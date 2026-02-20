@@ -88,11 +88,6 @@ export default function LoginPage() {
               {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
             </Button>
           </form>
-          <div className="mt-6 p-3 bg-muted rounded-lg text-xs text-muted-foreground">
-            <p className="font-medium mb-1">Demo Hesaplar:</p>
-            <p>Admin: admin@servis.com / admin123</p>
-            <p>Danışman: danisman@servis.com / advisor123</p>
-          </div>
         </CardContent>
       </Card>
     </div>
