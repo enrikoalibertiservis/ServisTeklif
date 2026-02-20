@@ -15,7 +15,7 @@ import {
 } from "@/app/actions/vehicle"
 import { createQuoteFromTemplate } from "@/app/actions/quote"
 import { useToast } from "@/hooks/use-toast"
-import { Car, Wrench, User, ArrowRight, Loader2, Zap, Gauge, PlusCircle } from "lucide-react"
+import { Car, Wrench, User, ArrowRight, Loader2, Zap, Gauge, PlusCircle, Shield } from "lucide-react"
 
 const SERVICE_TYPE_CONFIG: Record<string, { label: string; color: string; icon: any; desc: string }> = {
   NORMAL: { label: "Normal Bakım",  color: "border-blue-500 bg-blue-50 text-blue-700",    icon: Gauge,  desc: "Standart bakım" },

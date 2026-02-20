@@ -31,6 +31,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Tüm alanlar gereklidir" }, { status: 400 })
   }
 
+  // Güçlü şifre kuralları
+  const pwdErrors: string[] = []
+  if (password.length < 8)                      pwdErrors.push("En az 8 karakter")
+  if (!/[A-Z]/.test(password))                  pwdErrors.push("En az 1 büyük harf")
+  if (!/[a-z]/.test(password))                  pwdErrors.push("En az 1 küçük harf")
+  if (!/[0-9]/.test(password))                  pwdErrors.push("En az 1 rakam")
+  if (!/[^A-Za-z0-9]/.test(password))           pwdErrors.push("En az 1 özel karakter (!@#$... vb.)")
+  if (pwdErrors.length > 0) {
+    return NextResponse.json({ error: `Şifre gereksinimleri: ${pwdErrors.join(", ")}` }, { status: 400 })
+  }
+
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
     return NextResponse.json({ error: "Bu e-posta adresi zaten kullanılıyor" }, { status: 400 })

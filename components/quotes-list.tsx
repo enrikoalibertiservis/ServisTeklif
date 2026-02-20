@@ -145,7 +145,7 @@ export function QuotesList({ quotes, isAdmin }: QuotesListProps) {
             placeholder="Teklif no, plaka, müşteri, araç ara…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 border-2 border-green-300 focus:border-green-500 focus-visible:ring-green-200 bg-green-50/40"
           />
         </div>
       </div>

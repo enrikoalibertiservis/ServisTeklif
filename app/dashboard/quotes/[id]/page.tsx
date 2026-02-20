@@ -220,7 +220,7 @@ export default function QuoteDetailPage() {
               <div><span className="text-muted-foreground text-xs">E-posta: </span>{quote.customerEmail || "-"}</div>
               <div><span className="text-muted-foreground text-xs">Plaka: </span>{quote.plateNo || "-"}</div>
               <div><span className="text-muted-foreground text-xs">Danışman: </span>{quote.createdBy.name}</div>
-              <div><span className="text-muted-foreground text-xs">Tarih: </span>{new Date(quote.createdAt).toLocaleDateString("tr-TR")}</div>
+              <div><span className="text-muted-foreground text-xs">Tarih: </span>{new Date(quote.createdAt).toLocaleDateString("tr-TR")} {new Date(quote.createdAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</div>
               {quote.notes && <div className="sm:col-span-3"><span className="text-muted-foreground text-xs">Not: </span>{quote.notes}</div>}
             </div>
           )}

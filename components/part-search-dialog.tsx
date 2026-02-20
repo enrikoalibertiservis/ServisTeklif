@@ -8,7 +8,7 @@ import { searchParts, searchLabor } from "@/app/actions/quote"
 import { formatCurrency } from "@/lib/utils"
 import { Search, Plus, Loader2, Clock } from "lucide-react"
 
-const MAX_RECENT = 8
+const MAX_RECENT = 5
 
 function recentKey(brandName: string, type: "PART" | "LABOR") {
   return `recent_${type}_${brandName}`

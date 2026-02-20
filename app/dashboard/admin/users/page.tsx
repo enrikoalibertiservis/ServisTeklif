@@ -10,7 +10,58 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Users, Plus, UserCheck, UserX } from "lucide-react"
+import { Users, Plus, UserCheck, UserX, Eye, EyeOff } from "lucide-react"
+
+// Şifre kural kontrolü
+function checkPassword(pwd: string) {
+  return {
+    length:    pwd.length >= 8,
+    uppercase: /[A-Z]/.test(pwd),
+    lowercase: /[a-z]/.test(pwd),
+    number:    /[0-9]/.test(pwd),
+    special:   /[^A-Za-z0-9]/.test(pwd),
+  }
+}
+
+function PasswordStrength({ password }: { password: string }) {
+  if (!password) return null
+  const r = checkPassword(password)
+  const passed = Object.values(r).filter(Boolean).length
+  const bars = [
+    passed <= 1 ? "bg-red-500" : passed <= 2 ? "bg-orange-400" : passed <= 3 ? "bg-yellow-400" : passed <= 4 ? "bg-lime-500" : "bg-green-500",
+  ]
+  const label = ["", "Çok Zayıf", "Zayıf", "Orta", "İyi", "Güçlü"][passed]
+  const labelColor = ["", "text-red-500", "text-orange-500", "text-yellow-600", "text-lime-600", "text-green-600"][passed]
+
+  const rules = [
+    { key: "length",    text: "En az 8 karakter" },
+    { key: "uppercase", text: "En az 1 büyük harf" },
+    { key: "lowercase", text: "En az 1 küçük harf" },
+    { key: "number",    text: "En az 1 rakam" },
+    { key: "special",   text: "En az 1 özel karakter" },
+  ]
+
+  return (
+    <div className="mt-2 space-y-2">
+      {/* Güç barı */}
+      <div className="flex gap-1">
+        {[1,2,3,4,5].map(i => (
+          <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i <= passed ? bars[0] : "bg-slate-200"}`} />
+        ))}
+      </div>
+      <div className={`text-xs font-medium ${labelColor}`}>{label}</div>
+      {/* Kural listesi */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {rules.map(rule => (
+          <div key={rule.key} className={`flex items-center gap-1 text-xs ${(r as any)[rule.key] ? "text-green-600" : "text-slate-400"}`}>
+            <span>{(r as any)[rule.key] ? "✓" : "○"}</span>
+            {rule.text}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function UsersPage() {
   const { toast } = useToast()
@@ -19,6 +70,7 @@ export default function UsersPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPwd, setShowPwd] = useState(false)
   const [role, setRole] = useState("ADVISOR")
   const [saving, setSaving] = useState(false)
 
@@ -50,7 +102,7 @@ export default function UsersPage() {
 
     toast({ title: "Kullanıcı oluşturuldu" })
     setDialogOpen(false)
-    setName(""); setEmail(""); setPassword(""); setRole("ADVISOR")
+    setName(""); setEmail(""); setPassword(""); setRole("ADVISOR"); setShowPwd(false)
     loadUsers()
   }
 
@@ -149,7 +201,22 @@ export default function UsersPage() {
             </div>
             <div className="space-y-2">
               <Label>Şifre</Label>
-              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+              <div className="relative">
+                <Input
+                  type={showPwd ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <PasswordStrength password={password} />
             </div>
             <div className="space-y-2">
               <Label>Rol</Label>
