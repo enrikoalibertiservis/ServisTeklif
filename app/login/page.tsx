@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Wrench } from "lucide-react"
-import Image from "next/image"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -52,45 +51,40 @@ export default function LoginPage() {
             </CardDescription>
           </div>
           {/* Marka logoları */}
-          <div className="flex items-center justify-center gap-6 pt-1">
+          <div className="flex items-center justify-center gap-5 pt-1">
+            {/* Fiat */}
             <div className="flex flex-col items-center gap-1.5">
-              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-                <Image
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Fiat_Automobiles_2020.svg/120px-Fiat_Automobiles_2020.svg.png"
-                  alt="Fiat"
-                  width={36}
-                  height={36}
-                  className="object-contain"
-                  unoptimized
-                />
+              <div className="w-14 h-14 rounded-full bg-white border-2 border-slate-100 shadow-md flex items-center justify-center">
+                <svg viewBox="0 0 60 60" className="w-10 h-10">
+                  <ellipse cx="30" cy="30" rx="28" ry="28" fill="#C00" />
+                  <ellipse cx="30" cy="30" rx="22" ry="22" fill="none" stroke="#fff" strokeWidth="1.5" />
+                  <text x="30" y="35" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="bold" fontFamily="serif" letterSpacing="1">FIAT</text>
+                </svg>
               </div>
-              <span className="text-[10px] font-semibold text-[#8B0000] tracking-wide">FIAT</span>
+              <span className="text-[10px] font-bold text-[#CC0000] tracking-widest">FIAT</span>
             </div>
+            {/* Alfa Romeo */}
             <div className="flex flex-col items-center gap-1.5">
-              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-                <Image
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Alfa_Romeo_2015.svg/120px-Alfa_Romeo_2015.svg.png"
-                  alt="Alfa Romeo"
-                  width={36}
-                  height={36}
-                  className="object-contain"
-                  unoptimized
-                />
+              <div className="w-14 h-14 rounded-full bg-white border-2 border-slate-100 shadow-md flex items-center justify-center">
+                <svg viewBox="0 0 60 60" className="w-10 h-10">
+                  <rect x="2" y="2" width="56" height="56" rx="28" fill="#CC0000" />
+                  <rect x="29" y="2" width="3" height="56" fill="#fff" />
+                  <text x="15" y="36" textAnchor="middle" fill="#fff" fontSize="7" fontWeight="bold" fontFamily="sans-serif">AR</text>
+                  <path d="M32 10 Q38 18 36 30 Q38 42 32 50" fill="none" stroke="#fff" strokeWidth="1.5"/>
+                  <text x="45" y="36" textAnchor="middle" fill="#fff" fontSize="7" fontWeight="bold" fontFamily="sans-serif">🐍</text>
+                </svg>
               </div>
-              <span className="text-[10px] font-semibold text-[#8B0000] tracking-wide">ALFA ROMEO</span>
+              <span className="text-[10px] font-bold text-[#CC0000] tracking-widest">ALFA</span>
             </div>
+            {/* Jeep */}
             <div className="flex flex-col items-center gap-1.5">
-              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-                <Image
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Jeep_wordmark.svg/120px-Jeep_wordmark.svg.png"
-                  alt="Jeep"
-                  width={40}
-                  height={20}
-                  className="object-contain"
-                  unoptimized
-                />
+              <div className="w-14 h-14 rounded-full bg-white border-2 border-slate-100 shadow-md flex items-center justify-center">
+                <svg viewBox="0 0 70 30" className="w-11 h-7">
+                  <rect x="1" y="1" width="68" height="28" rx="4" fill="#1a3a1a" />
+                  <text x="35" y="21" textAnchor="middle" fill="#fff" fontSize="16" fontWeight="900" fontFamily="Arial Black, sans-serif" letterSpacing="2">JEEP</text>
+                </svg>
               </div>
-              <span className="text-[10px] font-semibold text-[#2E5735] tracking-wide">JEEP</span>
+              <span className="text-[10px] font-bold text-[#2E5735] tracking-widest">JEEP</span>
             </div>
           </div>
         </CardHeader>
