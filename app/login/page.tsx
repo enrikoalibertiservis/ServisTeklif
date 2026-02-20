@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Car, Wrench } from "lucide-react"
+import { Wrench } from "lucide-react"
+import Image from "next/image"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -47,15 +48,50 @@ export default function LoginPage() {
           <div>
             <CardTitle className="text-2xl">Servis Teklif</CardTitle>
             <CardDescription className="mt-2">
-              Bakım Reçetesi Yönetim Sistemi
+              Bakım Teklif Sihirbazı
             </CardDescription>
           </div>
-          <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
-            <span className="font-semibold text-[#8B0000]">Fiat</span>
-            <span className="text-border">|</span>
-            <span className="font-semibold text-[#8B0000]">Alfa Romeo</span>
-            <span className="text-border">|</span>
-            <span className="font-semibold text-[#2E5735]">Jeep</span>
+          {/* Marka logoları */}
+          <div className="flex items-center justify-center gap-6 pt-1">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
+                <Image
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Fiat_Automobiles_2020.svg/120px-Fiat_Automobiles_2020.svg.png"
+                  alt="Fiat"
+                  width={36}
+                  height={36}
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+              <span className="text-[10px] font-semibold text-[#8B0000] tracking-wide">FIAT</span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
+                <Image
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Alfa_Romeo_2015.svg/120px-Alfa_Romeo_2015.svg.png"
+                  alt="Alfa Romeo"
+                  width={36}
+                  height={36}
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+              <span className="text-[10px] font-semibold text-[#8B0000] tracking-wide">ALFA ROMEO</span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
+                <Image
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Jeep_wordmark.svg/120px-Jeep_wordmark.svg.png"
+                  alt="Jeep"
+                  width={40}
+                  height={20}
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+              <span className="text-[10px] font-semibold text-[#2E5735] tracking-wide">JEEP</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
