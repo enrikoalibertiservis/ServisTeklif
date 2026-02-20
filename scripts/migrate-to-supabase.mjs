@@ -10,8 +10,14 @@ import { fileURLToPath } from "url"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const SQLITE_PATH    = path.join(__dirname, "../prisma/dev.db")
-const SUPABASE_URL   = "https://rjwxlzuwodptascjfcel.supabase.co"
-const SUPABASE_KEY   = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqd3hsenV3b2RwdGFzY2pmY2VsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTYxODM1OCwiZXhwIjoyMDg3MTk0MzU4fQ.yNM3tuvGouGVH9cUeYEhY4aQNygsfo2fZs7PZZ3cST8"
+// Çevre değişkenlerinden oku — asla koda gömme!
+const SUPABASE_URL   = process.env.SUPABASE_URL
+const SUPABASE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("❌  SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY env değişkenlerini tanımlayın.")
+  process.exit(1)
+}
 
 const sqlite = new Database(SQLITE_PATH, { readonly: true })
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
