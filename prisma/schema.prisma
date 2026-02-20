@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("ADVISOR") // ADMIN | ADVISOR
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  quotes       Quote[]
+  importLogs   PriceListVersion[]
+}
+
+// ─── Vehicle Catalog ─────────────────────────────────────────
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  models             VehicleModel[]
+  parts              Part[]
+  laborOperations    LaborOperation[]
+  maintenanceTemplates MaintenanceTemplate[]
+}
+
+model VehicleModel {
+  id        String   @id @default(cuid())
+  brandId   String
+  name      String
+  createdAt DateTime @default(now())
+
+  brand     Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  subModels SubModel[]
+  maintenanceTemplates MaintenanceTemplate[]
+
+  @@unique([brandId, name])
+}
+
+model SubModel {
+  id        String   @id @default(cuid())
+  modelId   String
+  name      String
+  createdAt DateTime @default(now())
+
+  model     VehicleModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  specs     VehicleSpec[]
+  maintenanceTemplates MaintenanceTemplate[]
+
+  @@unique([modelId, name])
+}
+
+model VehicleSpec {
+  id         String @id @default(cuid())
+  subModelId String
+  specKey    String  // e.g. "engineCode", "fuelType", "transmission", "driveType"
+  specValue  String  // e.g. "1.4 T-Jet", "Benzin", "Manuel", "FWD"
+
+  subModel   SubModel @relation(fields: [subModelId], references: [id], onDelete: Cascade)
+
+  @@unique([subModelId, specKey])
+}
+
+// ─── Parts ───────────────────────────────────────────────────
+
+model Part {
+  id          String   @id @default(cuid())
+  brandId     String
+  partNo      String
+  name        String
+  unitPrice   Float
+  currency    String   @default("TRY")
+  validFrom   DateTime @default(now())
+  versionTag  String?
+  createdAt   DateTime @default(now())
+
+  brand       Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, partNo])
+  @@index([partNo])
+  @@index([name])
+}
+
+// ─── Labor Operations ────────────────────────────────────────
+
+model LaborOperation {
+  id           String   @id @default(cuid())
+  brandId      String
+  operationCode String
+  name         String
+  durationHours Float
+  hourlyRate   Float
+  totalPrice   Float?   // if provided from Excel, overrides duration*rate
+  currency     String   @default("TRY")
+  validFrom    DateTime @default(now())
+  versionTag   String?
+  createdAt    DateTime @default(now())
+
+  brand        Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, operationCode])
+  @@index([operationCode])
+  @@index([name])
+}
+
+// ─── Maintenance Templates ───────────────────────────────────
+
+model MaintenanceTemplate {
+  id          String   @id @default(cuid())
+  brandId     String
+  modelId     String?
+  subModelId  String?
+  periodKm    Int?
+  periodMonth Int?
+  serviceType String?  // "AGIR" | "NORMAL" | "HIZLI"
+  name        String?
+  createdAt   DateTime @default(now())
+
+  brand       Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  model       VehicleModel? @relation(fields: [modelId], references: [id])
+  subModel    SubModel?     @relation(fields: [subModelId], references: [id])
+  items       MaintenanceTemplateItem[]
+
+  @@index([brandId, modelId, subModelId, periodKm, serviceType])
+}
+
+model MaintenanceTemplateItem {
+  id             String @id @default(cuid())
+  templateId     String
+  itemType       String // "PART" | "LABOR"
+  referenceCode  String // partNo or operationCode
+  quantity       Float  @default(1)
+  durationOverride Float? // only for LABOR, overrides default duration
+  sortOrder      Int    @default(0)
+
+  template       MaintenanceTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+// ─── Quotes ──────────────────────────────────────────────────
+
+model Quote {
+  id               String   @id @default(cuid())
+  quoteNo          String   @unique
+  revision         Int      @default(1)
+  status           String   @default("DRAFT") // DRAFT | FINALIZED | CANCELLED
+
+  // Customer info
+  customerName     String?
+  customerPhone    String?
+  customerEmail    String?
+  plateNo          String?
+
+  // Vehicle info (denormalized for history)
+  brandName        String
+  modelName        String
+  subModelName     String?
+  vehicleSpecs     String?  // JSON string of specs
+  periodKm         Int?
+  periodMonth      Int?
+  serviceType      String?  // "AGIR" | "NORMAL" | "HIZLI"
+
+  // Pricing
+  partsSubtotal    Float    @default(0)
+  laborSubtotal    Float    @default(0)
+  subtotal         Float    @default(0)
+  discountType     String?  // "PERCENT" | "AMOUNT"
+  discountValue    Float    @default(0)
+  discountAmount   Float    @default(0)
+  taxRate          Float    @default(20) // KDV %
+  taxAmount        Float    @default(0)
+  grandTotal       Float    @default(0)
+
+  // Meta
+  priceListVersion String?
+  notes            String?
+  createdById      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdBy        User     @relation(fields: [createdById], references: [id])
+  items            QuoteItem[]
+}
+
+model QuoteItem {
+  id             String @id @default(cuid())
+  quoteId        String
+  itemType       String // "PART" | "LABOR"
+  referenceCode  String // partNo or operationCode
+  name           String
+  quantity       Float  @default(1)
+  unitPrice      Float  @default(0)
+  discountPct    Float  @default(0)   // satır iskonto yüzdesi (0-100)
+  discountAmount Float  @default(0)   // hesaplanan iskonto tutarı
+  totalPrice     Float  @default(0)   // iskonto sonrası toplam
+  durationHours  Float? // for LABOR
+  hourlyRate     Float? // for LABOR
+  sortOrder      Int    @default(0)
+
+  quote          Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+// ─── Import Tracking ─────────────────────────────────────────
+
+model PriceListVersion {
+  id          String   @id @default(cuid())
+  type        String   // "PART" | "LABOR" | "TEMPLATE"
+  brandName   String
+  fileName    String
+  recordCount Int      @default(0)
+  added       Int      @default(0)
+  updated     Int      @default(0)
+  errors      Int      @default(0)
+  errorDetails String? // JSON string of error messages
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  uploadedBy   User @relation(fields: [uploadedById], references: [id])
+}
+
+// ─── App Settings ────────────────────────────────────────────
+
+model AppSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
