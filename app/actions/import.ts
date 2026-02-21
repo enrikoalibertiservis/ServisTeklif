@@ -23,45 +23,56 @@ export async function importParts(
 
   const result: ImportResult = { added: 0, updated: 0, errors: 0, errorDetails: [] }
 
+  const validRows: Array<{ idx: number; partNo: string; name: string; unitPrice: number }> = []
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
-    try {
-      if (!row.partNo?.trim()) {
-        result.errors++
-        result.errorDetails.push(`Satır ${i + 2}: Parça numarası boş`)
-        continue
-      }
-      if (typeof row.unitPrice !== "number" || isNaN(row.unitPrice)) {
-        result.errors++
-        result.errorDetails.push(`Satır ${i + 2}: Fiyat geçersiz (${row.unitPrice})`)
-        continue
-      }
+    if (!row.partNo?.trim()) {
+      result.errors++
+      result.errorDetails.push(`Satır ${i + 2}: Parça numarası boş`)
+      continue
+    }
+    if (typeof row.unitPrice !== "number" || isNaN(row.unitPrice)) {
+      result.errors++
+      result.errorDetails.push(`Satır ${i + 2}: Fiyat geçersiz (${row.unitPrice})`)
+      continue
+    }
+    validRows.push({ idx: i, partNo: row.partNo.trim(), name: row.name?.trim() || "İsimsiz Parça", unitPrice: row.unitPrice })
+  }
 
-      const existing = await prisma.part.findUnique({
-        where: { brandId_partNo: { brandId: brand.id, partNo: row.partNo.trim() } },
-      })
+  const BATCH = 200
+  for (let b = 0; b < validRows.length; b += BATCH) {
+    const batch = validRows.slice(b, b + BATCH)
+    const partNos = batch.map(r => r.partNo)
 
-      if (existing) {
-        await prisma.part.update({
-          where: { id: existing.id },
-          data: { name: row.name?.trim() || existing.name, unitPrice: row.unitPrice, validFrom: new Date() },
-        })
+    const existingParts = await prisma.part.findMany({
+      where: { brandId: brand.id, partNo: { in: partNos } },
+      select: { id: true, partNo: true, name: true },
+    })
+    const existingMap = new Map(existingParts.map(p => [p.partNo, p]))
+
+    const toCreate: Array<{ brandId: string; partNo: string; name: string; unitPrice: number }> = []
+    const updateOps: Array<ReturnType<typeof prisma.part.update>> = []
+
+    for (const row of batch) {
+      const ex = existingMap.get(row.partNo)
+      if (ex) {
+        updateOps.push(
+          prisma.part.update({
+            where: { id: ex.id },
+            data: { name: row.name || ex.name, unitPrice: row.unitPrice, validFrom: new Date() },
+          })
+        )
         result.updated++
       } else {
-        await prisma.part.create({
-          data: {
-            brandId: brand.id,
-            partNo: row.partNo.trim(),
-            name: row.name?.trim() || "İsimsiz Parça",
-            unitPrice: row.unitPrice,
-          },
-        })
+        toCreate.push({ brandId: brand.id, partNo: row.partNo, name: row.name, unitPrice: row.unitPrice })
         result.added++
       }
-    } catch (err: any) {
-      result.errors++
-      result.errorDetails.push(`Satır ${i + 2}: ${err.message}`)
     }
+
+    await prisma.$transaction([
+      ...(toCreate.length > 0 ? [prisma.part.createMany({ data: toCreate, skipDuplicates: true })] : []),
+      ...updateOps,
+    ])
   }
 
   await prisma.priceListVersion.create({
@@ -93,53 +104,76 @@ export async function importLabor(
 
   const result: ImportResult = { added: 0, updated: 0, errors: 0, errorDetails: [] }
 
+  const validRows: Array<{ idx: number; operationCode: string; name: string; durationHours: number; hourlyRate: number; totalPrice?: number }> = []
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
-    try {
-      if (!row.operationCode?.trim()) {
-        result.errors++
-        result.errorDetails.push(`Satır ${i + 2}: Operasyon kodu boş`)
-        continue
-      }
-      if (typeof row.durationHours !== "number" || isNaN(row.durationHours)) {
-        result.errors++
-        result.errorDetails.push(`Satır ${i + 2}: Süre geçersiz`)
-        continue
-      }
+    if (!row.operationCode?.trim()) {
+      result.errors++
+      result.errorDetails.push(`Satır ${i + 2}: Operasyon kodu boş`)
+      continue
+    }
+    if (typeof row.durationHours !== "number" || isNaN(row.durationHours)) {
+      result.errors++
+      result.errorDetails.push(`Satır ${i + 2}: Süre geçersiz`)
+      continue
+    }
+    validRows.push({
+      idx: i,
+      operationCode: row.operationCode.trim(),
+      name: row.name?.trim() || "İsimsiz Operasyon",
+      durationHours: row.durationHours,
+      hourlyRate: row.hourlyRate,
+      totalPrice: row.totalPrice,
+    })
+  }
 
-      const existing = await prisma.laborOperation.findUnique({
-        where: { brandId_operationCode: { brandId: brand.id, operationCode: row.operationCode.trim() } },
-      })
+  const BATCH = 200
+  for (let b = 0; b < validRows.length; b += BATCH) {
+    const batch = validRows.slice(b, b + BATCH)
+    const codes = batch.map(r => r.operationCode)
 
-      if (existing) {
-        await prisma.laborOperation.update({
-          where: { id: existing.id },
-          data: {
-            name: row.name?.trim() || existing.name,
-            durationHours: row.durationHours,
-            hourlyRate: row.hourlyRate,
-            totalPrice: row.totalPrice ?? null,
-            validFrom: new Date(),
-          },
-        })
+    const existingOps = await prisma.laborOperation.findMany({
+      where: { brandId: brand.id, operationCode: { in: codes } },
+      select: { id: true, operationCode: true, name: true },
+    })
+    const existingMap = new Map(existingOps.map(o => [o.operationCode, o]))
+
+    const toCreate: Array<{ brandId: string; operationCode: string; name: string; durationHours: number; hourlyRate: number; totalPrice: number | null }> = []
+    const updateOps: Array<ReturnType<typeof prisma.laborOperation.update>> = []
+
+    for (const row of batch) {
+      const ex = existingMap.get(row.operationCode)
+      if (ex) {
+        updateOps.push(
+          prisma.laborOperation.update({
+            where: { id: ex.id },
+            data: {
+              name: row.name || ex.name,
+              durationHours: row.durationHours,
+              hourlyRate: row.hourlyRate,
+              totalPrice: row.totalPrice ?? null,
+              validFrom: new Date(),
+            },
+          })
+        )
         result.updated++
       } else {
-        await prisma.laborOperation.create({
-          data: {
-            brandId: brand.id,
-            operationCode: row.operationCode.trim(),
-            name: row.name?.trim() || "İsimsiz Operasyon",
-            durationHours: row.durationHours,
-            hourlyRate: row.hourlyRate,
-            totalPrice: row.totalPrice ?? null,
-          },
+        toCreate.push({
+          brandId: brand.id,
+          operationCode: row.operationCode,
+          name: row.name,
+          durationHours: row.durationHours,
+          hourlyRate: row.hourlyRate,
+          totalPrice: row.totalPrice ?? null,
         })
         result.added++
       }
-    } catch (err: any) {
-      result.errors++
-      result.errorDetails.push(`Satır ${i + 2}: ${err.message}`)
     }
+
+    await prisma.$transaction([
+      ...(toCreate.length > 0 ? [prisma.laborOperation.createMany({ data: toCreate, skipDuplicates: true })] : []),
+      ...updateOps,
+    ])
   }
 
   await prisma.priceListVersion.create({
@@ -188,6 +222,18 @@ export async function importTemplates(
     grouped.get(key)!.push(row)
   }
 
+  const allModels = await prisma.vehicleModel.findMany({
+    where: { brandId: brand.id },
+    select: { id: true, name: true },
+  })
+  const modelMap = new Map(allModels.map(m => [m.name, m.id]))
+
+  const allSubModels = await prisma.subModel.findMany({
+    where: { model: { brandId: brand.id } },
+    select: { id: true, name: true, modelId: true },
+  })
+  const subModelMap = new Map(allSubModels.map(s => [`${s.modelId}:${s.name}`, s.id]))
+
   for (const [, items] of Array.from(grouped.entries())) {
     try {
       const first = items[0]
@@ -196,20 +242,12 @@ export async function importTemplates(
       let subModelId: string | null = null
 
       if (first.modelName) {
-        const model = await prisma.vehicleModel.findFirst({
-          where: { brandId: brand.id, name: first.modelName },
-        })
-        modelId = model?.id ?? null
-
-        if (model && first.subModelName) {
-          const subModel = await prisma.subModel.findFirst({
-            where: { modelId: model.id, name: first.subModelName },
-          })
-          subModelId = subModel?.id ?? null
+        modelId = modelMap.get(first.modelName) ?? null
+        if (modelId && first.subModelName) {
+          subModelId = subModelMap.get(`${modelId}:${first.subModelName}`) ?? null
         }
       }
 
-      // Try to find existing template
       const existing = await prisma.maintenanceTemplate.findFirst({
         where: {
           brandId: brand.id,
@@ -218,25 +256,21 @@ export async function importTemplates(
         },
       })
 
+      const itemData = items.map((item, idx) => ({
+        itemType: item.itemType,
+        referenceCode: item.referenceCode,
+        quantity: item.quantity ?? 1,
+        durationOverride: item.durationOverride ?? null,
+        sortOrder: idx + 1,
+      }))
+
       if (existing) {
-        // Add items to existing template (clear old items first)
-        await prisma.maintenanceTemplateItem.deleteMany({ where: { templateId: existing.id } })
-        for (let idx = 0; idx < items.length; idx++) {
-          const item = items[idx]
-          await prisma.maintenanceTemplateItem.create({
-            data: {
-              templateId: existing.id,
-              itemType: item.itemType,
-              referenceCode: item.referenceCode,
-              quantity: item.quantity ?? 1,
-              durationOverride: item.durationOverride ?? null,
-              sortOrder: idx + 1,
-            },
-          })
-        }
+        await prisma.$transaction([
+          prisma.maintenanceTemplateItem.deleteMany({ where: { templateId: existing.id } }),
+          ...itemData.map(d => prisma.maintenanceTemplateItem.create({ data: { ...d, templateId: existing.id } })),
+        ])
         result.updated++
       } else {
-        // Create new template with items
         await prisma.maintenanceTemplate.create({
           data: {
             brandId: brand.id,
@@ -245,15 +279,7 @@ export async function importTemplates(
             periodKm: first.periodKm ?? null,
             periodMonth: first.periodMonth ?? null,
             name: first.name ?? `${first.periodKm ? first.periodKm + " km" : ""} Bakım`,
-            items: {
-              create: items.map((item, idx) => ({
-                itemType: item.itemType,
-                referenceCode: item.referenceCode,
-                quantity: item.quantity ?? 1,
-                durationOverride: item.durationOverride ?? null,
-                sortOrder: idx + 1,
-              })),
-            },
+            items: { create: itemData },
           },
         })
         result.added++
