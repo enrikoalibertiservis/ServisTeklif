@@ -96,10 +96,10 @@ export default function SettingsPage() {
     setFetchingModels(true)
     setOllamaConnected(false)
     try {
-      const res = await fetch(`${url}/api/tags`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const res = await fetch(`/api/ai/ollama-models?url=${encodeURIComponent(url)}`)
       const data = await res.json()
-      const models: string[] = (data.models || []).map((m: { name: string }) => m.name)
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+      const models: string[] = data.models || []
       if (models.length === 0) throw new Error("Kurulu model bulunamadı")
       setOllamaModels(models)
       setOllamaConnected(true)
