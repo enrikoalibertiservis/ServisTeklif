@@ -92,7 +92,7 @@ export default function ImportPage() {
   const [history, setHistory] = useState<(PriceListVersion & { uploadedBy: { name: string | null } })[]>([])
   const [activeTab, setActiveTab] = useState<TabType>("parts")
 
-  const [selectedBrandId, setSelectedBrandId] = useState<string>("")
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([])
 
   const [tabState, setTabState] = useState<Record<TabType, TabState>>({
     parts: { file: null, excelColumns: [], excelRows: [], columnMapping: {}, importResult: null },
@@ -107,7 +107,7 @@ export default function ImportPage() {
       try {
         const data = await getBrands()
         setBrands(data)
-        if (data.length > 0 && !selectedBrandId) setSelectedBrandId(data[0].id)
+        if (data.length > 0 && selectedBrandIds.length === 0) setSelectedBrandIds([data[0].id])
       } catch (err) {
         toast({
           title: "Hata",
@@ -220,9 +220,8 @@ export default function ImportPage() {
   const onDragLeave = () => setIsDragging(false)
 
   const handleImport = async () => {
-    const brand = brands.find((b) => b.id === selectedBrandId)
-    if (!brand) {
-      toast({ title: "Marka seçin", variant: "destructive" })
+    if (selectedBrandIds.length === 0) {
+      toast({ title: "En az bir marka seçin", variant: "destructive" })
       return
     }
     const state = tabState[activeTab]
@@ -230,119 +229,74 @@ export default function ImportPage() {
       toast({ title: "Dosya yükleyin", variant: "destructive" })
       return
     }
-
     const fields = getFields()
     const required = fields.filter((f) => f.required)
     const columnMapping = state.columnMapping
     for (const f of required) {
       if (!columnMapping[f.key]) {
-        toast({
-          title: "Eşleme eksik",
-          description: `${f.label} alanı için sütun eşlemesi yapın.`,
-          variant: "destructive",
-        })
+        toast({ title: "Eşleme eksik", description: `${f.label} alanı için sütun eşlemesi yapın.`, variant: "destructive" })
         return
       }
     }
 
     setIsImporting(true)
-    setTabState((prev) => ({
-      ...prev,
-      [activeTab]: { ...prev[activeTab], importResult: null },
-    }))
+    setTabState((prev) => ({ ...prev, [activeTab]: { ...prev[activeTab], importResult: null } }))
+
+    const combined = { added: 0, updated: 0, errors: 0, errorDetails: [] as string[] }
 
     try {
-      if (activeTab === "parts") {
-        const rows = state.excelRows.map((r) => {
-          const partNo = String(r[columnMapping.partNo] ?? "").trim()
-          const name = String(r[columnMapping.name] ?? "").trim()
-          const unitPrice = parseNumber(r[columnMapping.unitPrice])
-          return { partNo, name, unitPrice: unitPrice ?? 0 }
-        })
-        const result = await importParts(brand.name, rows)
-        setTabState((prev) => ({ ...prev, [activeTab]: { ...prev[activeTab], importResult: result } }))
-        toast({
-          title: "İçe aktarma tamamlandı",
-          description: `${result.added} eklendi, ${result.updated} güncellendi, ${result.errors} hata.`,
-        })
-      } else if (activeTab === "labor") {
-        const rows = state.excelRows.map((r) => {
-          const operationCode = String(r[columnMapping.operationCode] ?? "").trim()
-          const name = String(r[columnMapping.name] ?? "").trim()
-          const durationHours = parseNumber(r[columnMapping.durationHours])
-          const hourlyRate = parseNumber(r[columnMapping.hourlyRate])
-          const totalPrice = columnMapping.totalPrice
-            ? parseNumber(r[columnMapping.totalPrice])
-            : undefined
-          return {
-            operationCode,
-            name,
-            durationHours: durationHours ?? 0,
-            hourlyRate: hourlyRate ?? 0,
-            totalPrice,
-          }
-        })
-        const result = await importLabor(brand.name, rows)
-        setTabState((prev) => ({ ...prev, [activeTab]: { ...prev[activeTab], importResult: result } }))
-        toast({
-          title: "İçe aktarma tamamlandı",
-          description: `${result.added} eklendi, ${result.updated} güncellendi, ${result.errors} hata.`,
-        })
-      } else {
-        const rows = state.excelRows.map((r) => {
-          const periodKm = columnMapping.periodKm
-            ? parseNumber(r[columnMapping.periodKm])
-            : undefined
-          const periodMonth = columnMapping.periodMonth
-            ? parseNumber(r[columnMapping.periodMonth])
-            : undefined
-          const name = columnMapping.name
-            ? String(r[columnMapping.name] ?? "").trim()
-            : undefined
-          const modelName = columnMapping.modelName
-            ? String(r[columnMapping.modelName] ?? "").trim()
-            : undefined
-          const itemType = columnMapping.itemType
-            ? String(r[columnMapping.itemType] ?? "").trim().toUpperCase()
-            : ""
-          const referenceCode = columnMapping.referenceCode
-            ? String(r[columnMapping.referenceCode] ?? "").trim()
-            : ""
-          const quantity = columnMapping.quantity
-            ? parseNumber(r[columnMapping.quantity])
-            : undefined
-          const durationOverride = columnMapping.durationOverride
-            ? parseNumber(r[columnMapping.durationOverride])
-            : undefined
-          return {
-            periodKm,
-            periodMonth,
-            name,
-            modelName,
-            itemType: itemType === "LABOR" ? "LABOR" : "PART",
-            referenceCode,
-            quantity,
-            durationOverride,
-          }
-        })
-        const result = await importTemplates(brand.name, rows)
-        setTabState((prev) => ({ ...prev, [activeTab]: { ...prev[activeTab], importResult: result } }))
-        toast({
-          title: "İçe aktarma tamamlandı",
-          description: `${result.added} şablon eklendi, ${result.errors} hata.`,
-        })
+      for (const brandId of selectedBrandIds) {
+        const brand = brands.find((b) => b.id === brandId)!
+        if (activeTab === "parts") {
+          const rows = state.excelRows.map((r) => ({
+            partNo: String(r[columnMapping.partNo] ?? "").trim(),
+            name: String(r[columnMapping.name] ?? "").trim(),
+            unitPrice: parseNumber(r[columnMapping.unitPrice]) ?? 0,
+          }))
+          const result = await importParts(brand.name, rows)
+          combined.added += result.added; combined.updated += result.updated
+          combined.errors += result.errors; combined.errorDetails.push(...result.errorDetails)
+        } else if (activeTab === "labor") {
+          const rows = state.excelRows.map((r) => ({
+            operationCode: String(r[columnMapping.operationCode] ?? "").trim(),
+            name: String(r[columnMapping.name] ?? "").trim(),
+            durationHours: parseNumber(r[columnMapping.durationHours]) ?? 0,
+            hourlyRate: parseNumber(r[columnMapping.hourlyRate]) ?? 0,
+            totalPrice: columnMapping.totalPrice ? parseNumber(r[columnMapping.totalPrice]) : undefined,
+          }))
+          const result = await importLabor(brand.name, rows)
+          combined.added += result.added; combined.updated += result.updated
+          combined.errors += result.errors; combined.errorDetails.push(...result.errorDetails)
+        } else {
+          const rows = state.excelRows.map((r) => {
+            const itemType = columnMapping.itemType ? String(r[columnMapping.itemType] ?? "").trim().toUpperCase() : ""
+            return {
+              periodKm: columnMapping.periodKm ? parseNumber(r[columnMapping.periodKm]) : undefined,
+              periodMonth: columnMapping.periodMonth ? parseNumber(r[columnMapping.periodMonth]) : undefined,
+              name: columnMapping.name ? String(r[columnMapping.name] ?? "").trim() : undefined,
+              modelName: columnMapping.modelName ? String(r[columnMapping.modelName] ?? "").trim() : undefined,
+              itemType: itemType === "LABOR" ? "LABOR" : "PART",
+              referenceCode: columnMapping.referenceCode ? String(r[columnMapping.referenceCode] ?? "").trim() : "",
+              quantity: columnMapping.quantity ? parseNumber(r[columnMapping.quantity]) : undefined,
+              durationOverride: columnMapping.durationOverride ? parseNumber(r[columnMapping.durationOverride]) : undefined,
+            }
+          })
+          const result = await importTemplates(brand.name, rows)
+          combined.added += result.added; combined.errors += result.errors
+          combined.errorDetails.push(...result.errorDetails)
+        }
       }
+      setTabState((prev) => ({ ...prev, [activeTab]: { ...prev[activeTab], importResult: combined } }))
+      const brandNames = selectedBrandIds.map(id => brands.find(b => b.id === id)?.name).join(", ")
+      toast({
+        title: `${selectedBrandIds.length} marka için aktarma tamamlandı`,
+        description: `${brandNames} → ${combined.added} eklendi, ${combined.updated} güncellendi, ${combined.errors} hata.`,
+      })
       loadHistory()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata"
       toast({ title: "İçe aktarma hatası", description: msg, variant: "destructive" })
-      setTabState((prev) => ({
-        ...prev,
-        [activeTab]: {
-          ...prev[activeTab],
-          importResult: { added: 0, updated: 0, errors: 1, errorDetails: [msg] },
-        },
-      }))
+      setTabState((prev) => ({ ...prev, [activeTab]: { ...prev[activeTab], importResult: { added: 0, updated: 0, errors: 1, errorDetails: [msg] } } }))
     } finally {
       setIsImporting(false)
     }
@@ -370,9 +324,9 @@ export default function ImportPage() {
         <TabsContent value="parts" className="mt-6">
           <ImportTabContent
             tabId="parts"
-            brandId={selectedBrandId}
+            brandIds={selectedBrandIds}
             brands={brands}
-            onBrandChange={setSelectedBrandId}
+            onBrandChange={setSelectedBrandIds}
             state={tabState.parts}
             onStateChange={(s) => setTabState((p) => ({ ...p, parts: s }))}
             onFileChange={handleFile}
@@ -389,9 +343,9 @@ export default function ImportPage() {
         <TabsContent value="labor" className="mt-6">
           <ImportTabContent
             tabId="labor"
-            brandId={selectedBrandId}
+            brandIds={selectedBrandIds}
             brands={brands}
-            onBrandChange={setSelectedBrandId}
+            onBrandChange={setSelectedBrandIds}
             state={tabState.labor}
             onStateChange={(s) => setTabState((p) => ({ ...p, labor: s }))}
             onFileChange={handleFile}
@@ -408,9 +362,9 @@ export default function ImportPage() {
         <TabsContent value="templates" className="mt-6">
           <ImportTabContent
             tabId="templates"
-            brandId={selectedBrandId}
+            brandIds={selectedBrandIds}
             brands={brands}
-            onBrandChange={setSelectedBrandId}
+            onBrandChange={setSelectedBrandIds}
             state={tabState.templates}
             onStateChange={(s) => setTabState((p) => ({ ...p, templates: s }))}
             onFileChange={handleFile}
@@ -488,9 +442,9 @@ export default function ImportPage() {
 
 interface ImportTabContentProps {
   tabId: string
-  brandId: string
+  brandIds: string[]
   brands: Brand[]
-  onBrandChange: (id: string) => void
+  onBrandChange: (ids: string[]) => void
   state: TabState
   onStateChange: (s: TabState) => void
   onFileChange: (f: File | null) => void
@@ -505,7 +459,7 @@ interface ImportTabContentProps {
 
 function ImportTabContent({
   tabId,
-  brandId,
+  brandIds,
   brands,
   onBrandChange,
   state,
@@ -519,6 +473,13 @@ function ImportTabContent({
   isImporting,
   onImport,
 }: ImportTabContentProps) {
+  function toggleBrand(id: string) {
+    if (brandIds.includes(id)) {
+      onBrandChange(brandIds.filter(b => b !== id))
+    } else {
+      onBrandChange([...brandIds, id])
+    }
+  }
   const { file, excelColumns, excelRows, columnMapping, importResult } = state
   const previewRows = excelRows.slice(0, 5)
   const setColumnMapping = (m: Record<string, string>) =>
@@ -535,19 +496,45 @@ function ImportTabContent({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Marka</Label>
-            <Select value={brandId} onValueChange={onBrandChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Marka seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {brands.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
+            <Label>
+              Marka
+              <span className="ml-2 text-xs text-muted-foreground font-normal">
+                (birden fazla seçilebilir)
+              </span>
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {brands.map((b) => {
+                const checked = brandIds.includes(b.id)
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => toggleBrand(b.id)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-all",
+                      checked
+                        ? "border-teal-500 bg-teal-50 text-teal-700"
+                        : "border-muted-foreground/25 bg-background text-foreground hover:border-teal-300 hover:bg-teal-50/50"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded border",
+                        checked ? "border-teal-500 bg-teal-500" : "border-muted-foreground"
+                      )}
+                    >
+                      {checked && <Check className="h-3 w-3 text-white" />}
+                    </span>
                     {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </button>
+                )
+              })}
+            </div>
+            {brandIds.length > 0 && (
+              <p className="text-xs text-teal-600">
+                {brandIds.length} marka seçildi: {brandIds.map(id => brands.find(b => b.id === id)?.name).join(", ")}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
