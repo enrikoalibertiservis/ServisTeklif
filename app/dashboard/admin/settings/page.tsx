@@ -54,7 +54,14 @@ const OPENAI_MODELS = [
   "gpt-3.5-turbo",
   "gpt-3.5-turbo-16k",
 ]
-const GEMINI_MODELS   = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
+const GEMINI_MODELS_DEFAULT = [
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-2.0-flash-exp",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-pro",
+]
 const ANTHROPIC_MODELS = [
   "claude-3-haiku-20240307",
   "claude-3-sonnet-20240229",
@@ -86,6 +93,10 @@ export default function SettingsPage() {
   const [ollamaModels, setOllamaModels] = useState<string[]>([])
   const [fetchingModels, setFetchingModels] = useState(false)
   const [ollamaConnected, setOllamaConnected] = useState(false)
+  // Gemini
+  const [geminiModels, setGeminiModels] = useState<string[]>([])
+  const [fetchingGemini, setFetchingGemini] = useState(false)
+  const [geminiConnected, setGeminiConnected] = useState(false)
 
   useEffect(() => {
     fetch("/api/settings").then(r => r.json()).then((data: { key: string; value: string }[]) => {
@@ -109,6 +120,34 @@ export default function SettingsPage() {
     }))
     setOllamaModels([])
     setOllamaConnected(false)
+    setGeminiModels([])
+    setGeminiConnected(false)
+  }
+
+  async function fetchGeminiModels() {
+    const key = settings.aiApiKey || ""
+    if (!key) {
+      toast({ title: "API Key gerekli", description: "Önce Gemini API key'ini girin.", variant: "destructive" })
+      return
+    }
+    setFetchingGemini(true)
+    setGeminiConnected(false)
+    try {
+      const res = await fetch(`/api/ai/gemini-models?key=${encodeURIComponent(key)}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+      const models: string[] = data.models || []
+      if (models.length === 0) throw new Error("Kullanılabilir model bulunamadı")
+      setGeminiModels(models)
+      setGeminiConnected(true)
+      if (!settings.aiModel) set("aiModel", models[0])
+      toast({ title: `${models.length} Gemini modeli bulundu` })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Bağlantı hatası"
+      toast({ title: "Gemini bağlantı hatası", description: msg, variant: "destructive" })
+    } finally {
+      setFetchingGemini(false)
+    }
   }
 
   async function fetchOllamaModels() {
@@ -381,40 +420,68 @@ export default function SettingsPage() {
           {/* ── GEMINI ── */}
           {provider === "gemini" && (
             <div className={`space-y-4 rounded-lg border p-4 ${PROVIDER_COLORS.gemini}`}>
-              <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">Google Gemini</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">Google Gemini</Badge>
+                {geminiConnected && (
+                  <span className="flex items-center gap-1 text-xs text-green-600">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Bağlı
+                  </span>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <Label>API Key</Label>
-                <div className="relative">
-                  <Input
-                    type={showApiKey ? "text" : "password"}
-                    value={settings.aiApiKey || ""}
-                    onChange={e => set("aiApiKey", e.target.value)}
-                    placeholder="AIza..."
-                    className="pr-10"
-                  />
-                  <button type="button" onClick={() => setShowApiKey(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      type={showApiKey ? "text" : "password"}
+                      value={settings.aiApiKey || ""}
+                      onChange={e => set("aiApiKey", e.target.value)}
+                      placeholder="AIza..."
+                      className="pr-10"
+                    />
+                    <button type="button" onClick={() => setShowApiKey(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchGeminiModels}
+                    disabled={fetchingGemini || !settings.aiApiKey}
+                    className="shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-1.5 ${fetchingGemini ? "animate-spin" : ""}`} />
+                    {fetchingGemini ? "Yüklüyor..." : "Modelleri Getir"}
+                  </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">aistudio.google.com → Get API Key</p>
+                <p className="text-xs text-muted-foreground">
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">aistudio.google.com</a> → Get API Key (ücretsiz)
+                </p>
               </div>
 
               <div className="space-y-2">
                 <Label>Model</Label>
-                <Select value={settings.aiModel || "gemini-1.5-flash"} onValueChange={v => set("aiModel", v)}>
+                <Select
+                  value={settings.aiModel || "gemini-2.0-flash"}
+                  onValueChange={v => set("aiModel", v)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    {GEMINI_MODELS.map(m => (
+                  <SelectContent className="max-h-72">
+                    {(geminiModels.length > 0 ? geminiModels : GEMINI_MODELS_DEFAULT).map(m => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  gemini-1.5-flash hızlı ve ücretsiz, gemini-1.5-pro daha güçlü.
+                  {geminiConnected
+                    ? `${geminiModels.length} model listelendi. `
+                    : "API key girdikten sonra 'Modelleri Getir' ile güncel listeyi çekin. "}
+                  Öneri: <strong>gemini-2.0-flash</strong> (hızlı &amp; ücretsiz)
                 </p>
               </div>
             </div>
