@@ -363,15 +363,17 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
               </div>
 
               {/* Teklif Oluştur Butonu */}
-              <Link
-                href={`/dashboard/quotes/new?brandId=${brandId}&modelId=${modelId}&subModelId=${subModelId}&templateId=${templateId}`}
-              >
-                <Button className="w-full" size="sm">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Bu Fiyatla Teklif Oluştur
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </Link>
+              <div className="pt-1">
+                <Link
+                  href={`/dashboard/quotes/new?brandId=${brandId}&modelId=${modelId}&subModelId=${subModelId}&templateId=${templateId}`}
+                >
+                  <button className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm py-3.5 px-5 shadow-md shadow-emerald-200 transition-all">
+                    <PlusCircle className="h-5 w-5 shrink-0" />
+                    Bu Fiyatla Teklif Oluştur
+                    <ChevronRight className="h-4 w-4 shrink-0 opacity-70" />
+                  </button>
+                </Link>
+              </div>
             </div>
           )
         })()}
