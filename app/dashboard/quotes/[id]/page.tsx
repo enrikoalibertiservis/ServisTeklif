@@ -15,7 +15,7 @@ import {
 } from "@/app/actions/quote"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
-import { Trash2, Plus, Search, FileDown, FileSpreadsheet, Save, Check, Loader2, Pencil, User, Clock } from "lucide-react"
+import { Trash2, Plus, Search, FileDown, FileSpreadsheet, Save, Check, Loader2, Pencil, User, Clock, PenLine, X } from "lucide-react"
 import { PartSearchDialog } from "@/components/part-search-dialog"
 import { exportQuotePdf, exportQuoteExcel } from "@/lib/export"
 
@@ -39,6 +39,22 @@ export default function QuoteDetailPage() {
   const [customerEmail, setCustomerEmail] = useState("")
   const [plateNo, setPlateNo] = useState("")
   const [notes, setNotes] = useState("")
+
+  // Manuel parça ekleme formu
+  const [manualPartOpen, setManualPartOpen] = useState(false)
+  const [mPartNo, setMPartNo]     = useState("")
+  const [mPartName, setMPartName] = useState("")
+  const [mPartPrice, setMPartPrice] = useState("")
+  const [mPartQty, setMPartQty]   = useState("1")
+  const [mPartSaving, setMPartSaving] = useState(false)
+
+  // Manuel işçilik ekleme formu
+  const [manualLaborOpen, setManualLaborOpen] = useState(false)
+  const [mLaborCode, setMLaborCode]   = useState("")
+  const [mLaborName, setMLaborName]   = useState("")
+  const [mLaborHours, setMLaborHours] = useState("")
+  const [mLaborRate, setMLaborRate]   = useState("")
+  const [mLaborSaving, setMLaborSaving] = useState(false)
 
   const loadQuote = useCallback(async () => {
     const q = await getQuote(params.id as string)
@@ -100,6 +116,54 @@ export default function QuoteDetailPage() {
     await loadQuote()
     setSearchOpen(false)
     toast({ title: "Kalem eklendi", description: item.name })
+  }
+
+  async function handleManualPartAdd() {
+    const unitPrice = parseFloat(mPartPrice.replace(",", "."))
+    const qty = parseInt(mPartQty) || 1
+    if (!mPartName.trim() || isNaN(unitPrice) || unitPrice <= 0) {
+      toast({ title: "Hata", description: "Parça adı ve fiyat zorunludur.", variant: "destructive" })
+      return
+    }
+    setMPartSaving(true)
+    await addQuoteItem(quote.id, {
+      itemType: "PART",
+      referenceCode: mPartNo.trim() || "MANUEL",
+      name: mPartName.trim(),
+      quantity: qty,
+      unitPrice,
+      totalPrice: unitPrice * qty,
+    })
+    await loadQuote()
+    setMPartSaving(false)
+    setManualPartOpen(false)
+    setMPartNo(""); setMPartName(""); setMPartPrice(""); setMPartQty("1")
+    toast({ title: "Parça eklendi", description: mPartName.trim() })
+  }
+
+  async function handleManualLaborAdd() {
+    const hours = parseFloat(mLaborHours.replace(",", "."))
+    const rate  = parseFloat(mLaborRate.replace(",", "."))
+    if (!mLaborName.trim() || isNaN(hours) || hours <= 0 || isNaN(rate) || rate <= 0) {
+      toast({ title: "Hata", description: "İşlem adı, süre ve saat ücreti zorunludur.", variant: "destructive" })
+      return
+    }
+    setMLaborSaving(true)
+    await addQuoteItem(quote.id, {
+      itemType: "LABOR",
+      referenceCode: mLaborCode.trim() || "MANUEL",
+      name: mLaborName.trim(),
+      quantity: 1,
+      unitPrice: rate,
+      totalPrice: hours * rate,
+      durationHours: hours,
+      hourlyRate: rate,
+    })
+    await loadQuote()
+    setMLaborSaving(false)
+    setManualLaborOpen(false)
+    setMLaborCode(""); setMLaborName(""); setMLaborHours(""); setMLaborRate("")
+    toast({ title: "İşçilik eklendi", description: mLaborName.trim() })
   }
 
   async function handleFinalize() {
@@ -229,14 +293,52 @@ export default function QuoteDetailPage() {
 
       {/* ── Parçalar ─────────────────────────────────────────── */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between py-3 px-5">
+        <CardHeader className="flex flex-row items-center justify-between py-3 px-5 flex-wrap gap-2">
           <CardTitle className="text-sm font-semibold">Parçalar</CardTitle>
           {isDraft && (
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSearchType("PART"); setSearchOpen(true) }}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Parça Ekle
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSearchType("PART"); setSearchOpen(true) }}>
+                <Search className="h-3.5 w-3.5 mr-1" /> Listeden Ekle
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+                onClick={() => setManualPartOpen(o => !o)}>
+                <PenLine className="h-3.5 w-3.5 mr-1" /> Manuel Ekle
+              </Button>
+            </div>
           )}
         </CardHeader>
+        {isDraft && manualPartOpen && (
+          <div className="mx-5 mb-4 rounded-lg border border-cyan-200 bg-cyan-50/60 p-4">
+            <p className="text-xs font-semibold text-cyan-800 mb-3 uppercase tracking-wide">Manuel Parça Ekle</p>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="space-y-1">
+                <Label className="text-xs">Parça Kodu <span className="text-slate-400">(opsiyonel)</span></Label>
+                <Input className="h-8 text-sm" placeholder="55282942" value={mPartNo} onChange={e => setMPartNo(e.target.value)} />
+              </div>
+              <div className="sm:col-span-1 space-y-1">
+                <Label className="text-xs">Parça Adı <span className="text-red-400">*</span></Label>
+                <Input className="h-8 text-sm" placeholder="Motor Yağı Filtresi" value={mPartName} onChange={e => setMPartName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Birim Fiyat (TL) <span className="text-red-400">*</span></Label>
+                <Input className="h-8 text-sm" placeholder="185.00" value={mPartPrice} onChange={e => setMPartPrice(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Adet</Label>
+                <Input type="number" min="1" className="h-8 text-sm" value={mPartQty} onChange={e => setMPartQty(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Button size="sm" className="h-8 text-sm bg-cyan-600 hover:bg-cyan-700" onClick={handleManualPartAdd} disabled={mPartSaving}>
+                {mPartSaving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
+                Ekle
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8 text-sm" onClick={() => setManualPartOpen(false)}>
+                <X className="h-3.5 w-3.5 mr-1" /> İptal
+              </Button>
+            </div>
+          </div>
+        )}
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -325,14 +427,57 @@ export default function QuoteDetailPage() {
 
       {/* ── İşçilik ──────────────────────────────────────────── */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between py-3 px-5">
+        <CardHeader className="flex flex-row items-center justify-between py-3 px-5 flex-wrap gap-2">
           <CardTitle className="text-sm font-semibold">İşçilik</CardTitle>
           {isDraft && (
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSearchType("LABOR"); setSearchOpen(true) }}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> İşçilik Ekle
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSearchType("LABOR"); setSearchOpen(true) }}>
+                <Search className="h-3.5 w-3.5 mr-1" /> Listeden Ekle
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={() => setManualLaborOpen(o => !o)}>
+                <PenLine className="h-3.5 w-3.5 mr-1" /> Manuel Ekle
+              </Button>
+            </div>
           )}
         </CardHeader>
+        {isDraft && manualLaborOpen && (
+          <div className="mx-5 mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <p className="text-xs font-semibold text-amber-800 mb-3 uppercase tracking-wide">Manuel İşçilik Ekle</p>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="space-y-1">
+                <Label className="text-xs">İşlem Kodu <span className="text-slate-400">(opsiyonel)</span></Label>
+                <Input className="h-8 text-sm" placeholder="LBR-001" value={mLaborCode} onChange={e => setMLaborCode(e.target.value)} />
+              </div>
+              <div className="sm:col-span-1 space-y-1">
+                <Label className="text-xs">İşlem Adı <span className="text-red-400">*</span></Label>
+                <Input className="h-8 text-sm" placeholder="Motor Yağı Değişimi" value={mLaborName} onChange={e => setMLaborName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Süre (saat) <span className="text-red-400">*</span></Label>
+                <Input className="h-8 text-sm" placeholder="0.50" value={mLaborHours} onChange={e => setMLaborHours(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Saat Ücreti (TL) <span className="text-red-400">*</span></Label>
+                <Input className="h-8 text-sm" placeholder="5125" value={mLaborRate} onChange={e => setMLaborRate(e.target.value)} />
+              </div>
+            </div>
+            {mLaborHours && mLaborRate && !isNaN(parseFloat(mLaborHours)) && !isNaN(parseFloat(mLaborRate)) && (
+              <p className="text-xs text-amber-700 mt-2 font-medium">
+                Toplam: {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(parseFloat(mLaborHours) * parseFloat(mLaborRate))}
+              </p>
+            )}
+            <div className="flex gap-2 mt-3">
+              <Button size="sm" className="h-8 text-sm bg-amber-600 hover:bg-amber-700" onClick={handleManualLaborAdd} disabled={mLaborSaving}>
+                {mLaborSaving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
+                Ekle
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8 text-sm" onClick={() => setManualLaborOpen(false)}>
+                <X className="h-3.5 w-3.5 mr-1" /> İptal
+              </Button>
+            </div>
+          </div>
+        )}
         <CardContent className="p-0">
           <Table>
             <TableHeader>
