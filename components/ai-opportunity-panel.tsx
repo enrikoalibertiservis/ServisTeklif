@@ -462,14 +462,33 @@ export function AIOpportunityPanel({
           )}
 
           {/* Sonuç */}
-          {campaignResult && (
+          {campaignResult && (() => {
+            const otoTotal = campaignResult.suggestedProducts.reduce((s, p) => s + (p.price ?? 0), 0)
+            const genelTotal = grandTotal + otoTotal
+            return (
             <div className="space-y-4 rounded-xl border border-purple-200 bg-white/70 p-4">
-              {/* Toplam Teklif Tutarı */}
-              <div className="flex items-center justify-between rounded-lg bg-purple-50 border border-purple-200 px-4 py-2.5">
-                <span className="text-xs font-medium text-purple-700">Bu Bakımın Toplam Tutarı</span>
-                <span className="text-lg font-bold text-purple-800">
-                  ₺{grandTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
-                </span>
+              {/* Tutar Özeti */}
+              <div className="rounded-lg border border-purple-200 overflow-hidden text-sm">
+                <div className="flex items-center justify-between px-4 py-2 bg-purple-50/60">
+                  <span className="text-muted-foreground">Periyodik Bakım Tutarı</span>
+                  <span className="font-medium text-gray-700">
+                    ₺{grandTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                {otoTotal > 0 && (
+                  <div className="flex items-center justify-between px-4 py-2 bg-teal-50/60 border-t border-purple-100">
+                    <span className="text-muted-foreground">Oto Koruma Paketi</span>
+                    <span className="font-medium text-teal-700">
+                      ₺{otoTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between px-4 py-2.5 bg-purple-600 border-t border-purple-300">
+                  <span className="text-white font-semibold">Genel Toplam</span>
+                  <span className="text-white font-bold text-base">
+                    ₺{genelTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
               </div>
 
               <ScoreBadge
@@ -539,7 +558,8 @@ export function AIOpportunityPanel({
                 )}
               </div>
             </div>
-          )}
+          )
+          })()}
         </CardContent>
       )}
     </Card>

@@ -35,6 +35,8 @@ export async function exportQuotePdf(
     suggestedProducts: { name: string; price?: number }[]
     message: string
     grandTotal?: number
+    otoTotal?: number
+    genelTotal?: number
   } | null
 ) {
   const pdfMake = await loadPdfMake()
@@ -281,27 +283,37 @@ export async function exportQuotePdf(
           color: "#ffffff",
           margin: [10, -33, 0, 20] as [number, number, number, number],
         },
-        // Bakım toplam tutarı
-        ...(campaign.grandTotal ? [
-          {
-            columns: [
-              { text: "Bu Bakımın Toplam Tutarı:", fontSize: 9, color: "#6b7280", width: "*" },
-              {
-                text: fmtCurrency(campaign.grandTotal),
-                fontSize: 13,
-                bold: true,
-                color: "#7c3aed",
-                alignment: "right",
-                width: "auto",
-              },
+        // Tutar Özeti tablosu
+        {
+          table: {
+            widths: ["*", 160],
+            body: [
+              [
+                { text: "Periyodik Bakım Tutarı", fontSize: 9, color: "#374151", margin: [4, 4, 0, 4] as [number, number, number, number] },
+                { text: campaign.grandTotal ? fmtCurrency(campaign.grandTotal) : "—", fontSize: 9, color: "#374151", alignment: "right", margin: [0, 4, 4, 4] as [number, number, number, number] },
+              ],
+              ...(campaign.otoTotal && campaign.otoTotal > 0 ? [[
+                { text: "Oto Koruma Paketi", fontSize: 9, color: "#0f766e", margin: [4, 4, 0, 4] as [number, number, number, number] },
+                { text: fmtCurrency(campaign.otoTotal), fontSize: 9, color: "#0f766e", alignment: "right", bold: true, margin: [0, 4, 4, 4] as [number, number, number, number] },
+              ]] : []),
+              [
+                { text: "Genel Toplam", fontSize: 11, bold: true, color: "#ffffff", fillColor: "#7c3aed", margin: [4, 6, 0, 6] as [number, number, number, number] },
+                { text: campaign.genelTotal ? fmtCurrency(campaign.genelTotal) : (campaign.grandTotal ? fmtCurrency(campaign.grandTotal) : "—"), fontSize: 11, bold: true, color: "#ffffff", fillColor: "#7c3aed", alignment: "right", margin: [0, 6, 4, 6] as [number, number, number, number] },
+              ],
             ],
-            margin: [0, 4, 0, 14] as [number, number, number, number],
           },
-          {
-            canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: "#e5e7eb" }],
-            margin: [0, 0, 0, 14] as [number, number, number, number],
+          layout: {
+            hLineWidth: () => 0.5,
+            vLineWidth: () => 0,
+            hLineColor: () => "#e5e7eb",
+            fillColor: (rowIndex: number, node: unknown) => {
+              const n = node as { table: { body: unknown[][] } }
+              const lastRow = n.table.body.length - 1
+              return rowIndex === lastRow ? "#7c3aed" : (rowIndex % 2 === 0 ? "#f5f3ff" : null)
+            },
           },
-        ] : []),
+          margin: [0, 8, 0, 18] as [number, number, number, number],
+        },
         {
           stack: [
             { text: "KİŞİSEL KAMPANYA METNİ", fontSize: 8, color: "#888888", bold: true, margin: [0, 0, 0, 6] as [number, number, number, number] },

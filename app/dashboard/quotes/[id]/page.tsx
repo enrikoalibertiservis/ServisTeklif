@@ -241,7 +241,15 @@ export default function QuoteDetailPage() {
             disabled={exporting}
             onClick={async () => {
               setExporting(true)
-              try { await exportQuotePdf(quote, includeCampaignInPdf && campaignResult ? { ...campaignResult, grandTotal: quote.grandTotal } : null) }
+              try {
+                const otoTotal = campaignResult?.suggestedProducts?.reduce((s: number, p: { price?: number }) => s + (p.price ?? 0), 0) ?? 0
+                await exportQuotePdf(quote, includeCampaignInPdf && campaignResult ? {
+                  ...campaignResult,
+                  grandTotal: quote.grandTotal,
+                  otoTotal,
+                  genelTotal: quote.grandTotal + otoTotal,
+                } : null)
+              }
               catch (err: any) { toast({ title: "PDF hatası", description: err.message, variant: "destructive" }) }
               finally { setExporting(false) }
             }}
