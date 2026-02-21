@@ -116,7 +116,7 @@ export function Sidebar({ user }: SidebarProps) {
   const activeHref = getActiveHref(pathname, groups)
 
   return (
-    <aside className="w-60 bg-slate-900 flex flex-col h-full shrink-0">
+    <aside className="w-60 bg-slate-900 flex flex-col h-screen shrink-0">
       {/* Logo */}
       <Link href="/dashboard" className="p-4 border-b border-slate-700/60 flex items-center gap-2.5 hover:bg-slate-800/60 transition-colors">
         <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30">
