@@ -33,7 +33,27 @@ const AI_PROVIDERS = [
   { value: "anthropic", label: "Anthropic (Claude)" },
 ]
 
-const OPENAI_MODELS   = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+const OPENAI_MODELS = [
+  // GPT-4o serisi
+  "gpt-4o",
+  "gpt-4o-mini",
+  "gpt-4o-2024-11-20",
+  "gpt-4o-2024-08-06",
+  "gpt-4o-mini-2024-07-18",
+  // o1 / o3 serisi (reasoning)
+  "o1",
+  "o1-mini",
+  "o1-preview",
+  "o3-mini",
+  // GPT-4 serisi
+  "gpt-4-turbo",
+  "gpt-4-turbo-2024-04-09",
+  "gpt-4",
+  "gpt-4-32k",
+  // GPT-3.5
+  "gpt-3.5-turbo",
+  "gpt-3.5-turbo-16k",
+]
 const GEMINI_MODELS   = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
 const ANTHROPIC_MODELS = [
   "claude-3-haiku-20240307",
@@ -292,6 +312,20 @@ export default function SettingsPage() {
             <div className={`space-y-4 rounded-lg border p-4 ${PROVIDER_COLORS.openai}`}>
               <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50">OpenAI</Badge>
 
+              {/* ChatGPT Pro ≠ API kredisi uyarısı */}
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-600" />
+                <div className="space-y-0.5">
+                  <p className="font-semibold">ChatGPT Pro ≠ API kredisi</p>
+                  <p>
+                    ChatGPT Pro aboneliği (chat.openai.com) ile OpenAI API kredisi ayrı sistemlerdir.
+                    API kullanımı için{" "}
+                    <strong>platform.openai.com → Billing → Add credits</strong> bölümünden ücretli kredi eklemeniz gerekir.
+                    Ücretsiz alternatif: <strong>Google Gemini</strong> seçin.
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label>API Key</Label>
                 <div className="relative">
@@ -307,7 +341,9 @@ export default function SettingsPage() {
                     {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">platform.openai.com → API Keys</p>
+                <p className="text-xs text-muted-foreground">
+                  platform.openai.com → API Keys → Create new secret key
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -316,14 +352,27 @@ export default function SettingsPage() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    {OPENAI_MODELS.map(m => (
-                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="gpt-4o" disabled className="text-xs font-semibold text-muted-foreground pointer-events-none opacity-60">── GPT-4o Serisi ──</SelectItem>
+                    {["gpt-4o", "gpt-4o-mini", "gpt-4o-2024-11-20", "gpt-4o-2024-08-06", "gpt-4o-mini-2024-07-18"].map(m => (
+                      <SelectItem key={m} value={m} className="pl-4">{m}</SelectItem>
+                    ))}
+                    <SelectItem value="o1" disabled className="text-xs font-semibold text-muted-foreground pointer-events-none opacity-60">── o1 / o3 (Reasoning) ──</SelectItem>
+                    {["o1", "o1-mini", "o1-preview", "o3-mini"].map(m => (
+                      <SelectItem key={m} value={m} className="pl-4">{m}</SelectItem>
+                    ))}
+                    <SelectItem value="gpt-4-turbo" disabled className="text-xs font-semibold text-muted-foreground pointer-events-none opacity-60">── GPT-4 Serisi ──</SelectItem>
+                    {["gpt-4-turbo", "gpt-4-turbo-2024-04-09", "gpt-4", "gpt-4-32k"].map(m => (
+                      <SelectItem key={m} value={m} className="pl-4">{m}</SelectItem>
+                    ))}
+                    <SelectItem value="gpt-3.5-turbo" disabled className="text-xs font-semibold text-muted-foreground pointer-events-none opacity-60">── GPT-3.5 ──</SelectItem>
+                    {["gpt-3.5-turbo", "gpt-3.5-turbo-16k"].map(m => (
+                      <SelectItem key={m} value={m} className="pl-4">{m}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  gpt-4o-mini ucuz ve hızlı, gpt-4o daha yetenekli.
+                  Öneri: <strong>gpt-4o-mini</strong> (hızlı, ekonomik) veya <strong>gpt-4o</strong> (en güçlü)
                 </p>
               </div>
             </div>
