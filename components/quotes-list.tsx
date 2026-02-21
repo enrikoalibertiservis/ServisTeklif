@@ -220,9 +220,12 @@ export function QuotesList({ quotes, isAdmin }: QuotesListProps) {
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
+                      {/* Araç modeli — büyük ve belirgin */}
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">{q.quoteNo}</span>
+                        <span className="font-bold text-base text-slate-900">
+                          {q.brandName} {q.modelName}{q.subModelName ? ` ${q.subModelName}` : ""}
+                        </span>
                         <Badge
                           variant={q.status === "FINALIZED" ? "default" : "secondary"}
                           className="text-xs"
@@ -230,10 +233,11 @@ export function QuotesList({ quotes, isAdmin }: QuotesListProps) {
                           {statusLabel[q.status] ?? q.status}
                         </Badge>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {q.brandName} {q.modelName} {q.subModelName || ""}
-                        {q.plateNo ? ` · ${q.plateNo}` : ""}
-                        {q.customerName ? ` · ${q.customerName}` : ""}
+                      {/* Teklif no + müşteri / plaka — küçük ve soluk */}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="font-mono">{q.quoteNo}</span>
+                        {q.plateNo && <><span>·</span><span>{q.plateNo}</span></>}
+                        {q.customerName && <><span>·</span><span>{q.customerName}</span></>}
                       </div>
                       {isAdmin && (
                         <div className="text-xs text-muted-foreground">
@@ -242,7 +246,7 @@ export function QuotesList({ quotes, isAdmin }: QuotesListProps) {
                       )}
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-lg">
+                      <div className="font-bold text-lg tabular-nums">
                         {new Intl.NumberFormat("tr-TR", {
                           style: "currency",
                           currency: "TRY",
