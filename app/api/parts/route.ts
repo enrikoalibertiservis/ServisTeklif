@@ -32,6 +32,27 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ items, total })
 }
 
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== "ADMIN") return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })
+  const body = await req.json()
+  const { brandId, partNo, name, unitPrice } = body as { brandId: string; partNo: string; name: string; unitPrice: number }
+
+  if (!brandId || !partNo?.trim() || !name?.trim() || typeof unitPrice !== "number") {
+    return NextResponse.json({ error: "brandId, partNo, name ve unitPrice zorunludur" }, { status: 400 })
+  }
+
+  const existing = await prisma.part.findUnique({
+    where: { brandId_partNo: { brandId, partNo: partNo.trim() } },
+  })
+  if (existing) return NextResponse.json({ error: `'${partNo}' parça kodu zaten kayıtlı` }, { status: 409 })
+
+  const created = await prisma.part.create({
+    data: { brandId, partNo: partNo.trim(), name: name.trim(), unitPrice },
+  })
+  return NextResponse.json(created, { status: 201 })
+}
+
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== "ADMIN") return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })

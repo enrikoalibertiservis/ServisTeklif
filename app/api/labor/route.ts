@@ -32,6 +32,36 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ items, total })
 }
 
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== "ADMIN") return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })
+  const body = await req.json()
+  const { brandId, operationCode, name, durationHours, hourlyRate } = body as {
+    brandId: string; operationCode: string; name: string; durationHours: number; hourlyRate: number
+  }
+
+  if (!brandId || !operationCode?.trim() || !name?.trim() || typeof hourlyRate !== "number") {
+    return NextResponse.json({ error: "brandId, operationCode, name ve hourlyRate zorunludur" }, { status: 400 })
+  }
+
+  const existing = await prisma.laborOperation.findUnique({
+    where: { brandId_operationCode: { brandId, operationCode: operationCode.trim() } },
+  })
+  if (existing) return NextResponse.json({ error: `'${operationCode}' kodu zaten kayıtlı` }, { status: 409 })
+
+  const created = await prisma.laborOperation.create({
+    data: {
+      brandId,
+      operationCode: operationCode.trim(),
+      name: name.trim(),
+      durationHours: durationHours ?? 1,
+      hourlyRate,
+      totalPrice: hourlyRate * (durationHours ?? 1),
+    },
+  })
+  return NextResponse.json(created, { status: 201 })
+}
+
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== "ADMIN") return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })

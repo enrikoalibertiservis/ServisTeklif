@@ -13,7 +13,7 @@ import { getBrands } from "@/app/actions/vehicle"
 import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
-  Search, Package, Trash2, Pencil, CheckSquare, Square,
+  Search, Package, Trash2, Pencil, CheckSquare, Square, Plus,
   Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react"
 
@@ -36,6 +36,13 @@ export default function PartsPage() {
   const [editName, setEditName] = useState("")
   const [editPrice, setEditPrice] = useState("")
   const [saving, setSaving] = useState(false)
+
+  // Yeni parça ekleme
+  const [newOpen, setNewOpen] = useState(false)
+  const [newPartNo, setNewPartNo] = useState("")
+  const [newName, setNewName] = useState("")
+  const [newPrice, setNewPrice] = useState("")
+  const [newSaving, setNewSaving] = useState(false)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -114,6 +121,31 @@ export default function PartsPage() {
     } finally { setSaving(false) }
   }
 
+  async function handleNewSave() {
+    if (!brandId) { toast({ title: "Hata", description: "Önce marka seçin", variant: "destructive" }); return }
+    const unitPrice = parseFloat(newPrice.replace(",", "."))
+    if (!newPartNo.trim() || !newName.trim() || isNaN(unitPrice) || unitPrice <= 0) {
+      toast({ title: "Hata", description: "Parça kodu, adı ve fiyat zorunludur", variant: "destructive" })
+      return
+    }
+    setNewSaving(true)
+    try {
+      const res = await fetch("/api/parts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId, partNo: newPartNo.trim(), name: newName.trim(), unitPrice }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Hata")
+      toast({ title: "Parça eklendi", description: newName.trim() })
+      setNewOpen(false)
+      setNewPartNo(""); setNewName(""); setNewPrice("")
+      loadParts()
+    } catch (err: any) {
+      toast({ title: "Hata", description: err.message, variant: "destructive" })
+    } finally { setNewSaving(false) }
+  }
+
   const allSelected = parts.length > 0 && selected.size === parts.length
   const startIdx = (page - 1) * PAGE_SIZE + 1
   const endIdx = Math.min(page * PAGE_SIZE, total)
@@ -142,6 +174,10 @@ export default function PartsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Parça no veya adı ile arayın..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+
+        <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700" onClick={() => setNewOpen(true)} disabled={!brandId}>
+          <Plus className="h-4 w-4 mr-1" /> Yeni Parça Ekle
+        </Button>
 
         {selected.size > 0 && (
           <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
@@ -251,6 +287,37 @@ export default function PartsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Yeni Parça Ekleme Dialog */}
+      <Dialog open={newOpen} onOpenChange={(v) => { if (!v) { setNewOpen(false); setNewPartNo(""); setNewName(""); setNewPrice("") } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-cyan-500" /> Yeni Parça Ekle
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Parça Kodu <span className="text-red-500">*</span></Label>
+              <Input placeholder="55282942" value={newPartNo} onChange={e => setNewPartNo(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Parça Adı <span className="text-red-500">*</span></Label>
+              <Input placeholder="Motor Yağı Filtresi" value={newName} onChange={e => setNewName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Birim Fiyat (TL) <span className="text-red-500">*</span></Label>
+              <Input type="number" step="0.01" min="0" placeholder="185.00" value={newPrice} onChange={e => setNewPrice(e.target.value)} />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setNewOpen(false)}>İptal</Button>
+              <Button className="bg-cyan-600 hover:bg-cyan-700" onClick={handleNewSave} disabled={newSaving}>
+                {newSaving ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Kaydediliyor...</> : <><Plus className="h-4 w-4 mr-1" /> Kaydet</>}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editItem} onOpenChange={(v) => !v && setEditItem(null)}>
         <DialogContent className="max-w-md">

@@ -13,7 +13,7 @@ import { getBrands } from "@/app/actions/vehicle"
 import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
-  Search, Wrench, Trash2, Pencil, CheckSquare, Square,
+  Search, Wrench, Trash2, Pencil, CheckSquare, Square, Plus,
   Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react"
 
@@ -35,6 +35,14 @@ export default function LaborPage() {
   const [editName, setEditName] = useState("")
   const [editRate, setEditRate] = useState("")
   const [saving, setSaving] = useState(false)
+
+  // Yeni işçilik ekleme
+  const [newOpen, setNewOpen] = useState(false)
+  const [newCode, setNewCode] = useState("")
+  const [newName, setNewName] = useState("")
+  const [newHours, setNewHours] = useState("1")
+  const [newRate, setNewRate] = useState("")
+  const [newSaving, setNewSaving] = useState(false)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -113,6 +121,32 @@ export default function LaborPage() {
     } finally { setSaving(false) }
   }
 
+  async function handleNewSave() {
+    if (!brandId) { toast({ title: "Hata", description: "Önce marka seçin", variant: "destructive" }); return }
+    const hourlyRate = parseFloat(newRate.replace(",", "."))
+    const durationHours = parseFloat(newHours.replace(",", ".")) || 1
+    if (!newCode.trim() || !newName.trim() || isNaN(hourlyRate) || hourlyRate <= 0) {
+      toast({ title: "Hata", description: "İşlem kodu, adı ve saat ücreti zorunludur", variant: "destructive" })
+      return
+    }
+    setNewSaving(true)
+    try {
+      const res = await fetch("/api/labor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId, operationCode: newCode.trim(), name: newName.trim(), durationHours, hourlyRate }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Hata")
+      toast({ title: "İşçilik eklendi", description: newName.trim() })
+      setNewOpen(false)
+      setNewCode(""); setNewName(""); setNewHours("1"); setNewRate("")
+      loadOps()
+    } catch (err: any) {
+      toast({ title: "Hata", description: err.message, variant: "destructive" })
+    } finally { setNewSaving(false) }
+  }
+
   const allSelected = operations.length > 0 && selected.size === operations.length
   const startIdx = (page - 1) * PAGE_SIZE + 1
   const endIdx = Math.min(page * PAGE_SIZE, total)
@@ -141,6 +175,10 @@ export default function LaborPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Operasyon kodu veya adı ile arayın..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+
+        <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setNewOpen(true)} disabled={!brandId}>
+          <Plus className="h-4 w-4 mr-1" /> Yeni İşçilik Ekle
+        </Button>
 
         {selected.size > 0 && (
           <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
@@ -250,6 +288,48 @@ export default function LaborPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Yeni İşçilik Ekleme Dialog */}
+      <Dialog open={newOpen} onOpenChange={(v) => { if (!v) { setNewOpen(false); setNewCode(""); setNewName(""); setNewHours("1"); setNewRate("") } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-amber-500" /> Yeni İşçilik Ekle
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>İşlem Kodu <span className="text-red-500">*</span></Label>
+              <Input placeholder="LBR-001" value={newCode} onChange={e => setNewCode(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>İşlem Adı <span className="text-red-500">*</span></Label>
+              <Input placeholder="Motor Yağı Değişimi" value={newName} onChange={e => setNewName(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Süre (saat)</Label>
+                <Input type="number" step="0.25" min="0.25" placeholder="1" value={newHours} onChange={e => setNewHours(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Saat Ücreti (TL) <span className="text-red-500">*</span></Label>
+                <Input type="number" step="0.01" min="0" placeholder="5125" value={newRate} onChange={e => setNewRate(e.target.value)} />
+              </div>
+            </div>
+            {newHours && newRate && !isNaN(parseFloat(newHours)) && !isNaN(parseFloat(newRate)) && (
+              <p className="text-sm text-amber-700 bg-amber-50 rounded px-3 py-2 font-medium">
+                Toplam: {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(parseFloat(newHours) * parseFloat(newRate))}
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setNewOpen(false)}>İptal</Button>
+              <Button className="bg-amber-600 hover:bg-amber-700" onClick={handleNewSave} disabled={newSaving}>
+                {newSaving ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Kaydediliyor...</> : <><Plus className="h-4 w-4 mr-1" /> Kaydet</>}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editItem} onOpenChange={(v) => !v && setEditItem(null)}>
         <DialogContent className="max-w-md">
