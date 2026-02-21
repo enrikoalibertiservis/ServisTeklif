@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { generateQuoteNo } from "@/lib/utils"
+import { generateQuoteNo, toUpperTR } from "@/lib/utils"
 
 interface CreateQuoteInput {
   brandId: string
@@ -178,6 +178,7 @@ export async function addQuoteItem(
     data: {
       quoteId,
       ...item,
+      name: toUpperTR(item.name),
       discountPct: 0,
       discountAmount: 0,
       durationHours: item.durationHours ?? null,

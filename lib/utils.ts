@@ -20,6 +20,11 @@ export function formatNumber(num: number, decimals = 2): string {
   }).format(num)
 }
 
+/** Türkçe karakterleri doğru şekilde büyük harfe çevirir (i→İ, ı→I, ş→Ş vb.) */
+export function toUpperTR(str: string): string {
+  return str.toLocaleUpperCase("tr-TR")
+}
+
 export function generateQuoteNo(): string {
   const now = new Date()
   const y = now.getFullYear().toString().slice(-2)

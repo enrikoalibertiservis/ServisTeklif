@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { toUpperTR } from "@/lib/utils"
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
   if (existing) return NextResponse.json({ error: `'${partNo}' parça kodu zaten kayıtlı` }, { status: 409 })
 
   const created = await prisma.part.create({
-    data: { brandId, partNo: partNo.trim(), name: name.trim(), unitPrice },
+    data: { brandId, partNo: partNo.trim(), name: toUpperTR(name.trim()), unitPrice },
   })
   return NextResponse.json(created, { status: 201 })
 }
@@ -78,9 +79,9 @@ export async function PUT(req: NextRequest) {
   const updated = await prisma.part.update({
     where: { id },
     data: {
-      ...(partNo    !== undefined ? { partNo }                        : {}),
-      ...(name      !== undefined ? { name }                          : {}),
-      ...(unitPrice !== undefined ? { unitPrice, validFrom: new Date() } : {}),
+      ...(partNo    !== undefined ? { partNo }                                        : {}),
+      ...(name      !== undefined ? { name: toUpperTR(name) }                         : {}),
+      ...(unitPrice !== undefined ? { unitPrice, validFrom: new Date() }              : {}),
     },
   })
 

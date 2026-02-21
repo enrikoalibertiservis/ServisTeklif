@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { toUpperTR } from "@/lib/utils"
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
     data: {
       brandId,
       operationCode: operationCode.trim(),
-      name: name.trim(),
+      name: toUpperTR(name.trim()),
       durationHours: durationHours ?? 1,
       hourlyRate,
       totalPrice: hourlyRate * (durationHours ?? 1),
@@ -87,7 +88,7 @@ export async function PUT(req: NextRequest) {
   const updated = await prisma.laborOperation.update({
     where: { id },
     data: {
-      ...(name !== undefined ? { name } : {}),
+      ...(name !== undefined ? { name: toUpperTR(name) } : {}),
       ...(hourlyRate !== undefined ? { hourlyRate, validFrom: new Date() } : {}),
       ...(totalPrice !== undefined ? { totalPrice } : {}),
     },

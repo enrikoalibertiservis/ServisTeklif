@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { toUpperTR } from "@/lib/utils"
 
 interface ImportResult {
   added: number
@@ -36,7 +37,7 @@ export async function importParts(
       result.errorDetails.push(`Satır ${i + 2}: Fiyat geçersiz (${row.unitPrice})`)
       continue
     }
-    validRows.push({ idx: i, partNo: row.partNo.trim(), name: row.name?.trim() || "İsimsiz Parça", unitPrice: row.unitPrice })
+    validRows.push({ idx: i, partNo: row.partNo.trim(), name: toUpperTR(row.name?.trim() || "İSİMSİZ PARÇA"), unitPrice: row.unitPrice })
   }
 
   const BATCH = 200
@@ -59,7 +60,7 @@ export async function importParts(
         updateOps.push(
           prisma.part.update({
             where: { id: ex.id },
-            data: { name: row.name || ex.name, unitPrice: row.unitPrice, validFrom: new Date() },
+            data: { name: toUpperTR(row.name || ex.name), unitPrice: row.unitPrice, validFrom: new Date() },
           })
         )
         result.updated++
@@ -120,7 +121,7 @@ export async function importLabor(
     validRows.push({
       idx: i,
       operationCode: row.operationCode.trim(),
-      name: row.name?.trim() || "İsimsiz Operasyon",
+      name: toUpperTR(row.name?.trim() || "İSİMSİZ OPERASYON"),
       durationHours: row.durationHours,
       hourlyRate: row.hourlyRate,
       totalPrice: row.totalPrice,
@@ -148,7 +149,7 @@ export async function importLabor(
           prisma.laborOperation.update({
             where: { id: ex.id },
             data: {
-              name: row.name || ex.name,
+              name: toUpperTR(row.name || ex.name),
               durationHours: row.durationHours,
               hourlyRate: row.hourlyRate,
               totalPrice: row.totalPrice ?? null,
