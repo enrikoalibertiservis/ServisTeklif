@@ -29,7 +29,7 @@ async function loadPdfMake(): Promise<any> {
   return _pdfMake
 }
 
-export async function exportQuotePdf(quote: any, campaign?: { score: number; scoreLabel: string; suggestedProducts: { name: string; price?: number }[]; message: string } | null) {
+export async function exportQuotePdf(quote: any, campaign?: { suggestedProducts: { name: string; price?: number }[]; message: string } | null) {
   const pdfMake = await loadPdfMake()
 
   const partItems = quote.items?.filter((i: any) => i.itemType === "PART") || []
@@ -275,35 +275,17 @@ export async function exportQuotePdf(quote: any, campaign?: { score: number; sco
           margin: [10, -33, 0, 20] as [number, number, number, number],
         },
         {
-          columns: [
+          stack: [
+            { text: "KİŞİSEL KAMPANYA METNİ", fontSize: 8, color: "#888888", bold: true, margin: [0, 0, 0, 6] as [number, number, number, number] },
             {
-              width: 120,
-              stack: [
-                { text: "SATIN ALMA SKORU", fontSize: 8, color: "#888888", bold: true },
-                { text: campaign.score.toString(), fontSize: 36, bold: true, color: "#7c3aed", margin: [0, 4, 0, 0] as [number, number, number, number] },
-                {
-                  text: campaign.scoreLabel,
-                  fontSize: 10,
-                  bold: true,
-                  color: campaign.score >= 60 ? "#16a34a" : campaign.score >= 40 ? "#d97706" : "#dc2626",
-                },
-              ],
-            },
-            {
-              width: "*",
-              stack: [
-                { text: "KİŞİSEL KAMPANYA METNİ", fontSize: 8, color: "#888888", bold: true, margin: [0, 0, 0, 6] as [number, number, number, number] },
-                {
-                  text: campaign.message,
-                  fontSize: 10,
-                  color: "#1f2937",
-                  lineHeight: 1.5,
-                  italics: true,
-                },
-              ],
+              text: campaign.message,
+              fontSize: 11,
+              color: "#1f2937",
+              lineHeight: 1.6,
+              italics: true,
             },
           ],
-          margin: [0, 10, 0, 20] as [number, number, number, number],
+          margin: [0, 12, 0, 20] as [number, number, number, number],
         },
         ...(campaign.suggestedProducts.length > 0 ? [
           { text: "ÖNERİLEN OTO KORUMA ÜRÜNLERİ", fontSize: 10, bold: true, color: "#0f766e", margin: [0, 0, 0, 8] as [number, number, number, number] },
