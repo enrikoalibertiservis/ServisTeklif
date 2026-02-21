@@ -356,9 +356,9 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
                   <span className="text-slate-400 text-xs">KDV (%{result.taxRate})</span>
                   <span className="text-slate-500 text-xs tabular-nums">{fmt(result.taxAmount)}</span>
                 </div>
-                <div className="flex justify-between items-center px-4 py-4 bg-emerald-100 border-t border-emerald-200">
-                  <span className="font-semibold text-emerald-900 text-sm">Genel Toplam</span>
-                  <span className="font-extrabold text-emerald-800 text-xl tabular-nums">{fmt(result.grandTotal)}</span>
+                <div className="flex justify-between items-center px-4 py-4 border-t border-slate-200">
+                  <span className="font-semibold text-slate-700 text-base">Genel Toplam</span>
+                  <span className="font-extrabold text-slate-900 text-2xl tabular-nums">{fmt(result.grandTotal)}</span>
                 </div>
               </div>
 
