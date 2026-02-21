@@ -241,7 +241,7 @@ export default function QuoteDetailPage() {
             disabled={exporting}
             onClick={async () => {
               setExporting(true)
-              try { await exportQuotePdf(quote, includeCampaignInPdf ? campaignResult : null) }
+              try { await exportQuotePdf(quote, includeCampaignInPdf && campaignResult ? { ...campaignResult, grandTotal: quote.grandTotal } : null) }
               catch (err: any) { toast({ title: "PDF hatası", description: err.message, variant: "destructive" }) }
               finally { setExporting(false) }
             }}

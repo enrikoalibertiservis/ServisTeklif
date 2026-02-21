@@ -464,6 +464,14 @@ export function AIOpportunityPanel({
           {/* Sonuç */}
           {campaignResult && (
             <div className="space-y-4 rounded-xl border border-purple-200 bg-white/70 p-4">
+              {/* Toplam Teklif Tutarı */}
+              <div className="flex items-center justify-between rounded-lg bg-purple-50 border border-purple-200 px-4 py-2.5">
+                <span className="text-xs font-medium text-purple-700">Bu Bakımın Toplam Tutarı</span>
+                <span className="text-lg font-bold text-purple-800">
+                  ₺{grandTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
               <ScoreBadge
                 score={campaignResult.score}
                 label={campaignResult.scoreLabel}
