@@ -254,87 +254,114 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
         )}
 
         {/* Sonuç */}
-        {result && !loading && (
-          <div className="space-y-3">
-            <div className="rounded-lg border bg-white overflow-hidden">
+        {result && !loading && (() => {
+          const partItems = result.items.filter(i => i.itemType === "PART")
+          const laborItems = result.items.filter(i => i.itemType === "LABOR")
+          return (
+            <div className="space-y-3">
               {/* Parçalar */}
-              {result.items.filter(i => i.itemType === "PART").length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 px-3 py-2 bg-cyan-50 border-b">
-                    <Package className="h-3.5 w-3.5 text-cyan-600" />
-                    <span className="text-base font-bold text-cyan-700 uppercase tracking-wide">Parçalar</span>
+              {partItems.length > 0 && (
+                <div className="rounded-lg border border-cyan-200 overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2.5 bg-cyan-50 border-b-2 border-cyan-200">
+                    <div className="flex items-center gap-1.5">
+                      <Package className="h-4 w-4 text-cyan-600" />
+                      <span className="text-sm font-bold text-cyan-800 uppercase tracking-wide">Parçalar</span>
+                      <span className="text-xs text-cyan-500 font-medium ml-1">({partItems.length})</span>
+                    </div>
+                    <span className="text-sm font-bold text-cyan-700 tabular-nums">{fmt(result.partsSubtotal)}</span>
                   </div>
-                  {result.items.filter(i => i.itemType === "PART").map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between px-3 py-2 text-sm border-b last:border-0 hover:bg-muted/30">
-                      <div className="flex-1 min-w-0">
-                        <span className="truncate block">{item.name}</span>
-                        <span className="text-xs text-muted-foreground">{item.referenceCode} × {item.quantity}</span>
+                  {partItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-center gap-2 px-0 py-2 text-sm border-b last:border-0 ${
+                        idx % 2 === 0 ? "bg-white" : "bg-slate-50/70"
+                      }`}
+                    >
+                      <div className="w-1 self-stretch rounded-r bg-cyan-400 shrink-0" />
+                      <span className="text-[11px] text-slate-400 font-mono w-5 text-right shrink-0">{idx + 1}</span>
+                      <div className="flex-1 min-w-0 pr-1">
+                        <span className="block truncate font-medium text-slate-800">{item.name}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[11px] font-mono text-slate-400">{item.referenceCode}</span>
+                          {item.quantity > 1 && (
+                            <span className="inline-flex items-center rounded bg-cyan-100 text-cyan-700 text-[10px] font-bold px-1.5 py-0">
+                              ×{item.quantity}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-medium ml-3 shrink-0">{fmt(item.totalPrice)}</span>
+                      <span className="font-semibold text-slate-900 tabular-nums pr-3 shrink-0">{fmt(item.totalPrice)}</span>
                     </div>
                   ))}
                 </div>
               )}
 
               {/* İşçilik */}
-              {result.items.filter(i => i.itemType === "LABOR").length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border-b">
-                    <Wrench className="h-3.5 w-3.5 text-amber-600" />
-                    <span className="text-base font-bold text-amber-700 uppercase tracking-wide">İşçilik</span>
+              {laborItems.length > 0 && (
+                <div className="rounded-lg border border-amber-200 overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2.5 bg-amber-50 border-b-2 border-amber-200">
+                    <div className="flex items-center gap-1.5">
+                      <Wrench className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-bold text-amber-800 uppercase tracking-wide">İşçilik</span>
+                      <span className="text-xs text-amber-500 font-medium ml-1">({laborItems.length})</span>
+                    </div>
+                    <span className="text-sm font-bold text-amber-700 tabular-nums">{fmt(result.laborSubtotal)}</span>
                   </div>
-                  {result.items.filter(i => i.itemType === "LABOR").map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between px-3 py-2 text-sm border-b last:border-0 hover:bg-muted/30">
-                      <div className="flex-1 min-w-0">
-                        <span className="truncate block">{item.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {item.referenceCode}
-                          {item.durationHours ? ` · ${item.durationHours} sa` : ""}
-                        </span>
+                  {laborItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-center gap-2 px-0 py-2 text-sm border-b last:border-0 ${
+                        idx % 2 === 0 ? "bg-white" : "bg-slate-50/70"
+                      }`}
+                    >
+                      <div className="w-1 self-stretch rounded-r bg-amber-400 shrink-0" />
+                      <span className="text-[11px] text-slate-400 font-mono w-5 text-right shrink-0">{idx + 1}</span>
+                      <div className="flex-1 min-w-0 pr-1">
+                        <span className="block truncate font-medium text-slate-800">{item.name}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[11px] font-mono text-slate-400">{item.referenceCode}</span>
+                          {item.durationHours && (
+                            <span className="inline-flex items-center rounded bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0">
+                              {item.durationHours} saat
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-medium ml-3 shrink-0">{fmt(item.totalPrice)}</span>
+                      <span className="font-semibold text-slate-900 tabular-nums pr-3 shrink-0">{fmt(item.totalPrice)}</span>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* Özet */}
-            <div className="rounded-lg border bg-white divide-y text-sm">
-              <div className="flex justify-between px-3 py-2">
-                <span className="text-muted-foreground">Parça Toplamı</span>
-                <span>{fmt(result.partsSubtotal)}</span>
+              {/* Özet */}
+              <div className="rounded-lg border overflow-hidden">
+                <div className="flex justify-between items-center px-4 py-2.5 text-sm border-b bg-slate-50">
+                  <span className="text-slate-500">Ara Toplam</span>
+                  <span className="font-medium text-slate-700 tabular-nums">{fmt(result.subtotal)}</span>
+                </div>
+                <div className="flex justify-between items-center px-4 py-2 text-sm border-b bg-white">
+                  <span className="text-slate-400 text-xs">KDV (%{result.taxRate})</span>
+                  <span className="text-slate-500 text-xs tabular-nums">{fmt(result.taxAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center px-4 py-4 bg-emerald-600">
+                  <span className="font-bold text-white text-base">Genel Toplam</span>
+                  <span className="font-extrabold text-white text-xl tabular-nums">{fmt(result.grandTotal)}</span>
+                </div>
               </div>
-              <div className="flex justify-between px-3 py-2">
-                <span className="text-muted-foreground">İşçilik Toplamı</span>
-                <span>{fmt(result.laborSubtotal)}</span>
-              </div>
-              <div className="flex justify-between px-3 py-2">
-                <span className="text-muted-foreground">Ara Toplam</span>
-                <span>{fmt(result.subtotal)}</span>
-              </div>
-              <div className="flex justify-between px-3 py-2">
-                <span className="text-muted-foreground">KDV (%{result.taxRate})</span>
-                <span>{fmt(result.taxAmount)}</span>
-              </div>
-              <div className="flex justify-between px-3 py-3 font-bold text-base bg-muted/30">
-                <span>Genel Toplam</span>
-                <span className="text-primary">{fmt(result.grandTotal)}</span>
-              </div>
-            </div>
 
-            {/* Teklif Oluştur Butonu */}
-            <Link
-              href={`/dashboard/quotes/new?brandId=${brandId}&modelId=${modelId}&subModelId=${subModelId}&templateId=${templateId}`}
-            >
-              <Button className="w-full" size="sm">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Bu Fiyatla Teklif Oluştur
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
-        )}
+              {/* Teklif Oluştur Butonu */}
+              <Link
+                href={`/dashboard/quotes/new?brandId=${brandId}&modelId=${modelId}&subModelId=${subModelId}&templateId=${templateId}`}
+              >
+                <Button className="w-full" size="sm">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Bu Fiyatla Teklif Oluştur
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          )
+        })()}
 
         {/* Yönlendirici boş durum */}
         {!loading && !result && !error && (
