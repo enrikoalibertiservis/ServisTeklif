@@ -29,7 +29,7 @@ async function loadPdfMake(): Promise<any> {
   return _pdfMake
 }
 
-export async function exportQuotePdf(quote: any) {
+export async function exportQuotePdf(quote: any, campaign?: { score: number; scoreLabel: string; suggestedProducts: { name: string; price?: number }[]; message: string } | null) {
   const pdfMake = await loadPdfMake()
 
   const partItems = quote.items?.filter((i: any) => i.itemType === "PART") || []
@@ -258,6 +258,78 @@ export async function exportQuotePdf(quote: any) {
           },
         ],
       },
+
+      // AI Fırsat Sayfası (opsiyonel)
+      ...(campaign ? [
+        { text: "", pageBreak: "before" },
+        {
+          canvas: [
+            { type: "rect", x: 0, y: 0, w: 515, h: 40, r: 4, color: "#7c3aed" },
+          ],
+        },
+        {
+          text: "ÖZEL KAMPANYA FIRSATI",
+          fontSize: 18,
+          bold: true,
+          color: "#ffffff",
+          margin: [10, -33, 0, 20] as [number, number, number, number],
+        },
+        {
+          columns: [
+            {
+              width: 120,
+              stack: [
+                { text: "SATIN ALMA SKORU", fontSize: 8, color: "#888888", bold: true },
+                { text: campaign.score.toString(), fontSize: 36, bold: true, color: "#7c3aed", margin: [0, 4, 0, 0] as [number, number, number, number] },
+                {
+                  text: campaign.scoreLabel,
+                  fontSize: 10,
+                  bold: true,
+                  color: campaign.score >= 60 ? "#16a34a" : campaign.score >= 40 ? "#d97706" : "#dc2626",
+                },
+              ],
+            },
+            {
+              width: "*",
+              stack: [
+                { text: "KİŞİSEL KAMPANYA METNİ", fontSize: 8, color: "#888888", bold: true, margin: [0, 0, 0, 6] as [number, number, number, number] },
+                {
+                  text: campaign.message,
+                  fontSize: 10,
+                  color: "#1f2937",
+                  lineHeight: 1.5,
+                  italics: true,
+                },
+              ],
+            },
+          ],
+          margin: [0, 10, 0, 20] as [number, number, number, number],
+        },
+        ...(campaign.suggestedProducts.length > 0 ? [
+          { text: "ÖNERİLEN OTO KORUMA ÜRÜNLERİ", fontSize: 10, bold: true, color: "#0f766e", margin: [0, 0, 0, 8] as [number, number, number, number] },
+          {
+            table: {
+              widths: ["*", 100],
+              body: [
+                [
+                  { text: "Ürün Adı", style: "tableHeader" },
+                  { text: "Fiyat", style: "tableHeader", alignment: "right" },
+                ],
+                ...campaign.suggestedProducts.map(p => [
+                  { text: p.name, fontSize: 9 },
+                  { text: p.price ? fmtCurrency(p.price) : "—", fontSize: 9, alignment: "right" },
+                ]),
+              ],
+            },
+            layout: {
+              hLineWidth: () => 0.5,
+              vLineWidth: () => 0,
+              hLineColor: () => "#d0d0d0",
+              fillColor: (rowIndex: number) => rowIndex === 0 ? "#0f766e" : null,
+            },
+          },
+        ] : []),
+      ] : []),
     ],
 
     // Footer

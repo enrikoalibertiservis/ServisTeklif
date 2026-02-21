@@ -18,6 +18,8 @@ import { formatCurrency } from "@/lib/utils"
 import { Trash2, Plus, Search, FileDown, FileSpreadsheet, Save, Check, Loader2, Pencil, User, Clock, PenLine, X } from "lucide-react"
 import { PartSearchDialog } from "@/components/part-search-dialog"
 import { exportQuotePdf, exportQuoteExcel } from "@/lib/export"
+import { AIOpportunityPanel } from "@/components/ai-opportunity-panel"
+import type { CampaignResponse } from "@/app/api/ai/campaign/route"
 
 export default function QuoteDetailPage() {
   const params = useParams()
@@ -47,6 +49,10 @@ export default function QuoteDetailPage() {
   const [mPartPrice, setMPartPrice] = useState("")
   const [mPartQty, setMPartQty]   = useState("1")
   const [mPartSaving, setMPartSaving] = useState(false)
+
+  // AI Fırsat Paneli
+  const [campaignResult, setCampaignResult] = useState<CampaignResponse | null>(null)
+  const [includeCampaignInPdf, setIncludeCampaignInPdf] = useState(false)
 
   // Manuel işçilik ekleme formu
   const [manualLaborOpen, setManualLaborOpen] = useState(false)
@@ -235,7 +241,7 @@ export default function QuoteDetailPage() {
             disabled={exporting}
             onClick={async () => {
               setExporting(true)
-              try { await exportQuotePdf(quote) }
+              try { await exportQuotePdf(quote, includeCampaignInPdf ? campaignResult : null) }
               catch (err: any) { toast({ title: "PDF hatası", description: err.message, variant: "destructive" }) }
               finally { setExporting(false) }
             }}
@@ -625,6 +631,16 @@ export default function QuoteDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── AI Fırsat Paneli ───────────────────────────────────── */}
+      <AIOpportunityPanel
+        quoteId={quote.id}
+        grandTotal={quote.grandTotal}
+        campaignResult={campaignResult}
+        onCampaignResult={setCampaignResult}
+        includeCampaignInPdf={includeCampaignInPdf}
+        onIncludePdfChange={setIncludeCampaignInPdf}
+      />
 
       <PartSearchDialog
         open={searchOpen}

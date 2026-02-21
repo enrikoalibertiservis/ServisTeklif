@@ -18,6 +18,7 @@ import {
   ClipboardList,
   Grid3X3,
   FileCog,
+  Shield,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -82,6 +83,12 @@ const adminGroups: NavGroup[] = [
       { href: "/dashboard/admin/templates",        label: "Bakım Şablonları", icon: ClipboardList, color: "text-indigo-500" },
       { href: "/dashboard/admin/template-editor",  label: "Şablon Editörü",   icon: FileCog,       color: "text-violet-500" },
       { href: "/dashboard/admin/import",           label: "Excel İçe Aktar",  icon: Upload,        color: "text-teal-500"   },
+    ],
+  },
+  {
+    title: "Oto Koruma",
+    items: [
+      { href: "/dashboard/admin/oto-koruma", label: "Oto Koruma Ürünleri", icon: Shield, color: "text-emerald-500" },
     ],
   },
   {
