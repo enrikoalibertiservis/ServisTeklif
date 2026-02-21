@@ -10,7 +10,7 @@ import {
 } from "@/app/actions/vehicle"
 import { previewTemplatePrice } from "@/app/actions/quote"
 import {
-  Zap, Shield, Gauge, Wrench, Car, ChevronRight,
+  Zap, Shield, Gauge, Wrench, Car, ChevronRight, ChevronDown,
   Loader2, RotateCcw, PlusCircle, Package,
 } from "lucide-react"
 import Link from "next/link"
@@ -45,6 +45,9 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
   const [loading, setLoading]   = useState(false)
   const [result, setResult]     = useState<PreviewResult | null>(null)
   const [error, setError]       = useState("")
+
+  const [partsOpen, setPartsOpen]   = useState(false)
+  const [laborOpen, setLaborOpen]   = useState(false)
 
   // Dışarıya aktif/pasif durumu bildir
   useEffect(() => {
@@ -262,15 +265,20 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
               {/* Parçalar */}
               {partItems.length > 0 && (
                 <div className="rounded-lg border border-cyan-200 overflow-hidden">
-                  <div className="flex items-center justify-between px-3 py-2.5 bg-cyan-50 border-b-2 border-cyan-200">
+                  <button
+                    type="button"
+                    onClick={() => setPartsOpen(o => !o)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-cyan-50 border-b-2 border-cyan-200 cursor-pointer hover:bg-cyan-100/60 transition-colors"
+                  >
                     <div className="flex items-center gap-1.5">
+                      <ChevronDown className={`h-4 w-4 text-cyan-500 transition-transform ${partsOpen ? "rotate-0" : "-rotate-90"}`} />
                       <Package className="h-4 w-4 text-cyan-600" />
                       <span className="text-sm font-bold text-cyan-800 uppercase tracking-wide">Parçalar</span>
                       <span className="text-xs text-cyan-500 font-medium ml-1">({partItems.length})</span>
                     </div>
                     <span className="text-sm font-bold text-cyan-700 tabular-nums">{fmt(result.partsSubtotal)}</span>
-                  </div>
-                  {partItems.map((item, idx) => (
+                  </button>
+                  {partsOpen && partItems.map((item, idx) => (
                     <div
                       key={idx}
                       className={`flex items-center gap-2 px-0 py-2 text-sm border-b last:border-0 ${
@@ -299,15 +307,20 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
               {/* İşçilik */}
               {laborItems.length > 0 && (
                 <div className="rounded-lg border border-amber-200 overflow-hidden">
-                  <div className="flex items-center justify-between px-3 py-2.5 bg-amber-50 border-b-2 border-amber-200">
+                  <button
+                    type="button"
+                    onClick={() => setLaborOpen(o => !o)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-amber-50 border-b-2 border-amber-200 cursor-pointer hover:bg-amber-100/60 transition-colors"
+                  >
                     <div className="flex items-center gap-1.5">
+                      <ChevronDown className={`h-4 w-4 text-amber-500 transition-transform ${laborOpen ? "rotate-0" : "-rotate-90"}`} />
                       <Wrench className="h-4 w-4 text-amber-600" />
                       <span className="text-sm font-bold text-amber-800 uppercase tracking-wide">İşçilik</span>
                       <span className="text-xs text-amber-500 font-medium ml-1">({laborItems.length})</span>
                     </div>
                     <span className="text-sm font-bold text-amber-700 tabular-nums">{fmt(result.laborSubtotal)}</span>
-                  </div>
-                  {laborItems.map((item, idx) => (
+                  </button>
+                  {laborOpen && laborItems.map((item, idx) => (
                     <div
                       key={idx}
                       className={`flex items-center gap-2 px-0 py-2 text-sm border-b last:border-0 ${
