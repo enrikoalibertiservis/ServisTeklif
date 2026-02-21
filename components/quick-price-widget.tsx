@@ -356,9 +356,9 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
                   <span className="text-slate-400 text-xs">KDV (%{result.taxRate})</span>
                   <span className="text-slate-500 text-xs tabular-nums">{fmt(result.taxAmount)}</span>
                 </div>
-                <div className="flex justify-between items-center px-4 py-4 bg-slate-800">
-                  <span className="font-semibold text-slate-300 text-sm">Genel Toplam</span>
-                  <span className="font-extrabold text-emerald-400 text-xl tabular-nums">{fmt(result.grandTotal)}</span>
+                <div className="flex justify-between items-center px-4 py-4 bg-emerald-100 border-t border-emerald-200">
+                  <span className="font-semibold text-emerald-900 text-sm">Genel Toplam</span>
+                  <span className="font-extrabold text-emerald-800 text-xl tabular-nums">{fmt(result.grandTotal)}</span>
                 </div>
               </div>
 
@@ -367,10 +367,10 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
                 <Link
                   href={`/dashboard/quotes/new?brandId=${brandId}&modelId=${modelId}&subModelId=${subModelId}&templateId=${templateId}`}
                 >
-                  <button className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white font-bold text-sm py-3.5 px-5 shadow-md shadow-slate-200 transition-all">
-                    <PlusCircle className="h-5 w-5 shrink-0 text-emerald-400" />
+                  <button className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-orange-100 hover:bg-orange-200 border border-orange-300 text-orange-900 font-bold text-sm py-3.5 px-5 transition-all">
+                    <PlusCircle className="h-5 w-5 shrink-0 text-orange-500" />
                     Bu Fiyatla Teklif Oluştur
-                    <ChevronRight className="h-4 w-4 shrink-0 opacity-50" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-orange-400" />
                   </button>
                 </Link>
               </div>
