@@ -116,7 +116,7 @@ export default function ImportPage() {
         })
       }
     })
-  }, [toast, selectedBrandId])
+  }, [toast, selectedBrandIds])
 
   const loadHistory = useCallback(() => {
     startTransition(async () => {
