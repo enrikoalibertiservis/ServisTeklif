@@ -4,10 +4,12 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export type CustomerProfile = {
+  profileText?: string   // Yeni format: tüm profil tek okunabilir metin olarak gelir
+  // Eski alanlar (geriye dönük uyumluluk)
   age?: number
   occupation?: string
-  gender?: "male" | "female" | "other"
-  vehiclePriceRange?: "budget" | "mid" | "premium" | "luxury"
+  gender?: string
+  vehiclePriceRange?: string
   additionalNote?: string
 }
 
@@ -25,19 +27,6 @@ export type CampaignResponse = {
   whatsappText: string
 }
 
-const VEHICLE_PRICE_LABELS: Record<string, string> = {
-  budget: "Ekonomik segment (0-500K TL)",
-  mid: "Orta segment (500K-1M TL)",
-  premium: "Premium segment (1M-2M TL)",
-  luxury: "Lüks segment (2M+ TL)",
-}
-
-const GENDER_LABELS: Record<string, string> = {
-  male: "Erkek",
-  female: "Kadın",
-  other: "Belirtilmemiş",
-}
-
 function buildPrompt(
   profile: CustomerProfile,
   grandTotal: number,
@@ -47,30 +36,38 @@ function buildPrompt(
     .map(p => `- ${p.name}${p.category ? ` (${p.category})` : ""}${p.price > 0 ? `: ₺${p.price.toLocaleString("tr-TR")}` : ""}${p.description ? ` — ${p.description}` : ""}`)
     .join("\n")
 
-  const profileLines = [
-    profile.age ? `Yaş: ${profile.age}` : null,
-    profile.occupation ? `Meslek: ${profile.occupation}` : null,
-    profile.gender ? `Cinsiyet: ${GENDER_LABELS[profile.gender]}` : null,
-    profile.vehiclePriceRange ? `Araç fiyat segmenti: ${VEHICLE_PRICE_LABELS[profile.vehiclePriceRange]}` : null,
-    profile.additionalNote ? `Ek not: ${profile.additionalNote}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n")
+  const profileSection = profile.profileText
+    ? profile.profileText
+    : [
+        profile.vehiclePriceRange ? `Araç fiyat segmenti: ${profile.vehiclePriceRange}` : null,
+        profile.age               ? `Tahmini yaş: ${profile.age}`                        : null,
+        profile.occupation        ? `Meslek: ${profile.occupation}`                       : null,
+        profile.gender            ? `Cinsiyet: ${profile.gender}`                         : null,
+        profile.additionalNote    ? `Ek not: ${profile.additionalNote}`                   : null,
+      ].filter(Boolean).join("\n")
 
-  return `Sen bir otomotiv servis satış uzmanısın. Aşağıdaki müşteri bilgileri ve oto koruma ürün listesine göre kişiselleştirilmiş bir kampanya fırsatı oluştur.
+  return `Sen bir otomotiv servis danışmanısın. Aşağıdaki müşteri profili ve oto koruma ürün listesine göre kişiselleştirilmiş satış fırsatı oluştur.
 
-MÜŞTERİ PROFİLİ:
-${profileLines || "Bilgi girilmemiş"}
+MÜŞTERİ & ARAÇ PROFİLİ:
+${profileSection || "Bilgi girilmemiş"}
 
 BAKIMDA ÖDENEN TUTAR: ₺${grandTotal.toLocaleString("tr-TR")}
+
+SKOR HESAPLAMA KURALLARI:
+- Araç fiyat segmenti en güçlü etkendir (2M+ → yüksek skor)
+- Sıfır veya 1-2 yaş araç → koruma ihtiyacı yüksek → skor artı
+- Günlük aktif kullanım → çok değerlendirme anlamına gelir → skor artı
+- Şehir içi/ticari yoğun → kir ve çizik riski yüksek → skor artı
+- Premium/kalite odaklı müşteri → satın alma ihtimali yüksek → skor artı
+- Fiyat hassas müşteri → skor düşürür ama uygun fiyatlı ürün önerilebilir
 
 OTO KORUMA ÜRÜNLERİ (mevcut liste):
 ${productList || "Ürün listesi boş"}
 
 GÖREVIN:
-1. Bu müşteri için 0-100 arası satın alma skoru belirle. Yüksek gelir/araç segmenti, bakım harcaması yüksekliği ve meslek satın alma ihtimalini artırır.
-2. En uygun 1-2 oto koruma ürünü öner (listeden seç).
-3. Müşteriye "fırsatı kaçırma" hissi yaratacak, samimi, kısa (2-3 cümle) ve ikna edici Türkçe bir kampanya mesajı yaz. Müşterinin profiline göre kişiselleştir.
+1. Yukarıdaki kurallara göre 0-100 arası satın alma skoru belirle.
+2. Müşteri profiline en uygun 1-2 oto koruma ürünü öner (listeden seç, profile göre eşleştir).
+3. "Fırsatı kaçırma" hissi yaratan, samimi ve kısa (2-3 cümle) Türkçe kampanya metni yaz. Müşterinin profilini yansıt, jenerik olmasın.
 
 YANIT FORMATI (sadece geçerli JSON, başka hiçbir şey yazma):
 {

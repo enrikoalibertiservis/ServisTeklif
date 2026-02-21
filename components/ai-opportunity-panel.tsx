@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -39,19 +38,62 @@ interface AIOpportunityPanelProps {
 }
 
 type Profile = {
-  age: string
-  occupation: string
-  gender: string
   vehiclePriceRange: string
+  vehicleAge: string
+  usageFrequency: string
+  usageType: string
+  decisionProfile: string
   additionalNote: string
 }
 
 const EMPTY_PROFILE: Profile = {
-  age: "",
-  occupation: "",
-  gender: "other",
-  vehiclePriceRange: "mid",
+  vehiclePriceRange: "",
+  vehicleAge: "",
+  usageFrequency: "",
+  usageType: "",
+  decisionProfile: "",
   additionalNote: "",
+}
+
+const PROFILE_OPTIONS = {
+  vehiclePriceRange: [
+    { value: "0-500k",  label: "0 – 500K TL" },
+    { value: "500k-1m", label: "500K – 1M TL" },
+    { value: "1m-2m",   label: "1M – 2M TL" },
+    { value: "2m+",     label: "2M+ TL" },
+  ],
+  vehicleAge: [
+    { value: "0km",   label: "0 km (Sıfır)" },
+    { value: "1-2y",  label: "1 – 2 Yıl" },
+    { value: "3-5y",  label: "3 – 5 Yıl" },
+    { value: "5y+",   label: "5 Yıl ve üzeri" },
+  ],
+  usageFrequency: [
+    { value: "daily",   label: "Günlük aktif" },
+    { value: "weekly",  label: "Haftalık" },
+    { value: "rarely",  label: "Nadiren" },
+  ],
+  usageType: [
+    { value: "city",        label: "Şehir içi" },
+    { value: "highway",     label: "Uzun yol" },
+    { value: "mixed",       label: "Karma" },
+    { value: "commercial",  label: "Ticari yoğun" },
+  ],
+  decisionProfile: [
+    { value: "price",    label: "Fiyat hassas" },
+    { value: "balanced", label: "Dengeli" },
+    { value: "quality",  label: "Kalite odaklı" },
+    { value: "premium",  label: "Premium eğilimli" },
+  ],
+}
+
+const FIELD_LABELS: Record<keyof Profile, string> = {
+  vehiclePriceRange: "Araç Fiyat Segmenti",
+  vehicleAge:        "Araç Yaşı",
+  usageFrequency:    "Kullanım Yoğunluğu",
+  usageType:         "Kullanım Tipi",
+  decisionProfile:   "Müşteri Karar Profili",
+  additionalNote:    "Ek Not",
 }
 
 function ScoreBadge({ score, label }: { score: number; label: string }) {
@@ -60,6 +102,12 @@ function ScoreBadge({ score, label }: { score: number; label: string }) {
     score >= 60 ? "bg-emerald-400" :
     score >= 40 ? "bg-yellow-500" :
     score >= 20 ? "bg-orange-500" : "bg-red-500"
+
+  const textColor =
+    score >= 80 ? "text-green-500" :
+    score >= 60 ? "text-emerald-400" :
+    score >= 40 ? "text-yellow-500" :
+    score >= 20 ? "text-orange-500" : "text-red-500"
 
   return (
     <div className="flex items-center gap-3">
@@ -73,12 +121,7 @@ function ScoreBadge({ score, label }: { score: number; label: string }) {
             strokeWidth="3"
             strokeDasharray={`${score} ${100 - score}`}
             strokeLinecap="round"
-            className={cn(
-              score >= 80 ? "text-green-500" :
-              score >= 60 ? "text-emerald-400" :
-              score >= 40 ? "text-yellow-500" :
-              score >= 20 ? "text-orange-500" : "text-red-500"
-            )}
+            className={textColor}
           />
         </svg>
         <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
@@ -93,6 +136,30 @@ function ScoreBadge({ score, label }: { score: number; label: string }) {
       </div>
     </div>
   )
+}
+
+// Profil etiketlerini okunabilir metne çevir (prompt için)
+function profileToText(profile: Profile): string {
+  const lines: string[] = []
+
+  const priceLabel = PROFILE_OPTIONS.vehiclePriceRange.find(o => o.value === profile.vehiclePriceRange)?.label
+  if (priceLabel) lines.push(`Araç fiyat segmenti: ${priceLabel}`)
+
+  const ageLabel = PROFILE_OPTIONS.vehicleAge.find(o => o.value === profile.vehicleAge)?.label
+  if (ageLabel) lines.push(`Araç yaşı: ${ageLabel}`)
+
+  const freqLabel = PROFILE_OPTIONS.usageFrequency.find(o => o.value === profile.usageFrequency)?.label
+  if (freqLabel) lines.push(`Kullanım yoğunluğu: ${freqLabel}`)
+
+  const typeLabel = PROFILE_OPTIONS.usageType.find(o => o.value === profile.usageType)?.label
+  if (typeLabel) lines.push(`Kullanım tipi: ${typeLabel}`)
+
+  const decLabel = PROFILE_OPTIONS.decisionProfile.find(o => o.value === profile.decisionProfile)?.label
+  if (decLabel) lines.push(`Müşteri karar profili: ${decLabel}`)
+
+  if (profile.additionalNote?.trim()) lines.push(`Ek gözlem: ${profile.additionalNote.trim()}`)
+
+  return lines.join("\n")
 }
 
 export function AIOpportunityPanel({
@@ -110,9 +177,14 @@ export function AIOpportunityPanel({
   const [copied, setCopied] = useState(false)
   const [copiedMsg, setCopiedMsg] = useState(false)
 
-  function set(key: keyof Profile, value: string) {
+  function setField(key: keyof Profile, value: string) {
     setProfile(prev => ({ ...prev, [key]: value }))
   }
+
+  const filledCount = Object.entries(profile)
+    .filter(([k, v]) => k !== "additionalNote" && v !== "")
+    .length
+  const totalRequired = 5
 
   async function generate() {
     setLoading(true)
@@ -123,13 +195,7 @@ export function AIOpportunityPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          profile: {
-            age: profile.age ? parseInt(profile.age) : undefined,
-            occupation: profile.occupation || undefined,
-            gender: profile.gender || undefined,
-            vehiclePriceRange: profile.vehiclePriceRange || undefined,
-            additionalNote: profile.additionalNote || undefined,
-          },
+          profile: { profileText: profileToText(profile) },
           grandTotal,
           quoteId,
         }),
@@ -178,6 +244,11 @@ export function AIOpportunityPanel({
             )}
           </CardTitle>
           <div className="flex items-center gap-2">
+            {!expanded && filledCount > 0 && (
+              <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">
+                {filledCount}/{totalRequired}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
               {expanded ? "Kapat" : "Kampanya Oluştur"}
             </span>
@@ -194,77 +265,146 @@ export function AIOpportunityPanel({
 
       {expanded && (
         <CardContent className="space-y-5 pt-0">
-          {/* Müşteri Profili */}
+          {/* Profil Alanları */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <TrendingUp className="h-3.5 w-3.5" />
-              Müşteri Profili
+              Müşteri &amp; Araç Profili
             </p>
+
             <div className="grid grid-cols-2 gap-3">
+              {/* Araç Fiyat Segmenti */}
               <div className="space-y-1.5">
-                <Label className="text-xs">Tahmini Yaş</Label>
-                <Input
-                  type="number"
-                  min="18"
-                  max="99"
-                  placeholder="ör. 42"
-                  value={profile.age}
-                  onChange={e => set("age", e.target.value)}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Meslek</Label>
-                <Input
-                  placeholder="ör. doktor, esnaf..."
-                  value={profile.occupation}
-                  onChange={e => set("occupation", e.target.value)}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Cinsiyet</Label>
-                <Select value={profile.gender} onValueChange={v => set("gender", v)}>
+                <Label className="text-xs font-semibold text-purple-800">
+                  {FIELD_LABELS.vehiclePriceRange}
+                  <span className="text-red-400 ml-0.5">*</span>
+                </Label>
+                <Select value={profile.vehiclePriceRange} onValueChange={v => setField("vehiclePriceRange", v)}>
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
+                    <SelectValue placeholder="Seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male">Erkek</SelectItem>
-                    <SelectItem value="female">Kadın</SelectItem>
-                    <SelectItem value="other">Belirtilmedi</SelectItem>
+                    {PROFILE_OPTIONS.vehiclePriceRange.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Araç Yaşı */}
               <div className="space-y-1.5">
-                <Label className="text-xs">Araç Fiyat Segmenti</Label>
-                <Select value={profile.vehiclePriceRange} onValueChange={v => set("vehiclePriceRange", v)}>
+                <Label className="text-xs font-semibold text-purple-800">
+                  {FIELD_LABELS.vehicleAge}
+                  <span className="text-red-400 ml-0.5">*</span>
+                </Label>
+                <Select value={profile.vehicleAge} onValueChange={v => setField("vehicleAge", v)}>
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
+                    <SelectValue placeholder="Seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="budget">Ekonomik (&lt;500K TL)</SelectItem>
-                    <SelectItem value="mid">Orta (500K-1M TL)</SelectItem>
-                    <SelectItem value="premium">Premium (1M-2M TL)</SelectItem>
-                    <SelectItem value="luxury">Lüks (2M+ TL)</SelectItem>
+                    {PROFILE_OPTIONS.vehicleAge.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Kullanım Yoğunluğu */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-purple-800">
+                  {FIELD_LABELS.usageFrequency}
+                  <span className="text-red-400 ml-0.5">*</span>
+                </Label>
+                <Select value={profile.usageFrequency} onValueChange={v => setField("usageFrequency", v)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROFILE_OPTIONS.usageFrequency.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Kullanım Tipi */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-purple-800">
+                  {FIELD_LABELS.usageType}
+                  <span className="text-red-400 ml-0.5">*</span>
+                </Label>
+                <Select value={profile.usageType} onValueChange={v => setField("usageType", v)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROFILE_OPTIONS.usageType.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {/* Müşteri Karar Profili – tam genişlik, vurgulu */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Ek Not (opsiyonel)</Label>
-              <Input
-                placeholder="ör. yeni araç aldı, temiz araç tutar, ilk gelişi..."
+              <Label className="text-xs font-semibold text-purple-800 flex items-center gap-1">
+                {FIELD_LABELS.decisionProfile}
+                <span className="text-red-400">*</span>
+                <span className="text-[10px] font-normal text-muted-foreground ml-1">— satış zekâsının temel sinyali</span>
+              </Label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {PROFILE_OPTIONS.decisionProfile.map(o => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setField("decisionProfile", o.value)}
+                    className={cn(
+                      "rounded-lg border-2 px-3 py-2 text-xs font-medium transition-all text-center",
+                      profile.decisionProfile === o.value
+                        ? "border-purple-500 bg-purple-100 text-purple-800"
+                        : "border-muted-foreground/20 bg-background text-muted-foreground hover:border-purple-300 hover:bg-purple-50/50"
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ek Not */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">{FIELD_LABELS.additionalNote} (opsiyonel)</Label>
+              <input
+                type="text"
+                className="w-full h-8 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                placeholder="ör. yeni araç aldı, çok titiz, ilk geliş, uzun süre kullanacak..."
                 value={profile.additionalNote}
-                onChange={e => set("additionalNote", e.target.value)}
-                className="h-8 text-sm"
+                onChange={e => setField("additionalNote", e.target.value)}
               />
+            </div>
+
+            {/* Doluluk göstergesi */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all",
+                    filledCount >= 5 ? "bg-green-500" : filledCount >= 3 ? "bg-yellow-500" : "bg-orange-400"
+                  )}
+                  style={{ width: `${(filledCount / totalRequired) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {filledCount}/{totalRequired} alan dolu
+              </span>
             </div>
           </div>
 
           {/* Üret Butonu */}
           <Button
             onClick={generate}
-            disabled={loading}
+            disabled={loading || filledCount === 0}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white gap-2"
           >
             {loading ? (
@@ -285,10 +425,8 @@ export function AIOpportunityPanel({
           {/* Sonuç */}
           {campaignResult && (
             <div className="space-y-4 rounded-xl border border-purple-200 bg-white/70 p-4">
-              {/* Score */}
               <ScoreBadge score={campaignResult.score} label={campaignResult.scoreLabel} />
 
-              {/* Önerilen Ürünler */}
               {campaignResult.suggestedProducts.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
@@ -310,19 +448,13 @@ export function AIOpportunityPanel({
                 </div>
               )}
 
-              {/* Kampanya Mesajı */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
                     <MessageSquare className="h-3.5 w-3.5 text-purple-500" />
                     Kampanya Metni
                   </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs gap-1 text-muted-foreground"
-                    onClick={copyMessage}
-                  >
+                  <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 text-muted-foreground" onClick={copyMessage}>
                     {copiedMsg ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                     {copiedMsg ? "Kopyalandı" : "Kopyala"}
                   </Button>
@@ -332,7 +464,6 @@ export function AIOpportunityPanel({
                 </div>
               </div>
 
-              {/* PDF ve WhatsApp */}
               <div className="flex items-center gap-3 pt-1">
                 <Button
                   variant="outline"
@@ -352,7 +483,7 @@ export function AIOpportunityPanel({
                       onChange={e => onIncludePdfChange(e.target.checked)}
                       className="rounded"
                     />
-                    PDF'e Ekle
+                    PDF&apos;e Ekle
                   </label>
                 )}
               </div>
