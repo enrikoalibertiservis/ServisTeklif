@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Settings, Save, Bot, Eye, EyeOff, RefreshCw, CheckCircle2 } from "lucide-react"
+import { Settings, Save, Bot, Eye, EyeOff, RefreshCw, CheckCircle2, AlertTriangle, Info } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -126,6 +126,14 @@ export default function SettingsPage() {
 
   const provider = settings.aiProvider || "none"
 
+  // Ollama URL'sinin localhost/127.0.0.1 olup olmadığını kontrol et
+  const ollamaUrl = settings.aiApiUrl || "http://localhost:11434"
+  const isLocalOllama = /localhost|127\.0\.0\.1/.test(ollamaUrl)
+  // Tarayıcı origin'i cloud'da mı çalışıyor?
+  const isCloudDeployment = typeof window !== "undefined" &&
+    !window.location.hostname.includes("localhost") &&
+    !window.location.hostname.includes("127.0.0.1")
+
   return (
     <div className="space-y-6 p-6">
       <div>
@@ -194,6 +202,37 @@ export default function SettingsPage() {
                 )}
               </div>
 
+              {/* Uyarı: Cloud'da localhost Ollama çalışmaz */}
+              {isLocalOllama && isCloudDeployment && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-800 space-y-1">
+                      <p className="font-semibold">Vercel&apos;den localhost Ollama&apos;ya erişilemez</p>
+                      <p>
+                        Uygulama cloud&apos;da (Vercel) çalışıyor. Vercel&apos;in sunucuları sizin bilgisayarınızdaki
+                        <code className="mx-1 bg-amber-100 px-1 rounded">localhost:11434</code>
+                        adresine ulaşamaz.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-6 space-y-1 text-xs text-amber-700">
+                    <p className="font-medium">Çözüm seçenekleri:</p>
+                    <p>① <strong>Ücretsiz cloud AI:</strong> Google Gemini seçin → ücretsiz API key alın</p>
+                    <p>② <strong>Yerel kullanım:</strong> Uygulamayı <code className="bg-amber-100 px-1 rounded">npm run dev</code> ile çalıştırın</p>
+                    <p>③ <strong>Public Ollama:</strong> Ollama&apos;yı dışarıdan erişilebilir bir sunucuya kurun</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Bilgi: Local'de çalışıyor, Ollama OK */}
+              {isLocalOllama && !isCloudDeployment && (
+                <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-700">
+                  <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>Uygulama yerel çalışıyor — localhost Ollama kullanılabilir.</span>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Ollama URL</Label>
                 <div className="flex gap-2">
@@ -208,16 +247,14 @@ export default function SettingsPage() {
                     variant="outline"
                     size="sm"
                     onClick={fetchOllamaModels}
-                    disabled={fetchingModels}
-                    className="shrink-0 border-orange-300 text-orange-700 hover:bg-orange-100"
+                    disabled={fetchingModels || (isLocalOllama && isCloudDeployment)}
+                    title={isLocalOllama && isCloudDeployment ? "Vercel'den localhost'a erişilemez" : ""}
+                    className="shrink-0 border-orange-300 text-orange-700 hover:bg-orange-100 disabled:opacity-40"
                   >
                     <RefreshCw className={`h-4 w-4 mr-1.5 ${fetchingModels ? "animate-spin" : ""}`} />
                     {fetchingModels ? "Bağlanıyor..." : "Modelleri Getir"}
                   </Button>
                 </div>
-                <p className="text-xs text-amber-700">
-                  Ollama sadece local veya self-hosted ortamda çalışır. Vercel'de OpenAI / Gemini kullanın.
-                </p>
               </div>
 
               <div className="space-y-2">
@@ -237,12 +274,15 @@ export default function SettingsPage() {
                   <Input
                     value={settings.aiModel || ""}
                     onChange={e => set("aiModel", e.target.value)}
-                    placeholder="Önce 'Modelleri Getir' butonuna basın"
+                    placeholder={isLocalOllama && isCloudDeployment ? "ör. llama3, mistral, gemma2" : "Modelleri Getir ile otomatik listele"}
                   />
                 )}
-                <p className="text-xs text-muted-foreground">
-                  Ollama'da yüklü modeller. "Modelleri Getir" ile otomatik listele.
-                </p>
+                {isLocalOllama && isCloudDeployment && (
+                  <p className="text-xs text-amber-700">
+                    Model adını elle yazın (ör. <code className="bg-amber-50 px-1 rounded">llama3</code>, <code className="bg-amber-50 px-1 rounded">mistral</code>).
+                    Ancak Vercel&apos;den çalışmayacağını unutmayın.
+                  </p>
+                )}
               </div>
             </div>
           )}

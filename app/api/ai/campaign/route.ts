@@ -316,7 +316,12 @@ export async function POST(req: NextRequest) {
       )
     }
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "AI servisine bağlanılamadı"
+    const rawMsg = e instanceof Error ? e.message : "AI servisine bağlanılamadı"
+    const aiUrl = settings.aiApiUrl || ""
+    const isLocal = /localhost|127\.0\.0\.1/.test(aiUrl)
+    const msg = isLocal
+      ? `Ollama'ya bağlanılamadı. Bu uygulama cloud'da (Vercel) çalışıyor — localhost:11434 adresine erişim mümkün değil. Çözüm: Admin > Ayarlar > AI bölümünden Google Gemini veya OpenAI seçin (ücretsiz API key ile çalışır).`
+      : rawMsg
     return NextResponse.json({ error: msg }, { status: 502 })
   }
 
