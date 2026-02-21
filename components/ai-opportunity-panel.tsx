@@ -96,71 +96,103 @@ const FIELD_LABELS: Record<keyof Profile, string> = {
   additionalNote:    "Ek Not",
 }
 
-function ScoreBadge({ score, label }: { score: number; label: string }) {
+type ScoreBreakdown = {
+  vehiclePriceRange: number
+  vehicleAge:        number
+  usageFrequency:    number
+  usageType:         number
+  decisionProfile:   number
+  additionalNote:    number
+}
+
+const BREAKDOWN_LABELS: { key: keyof ScoreBreakdown; label: string; max: number }[] = [
+  { key: "vehiclePriceRange", label: "Araç Fiyat Segmenti", max: 30 },
+  { key: "vehicleAge",        label: "Araç Yaşı",           max: 20 },
+  { key: "usageFrequency",    label: "Kullanım Yoğunluğu",  max: 15 },
+  { key: "usageType",         label: "Kullanım Tipi",        max: 15 },
+  { key: "decisionProfile",   label: "Karar Profili",        max: 15 },
+  { key: "additionalNote",    label: "Ek Not",               max:  5 },
+]
+
+function ScoreBadge({
+  score,
+  label,
+  breakdown,
+}: {
+  score: number
+  label: string
+  breakdown?: ScoreBreakdown
+}) {
   const color =
-    score >= 80 ? "bg-green-500" :
-    score >= 60 ? "bg-emerald-400" :
-    score >= 40 ? "bg-yellow-500" :
-    score >= 20 ? "bg-orange-500" : "bg-red-500"
+    score >= 85 ? "bg-green-500" :
+    score >= 65 ? "bg-emerald-500" :
+    score >= 45 ? "bg-yellow-500" :
+    score >= 25 ? "bg-orange-500" : "bg-red-500"
 
   const textColor =
-    score >= 80 ? "text-green-500" :
-    score >= 60 ? "text-emerald-400" :
-    score >= 40 ? "text-yellow-500" :
-    score >= 20 ? "text-orange-500" : "text-red-500"
+    score >= 85 ? "text-green-500" :
+    score >= 65 ? "text-emerald-500" :
+    score >= 45 ? "text-yellow-500" :
+    score >= 25 ? "text-orange-500" : "text-red-500"
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative w-16 h-16 shrink-0">
-        <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
-          <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted/20" />
-          <circle
-            cx="18" cy="18" r="15.9"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeDasharray={`${score} ${100 - score}`}
-            strokeLinecap="round"
-            className={textColor}
-          />
-        </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
-          {score}
-        </span>
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Satın Alma Skoru</p>
-        <div className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-white text-xs font-semibold mt-0.5", color)}>
-          {label}
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="relative w-16 h-16 shrink-0">
+          <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted/20" />
+            <circle
+              cx="18" cy="18" r="15.9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeDasharray={`${score} ${100 - score}`}
+              strokeLinecap="round"
+              className={textColor}
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
+            {score}
+          </span>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Satın Alma Skoru</p>
+          <div className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-white text-xs font-semibold mt-0.5", color)}>
+            {label}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">{score}/100 puan</p>
         </div>
       </div>
+
+      {breakdown && (
+        <div className="space-y-1.5 rounded-lg bg-muted/30 p-2.5">
+          {BREAKDOWN_LABELS.map(({ key, label: lbl, max }) => {
+            const val = breakdown[key]
+            const pct = max > 0 ? (val / max) * 100 : 0
+            return (
+              <div key={key} className="flex items-center gap-2 text-[11px]">
+                <span className="w-36 shrink-0 text-muted-foreground truncate">{lbl}</span>
+                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full",
+                      pct >= 80 ? "bg-green-500" : pct >= 50 ? "bg-yellow-500" : "bg-orange-400"
+                    )}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className="w-10 text-right font-medium text-muted-foreground shrink-0">
+                  {val}/{max}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
-// Profil etiketlerini okunabilir metne çevir (prompt için)
-function profileToText(profile: Profile): string {
-  const lines: string[] = []
-
-  const priceLabel = PROFILE_OPTIONS.vehiclePriceRange.find(o => o.value === profile.vehiclePriceRange)?.label
-  if (priceLabel) lines.push(`Araç fiyat segmenti: ${priceLabel}`)
-
-  const ageLabel = PROFILE_OPTIONS.vehicleAge.find(o => o.value === profile.vehicleAge)?.label
-  if (ageLabel) lines.push(`Araç yaşı: ${ageLabel}`)
-
-  const freqLabel = PROFILE_OPTIONS.usageFrequency.find(o => o.value === profile.usageFrequency)?.label
-  if (freqLabel) lines.push(`Kullanım yoğunluğu: ${freqLabel}`)
-
-  const typeLabel = PROFILE_OPTIONS.usageType.find(o => o.value === profile.usageType)?.label
-  if (typeLabel) lines.push(`Kullanım tipi: ${typeLabel}`)
-
-  const decLabel = PROFILE_OPTIONS.decisionProfile.find(o => o.value === profile.decisionProfile)?.label
-  if (decLabel) lines.push(`Müşteri karar profili: ${decLabel}`)
-
-  if (profile.additionalNote?.trim()) lines.push(`Ek gözlem: ${profile.additionalNote.trim()}`)
-
-  return lines.join("\n")
-}
 
 export function AIOpportunityPanel({
   quoteId,
@@ -195,7 +227,14 @@ export function AIOpportunityPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          profile: { profileText: profileToText(profile) },
+          profile: {
+            vehiclePriceRange: profile.vehiclePriceRange || undefined,
+            vehicleAge:        profile.vehicleAge        || undefined,
+            usageFrequency:    profile.usageFrequency    || undefined,
+            usageType:         profile.usageType         || undefined,
+            decisionProfile:   profile.decisionProfile   || undefined,
+            additionalNote:    profile.additionalNote    || undefined,
+          },
           grandTotal,
           quoteId,
         }),
@@ -258,7 +297,7 @@ export function AIOpportunityPanel({
         {!expanded && campaignResult && (
           <div className="mt-2 flex items-center gap-3">
             <ScoreBadge score={campaignResult.score} label={campaignResult.scoreLabel} />
-            <p className="text-sm text-muted-foreground line-clamp-2 flex-1">{campaignResult.message}</p>
+            <p className="text-sm text-muted-foreground line-clamp-2 flex-1 italic">{campaignResult.message}</p>
           </div>
         )}
       </CardHeader>
@@ -425,7 +464,11 @@ export function AIOpportunityPanel({
           {/* Sonuç */}
           {campaignResult && (
             <div className="space-y-4 rounded-xl border border-purple-200 bg-white/70 p-4">
-              <ScoreBadge score={campaignResult.score} label={campaignResult.scoreLabel} />
+              <ScoreBadge
+                score={campaignResult.score}
+                label={campaignResult.scoreLabel}
+                breakdown={campaignResult.scoreBreakdown}
+              />
 
               {campaignResult.suggestedProducts.length > 0 && (
                 <div className="space-y-2">
