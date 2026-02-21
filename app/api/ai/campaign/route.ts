@@ -319,9 +319,18 @@ export async function POST(req: NextRequest) {
     const rawMsg = e instanceof Error ? e.message : "AI servisine bağlanılamadı"
     const aiUrl = settings.aiApiUrl || ""
     const isLocal = /localhost|127\.0\.0\.1/.test(aiUrl)
-    const msg = isLocal
-      ? `Ollama'ya bağlanılamadı. Bu uygulama cloud'da (Vercel) çalışıyor — localhost:11434 adresine erişim mümkün değil. Çözüm: Admin > Ayarlar > AI bölümünden Google Gemini veya OpenAI seçin (ücretsiz API key ile çalışır).`
-      : rawMsg
+
+    let msg = rawMsg
+    if (isLocal) {
+      msg = "Ollama'ya bağlanılamadı. Uygulama Vercel'de çalışıyor — localhost:11434 erişilemez. Çözüm: Admin > Ayarlar > AI bölümünden Google Gemini seçin."
+    } else if (rawMsg.includes("insufficient_quota") || rawMsg.includes("429")) {
+      msg = "API krediniz tükendi. OpenAI hesabınıza bakiye ekleyin veya Admin > Ayarlar bölümünden Google Gemini'ye geçin (ücretsiz)."
+    } else if (rawMsg.includes("401") || rawMsg.includes("invalid_api_key") || rawMsg.includes("Unauthorized")) {
+      msg = "API anahtarı geçersiz. Admin > Ayarlar bölümünden doğru API key'i girin."
+    } else if (rawMsg.includes("timeout") || rawMsg.includes("ECONNREFUSED") || rawMsg.includes("fetch failed")) {
+      msg = "AI servisine bağlanılamadı. İnternet bağlantınızı ve API URL'sini kontrol edin."
+    }
+
     return NextResponse.json({ error: msg }, { status: 502 })
   }
 
