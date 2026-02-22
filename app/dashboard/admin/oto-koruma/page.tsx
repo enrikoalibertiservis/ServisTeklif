@@ -316,23 +316,21 @@ export default function OtoKorumaPage() {
   async function exportExcel() {
     const xlsx = await import("xlsx")
     const rows = products.map((p, i) => ({
-      "Sıra": i + 1,
-      "Ürün Adı": p.name,
-      "Kategori": p.category || "",
-      "Açıklama": p.description || "",
-      "Servis Fiyatı (₺)": p.price,
-      "Liste Fiyatı (₺)": p.listPrice ?? "",
-      "İndirim %": p.listPrice && p.listPrice > p.price
+      "Sıra":            i + 1,
+      "Ürün Adı":        p.name,
+      "Kategori":        p.category || "",
+      "Açıklama":        p.description || "",
+      "Liste Fiyatı (₺)":    p.listPrice ?? "",
+      "İndirimli Fiyat (₺)": p.price,
+      "İndirim %":       p.listPrice && p.listPrice > p.price
         ? Math.round(((p.listPrice - p.price) / p.listPrice) * 100)
         : "",
       "Satış Noktaları": p.salesPoints || "",
-      "Durum": p.isActive ? "Aktif" : "Pasif",
     }))
     const ws = xlsx.utils.json_to_sheet(rows)
-    // Kolon genişlikleri
     ws["!cols"] = [
       { wch: 5 }, { wch: 40 }, { wch: 20 }, { wch: 50 },
-      { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 60 }, { wch: 10 },
+      { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 60 },
     ]
     const wb = xlsx.utils.book_new()
     xlsx.utils.book_append_sheet(wb, ws, "Oto Koruma Ürünleri")
@@ -349,14 +347,17 @@ export default function OtoKorumaPage() {
     const fonts   = (fontsModule as any).default ?? fontsModule
     pdfMake.vfs   = fonts?.pdfMake?.vfs ?? fonts?.vfs ?? {}
 
+    const fmtPdf = (n: number) =>
+      new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n)
+
     const tableBody: any[][] = [
       [
-        { text: "#",               style: "th" },
-        { text: "Ürün Adı",        style: "th" },
-        { text: "Kategori",        style: "th" },
-        { text: "Servis Fiyatı",   style: "th", alignment: "right" },
-        { text: "Liste Fiyatı",    style: "th", alignment: "right" },
-        { text: "İndirim",         style: "th", alignment: "center" },
+        { text: "#",                style: "th" },
+        { text: "Ürün Adı",         style: "th" },
+        { text: "Kategori",         style: "th" },
+        { text: "Liste Fiyatı",     style: "th", alignment: "right" },
+        { text: "İndirimli Fiyat",  style: "th", alignment: "right" },
+        { text: "İndirim %",        style: "th", alignment: "center" },
       ],
     ]
 
@@ -380,22 +381,18 @@ export default function OtoKorumaPage() {
         },
         { text: p.category || "—", style: "td", fontSize: 8 },
         {
-          text: p.price > 0
-            ? new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(p.price)
-            : "—",
-          style: "td",
-          alignment: "right",
-          bold: true,
-          color: "#0f766e",
-        },
-        {
-          text: p.listPrice
-            ? new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(p.listPrice)
-            : "—",
+          text: p.listPrice ? fmtPdf(p.listPrice) : "—",
           style: "td",
           alignment: "right",
           color: "#9ca3af",
           decoration: p.listPrice && p.listPrice > p.price ? "lineThrough" : undefined,
+        },
+        {
+          text: p.price > 0 ? fmtPdf(p.price) : "—",
+          style: "td",
+          alignment: "right",
+          bold: true,
+          color: "#0f766e",
         },
         {
           text: discount,
