@@ -341,9 +341,13 @@ export default function OtoKorumaPage() {
 
   // ── PDF Export ────────────────────────────────────────────────────
   async function exportPdf() {
-    const pdfMake = (await import("pdfmake/build/pdfmake")) as any
-    const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any
-    pdfMake.vfs = pdfFonts.vfs || pdfFonts.default?.vfs
+    const [pdfMakeModule, fontsModule] = await Promise.all([
+      import("pdfmake/build/pdfmake"),
+      import("pdfmake/build/vfs_fonts"),
+    ])
+    const pdfMake = (pdfMakeModule as any).default ?? pdfMakeModule
+    const fonts   = (fontsModule as any).default ?? fontsModule
+    pdfMake.vfs   = fonts?.pdfMake?.vfs ?? fonts?.vfs ?? {}
 
     const tableBody: any[][] = [
       [
