@@ -46,24 +46,17 @@ export default async function DashboardPage() {
       })
     : []
 
-  // Sadece parça/işçilik kalemi olan şablonlar — brand bazlı sayım
-  const templatesWithItems = await prisma.maintenanceTemplate.findMany({
-    where: { items: { some: {} } },
-    select: { brandId: true, modelId: true },
+  // Marka bazlı teklif sayıları
+  const brandQuoteRows = await prisma.quote.groupBy({
+    by: ["brandName"],
+    _count: { id: true },
+    orderBy: { _count: { id: "desc" } },
+    take: 8,
   })
-  const brandMap: Record<string, number> = {}
-  for (const t of templatesWithItems) {
-    brandMap[t.brandId] = (brandMap[t.brandId] || 0) + 1
-  }
-  const brandIds = Object.keys(brandMap)
-  const brandNames = await prisma.brand.findMany({
-    where: { id: { in: brandIds } },
-    select: { id: true, name: true },
-  })
-  const brandTemplates = brandIds
-    .map(id => ({ name: brandNames.find(b => b.id === id)?.name ?? "?", count: brandMap[id] }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8)
+  const brandQuotes = brandQuoteRows.map(r => ({
+    name:  r.brandName,
+    count: r._count.id,
+  }))
 
   // Alt model (SubModel) bazında reçete doluluk oranı — brand bazlı
   const modelRecipes = await (async () => {
@@ -186,7 +179,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Hafif İstatistik Kartları ─────────────────────────── */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
         {statCards.map((s) => (
           <div
             key={s.label}
@@ -217,7 +210,7 @@ export default async function DashboardPage() {
       {/* ── Grafik İstatistikler ──────────────────────────────── */}
       <DashboardStats
         advisorStats={advisorStats}
-        brandTemplates={brandTemplates}
+        brandQuotes={brandQuotes}
         isAdmin={isAdmin}
       />
 
