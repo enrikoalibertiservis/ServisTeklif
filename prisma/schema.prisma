@@ -244,7 +244,9 @@ model OtoKorumaProduct {
   id          String   @id @default(cuid())
   name        String
   description String?
-  price       Float    @default(0)
+  price       Float    @default(0)   // indirimli / servis fiyatı
+  listPrice   Float?                 // katalog / liste fiyatı
+  salesPoints String?                // satış maddeleri — her satır bir madde
   category    String?
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)

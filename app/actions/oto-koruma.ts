@@ -10,6 +10,8 @@ export type OtoKorumaProductData = {
   name: string
   description: string | null
   price: number
+  listPrice: number | null
+  salesPoints: string | null
   category: string | null
   isActive: boolean
   sortOrder: number
@@ -35,6 +37,8 @@ export async function createOtoKorumaProduct(data: {
   name: string
   description?: string
   price: number
+  listPrice?: number
+  salesPoints?: string
   category?: string
   sortOrder?: number
 }) {
@@ -46,6 +50,8 @@ export async function createOtoKorumaProduct(data: {
       name: data.name.trim(),
       description: data.description?.trim() || null,
       price: data.price,
+      listPrice: data.listPrice ?? null,
+      salesPoints: data.salesPoints?.trim() || null,
       category: data.category?.trim() || null,
       sortOrder: data.sortOrder ?? 0,
       createdBy: session.user.name || session.user.email,
@@ -58,6 +64,8 @@ export async function updateOtoKorumaProduct(id: string, data: {
   name: string
   description?: string
   price: number
+  listPrice?: number
+  salesPoints?: string
   category?: string
   isActive: boolean
   sortOrder: number
@@ -71,6 +79,8 @@ export async function updateOtoKorumaProduct(id: string, data: {
       name: data.name.trim(),
       description: data.description?.trim() || null,
       price: data.price,
+      listPrice: data.listPrice ?? null,
+      salesPoints: data.salesPoints?.trim() || null,
       category: data.category?.trim() || null,
       isActive: data.isActive,
       sortOrder: data.sortOrder,
