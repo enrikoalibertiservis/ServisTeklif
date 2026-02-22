@@ -221,3 +221,47 @@ export async function deleteTemplate(templateId: string) {
   await prisma.maintenanceTemplateItem.deleteMany({ where: { templateId } })
   return prisma.maintenanceTemplate.delete({ where: { id: templateId } })
 }
+
+/** Mükerrer bakım şablonlarını siler (aynı araç + periyot). Kalem sayısı en fazla olan bırakılır. */
+export async function dedupeMaintenanceTemplates(): Promise<{ deleted: number }> {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== "ADMIN") throw new Error("Yetkisiz")
+
+  const templates = await prisma.maintenanceTemplate.findMany({
+    include: { _count: { select: { items: true } } },
+    orderBy: [{ createdAt: "asc" }],
+  })
+
+  function key(t: {
+    brandId: string
+    modelId: string | null
+    subModelId: string | null
+    periodKm: number | null
+    periodMonth: number | null
+    serviceType: string | null
+  }) {
+    const vehicle = t.subModelId ?? t.modelId ?? ""
+    return [t.brandId, vehicle, t.periodKm ?? "", t.periodMonth ?? "", t.serviceType ?? ""].join("|")
+  }
+
+  const groups = new Map<string, typeof templates>()
+  for (const t of templates) {
+    const k = key(t)
+    if (!groups.has(k)) groups.set(k, [])
+    groups.get(k)!.push(t)
+  }
+
+  const toDelete: string[] = []
+  Array.from(groups.values()).forEach((list) => {
+    if (list.length <= 1) return
+    const keep = list.reduce((a, b) => (a._count.items >= b._count.items ? a : b))
+    for (const t of list) {
+      if (t.id !== keep.id) toDelete.push(t.id)
+    }
+  })
+
+  if (toDelete.length === 0) return { deleted: 0 }
+
+  await prisma.maintenanceTemplate.deleteMany({ where: { id: { in: toDelete } } })
+  return { deleted: toDelete.length }
+}

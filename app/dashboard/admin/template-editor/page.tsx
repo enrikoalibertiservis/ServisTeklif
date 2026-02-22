@@ -25,6 +25,7 @@ import {
   clearTemplateItems,
   createTemplate,
   deleteTemplate,
+  dedupeMaintenanceTemplates,
 } from "@/app/actions/template"
 import { formatCurrency } from "@/lib/utils"
 import {
@@ -408,6 +409,28 @@ export default function TemplateEditorPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Bakım Şablonları</CardTitle>
+              <div className="flex items-center gap-2">
+              <Button
+                variant="outline" size="sm"
+                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                onClick={async () => {
+                  if (!confirm("Tüm mükerrer bakım periyodları silinecek (her periyot için kalem sayısı en fazla olan bırakılacak). Devam?")) return
+                  try {
+                    const { deleted } = await dedupeMaintenanceTemplates()
+                    toast({ title: deleted > 0 ? "Tekilleştirildi" : "Mükerrer yok", description: deleted > 0 ? `${deleted} mükerrer şablon silindi.` : "Silinecek çift periyot bulunamadı." })
+                    if (deleted > 0 && brandId && modelId) {
+                      const tpls = await getTemplatesForVehicle(brandId, modelId, subModelId || undefined)
+                      setTemplates(tpls)
+                      if (!tpls.some((t: any) => t.id === selectedTemplateId)) setSelectedTemplateId("")
+                    }
+                  } catch (e: any) {
+                    toast({ title: "Hata", description: e.message, variant: "destructive" })
+                  }
+                }}
+                disabled={!brandId}
+              >
+                Tekilleştir
+              </Button>
               <Button
                 variant="ghost" size="sm"
                 className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100"
@@ -416,6 +439,7 @@ export default function TemplateEditorPage() {
               >
                 <PlusCircle className="h-4 w-4 mr-1.5" /> Yeni Periyod Ekle
               </Button>
+            </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

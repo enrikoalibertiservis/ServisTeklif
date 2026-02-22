@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { getBrands, getModelsByBrand, getSubModelsByModel } from "@/app/actions/vehicle"
-import { deleteTemplate } from "@/app/actions/template"
-import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, ChevronRight as ChevronRightIcon } from "lucide-react"
+import { deleteTemplate, dedupeMaintenanceTemplates } from "@/app/actions/template"
+import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, Merge } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 
@@ -56,6 +56,7 @@ export default function TemplatesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteLabel, setDeleteLabel] = useState("")
   const [deleting, setDeleting] = useState(false)
+  const [deduping, setDeduping] = useState(false)
 
   useEffect(() => { getBrands().then(setBrands) }, [])
 
@@ -85,6 +86,20 @@ export default function TemplatesPage() {
       .then(r => r.json())
       .then(data => { setTemplates(data); setPage(1) })
       .finally(() => setLoading(false))
+  }
+
+  async function handleDedupe() {
+    if (!confirm("Tüm marka/model/alt modelde mükerrer periyotlar silinecek (her periyot için kalem sayısı en fazla olan bırakılacak). Devam?")) return
+    setDeduping(true)
+    try {
+      const { deleted } = await dedupeMaintenanceTemplates()
+      toast({ title: deleted > 0 ? "Tekilleştirildi" : "Mükerrer yok", description: deleted > 0 ? `${deleted} mükerrer şablon silindi.` : "Silinecek çift periyot bulunamadı." })
+      if (deleted > 0) loadTemplates()
+    } catch (e: any) {
+      toast({ title: "Hata", description: e.message, variant: "destructive" })
+    } finally {
+      setDeduping(false)
+    }
   }
 
   async function handleDelete() {
@@ -188,12 +203,24 @@ export default function TemplatesPage() {
       ) : (
         <div className="space-y-6">
           {/* Toplam bilgisi */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>
               Toplam <span className="font-semibold text-foreground">{templates.length}</span> şablon
               &nbsp;·&nbsp; Sayfa <span className="font-semibold text-foreground">{page}</span> / {totalPages}
             </span>
-            <span className="text-xs">Sayfa başına {PAGE_SIZE} şablon</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs">Sayfa başına {PAGE_SIZE} şablon</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                onClick={handleDedupe}
+                disabled={deduping}
+              >
+                {deduping ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Merge className="h-3.5 w-3.5 mr-1.5" />}
+                Mükerrerleri temizle
+              </Button>
+            </div>
           </div>
 
           {groupOrder.map(sType => {
