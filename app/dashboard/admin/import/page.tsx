@@ -107,7 +107,7 @@ export default function ImportPage() {
       try {
         const data = await getBrands()
         setBrands(data)
-        if (data.length > 0 && selectedBrandIds.length === 0) setSelectedBrandIds([data[0].id])
+        // Otomatik marka seçimi YOK — kullanıcı kendisi seçmeli
       } catch (err) {
         toast({
           title: "Hata",
@@ -116,7 +116,7 @@ export default function ImportPage() {
         })
       }
     })
-  }, [toast, selectedBrandIds])
+  }, [toast])
 
   const loadHistory = useCallback(() => {
     startTransition(async () => {
