@@ -64,8 +64,8 @@ export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) 
           <QuickPriceWidget onActiveChange={setWidgetActive} className="flex-1" />
         </div>
 
-        {/* Sağ: Reçete Tanımlı Modeller — mobilde gizli */}
-        <div className="hidden sm:block rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50/60 to-emerald-50/30 p-5 shadow-sm">
+        {/* Sağ: Reçete Tanımlı Modeller */}
+        <div className="rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50/60 to-emerald-50/30 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
               <BookOpen className="h-4 w-4 text-teal-600" />
@@ -144,9 +144,9 @@ export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) 
         </div>
       </div>
 
-      {/* ── Son Teklifler — widget aktifken kapanır, mobilde gizli ── */}
+      {/* ── Son Teklifler — widget aktifken kapanır ─────────────── */}
       <div
-        className={`hidden sm:block overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 ease-in-out ${
+        className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 ease-in-out ${
           widgetActive ? "max-h-0 opacity-0 border-transparent shadow-none" : "max-h-[800px] opacity-100"
         }`}
       >

@@ -210,14 +210,12 @@ export default async function DashboardPage() {
       {/* ── Hızlı Fiyat + Diğer (mobilde önce gelir) ─────────── */}
       <DashboardBottom recentQuotes={recentQuotes} isAdmin={isAdmin} modelRecipes={modelRecipes} />
 
-      {/* ── Grafik İstatistikler — mobilde gizli ─────────────── */}
-      <div className="hidden sm:block">
-        <DashboardStats
-          advisorStats={advisorStats}
-          brandQuotes={brandQuotes}
-          isAdmin={isAdmin}
-        />
-      </div>
+      {/* ── Grafik İstatistikler ──────────────────────────────── */}
+      <DashboardStats
+        advisorStats={advisorStats}
+        brandQuotes={brandQuotes}
+        isAdmin={isAdmin}
+      />
 
     </div>
   )
