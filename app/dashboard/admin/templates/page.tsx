@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { getBrands, getModelsByBrand, getSubModelsByModel } from "@/app/actions/vehicle"
 import { deleteTemplate, dedupeMaintenanceTemplates } from "@/app/actions/template"
-import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, Merge } from "lucide-react"
+import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, Merge, CheckSquare, Square } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 
@@ -53,9 +53,11 @@ export default function TemplatesPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteLabel, setDeleteLabel] = useState("")
   const [deleting, setDeleting] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const [deduping, setDeduping] = useState(false)
 
   useEffect(() => { getBrands().then(setBrands) }, [])
@@ -77,15 +79,59 @@ export default function TemplatesPage() {
   useEffect(() => { loadTemplates() }, [brandId, modelId, subModelId])
 
   function loadTemplates() {
-    if (!brandId) { setTemplates([]); return }
+    if (!brandId) { setTemplates([]); setSelectedIds(new Set()); return }
     setLoading(true)
     const params = new URLSearchParams({ brandId })
     if (subModelId) params.set("subModelId", subModelId)
     else if (modelId) params.set("modelId", modelId)
     fetch(`/api/templates?${params}`)
       .then(r => r.json())
-      .then(data => { setTemplates(data); setPage(1) })
+      .then(data => { setTemplates(data); setPage(1); setSelectedIds(new Set()) })
       .finally(() => setLoading(false))
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    const pagedIds = new Set(pagedTemplates.map(t => t.id))
+    const allSelected = pagedIds.size > 0 && selectedIds.size === pagedTemplates.length && pagedTemplates.every(t => selectedIds.has(t.id))
+    if (allSelected) {
+      setSelectedIds(prev => { const next = new Set(prev); pagedTemplates.forEach(t => next.delete(t.id)); return next })
+    } else {
+      setSelectedIds(prev => { const next = new Set(prev); pagedTemplates.forEach(t => next.add(t.id)); return next })
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return
+    if (!confirm(`${selectedIds.size} şablonu silmek istediğinize emin misiniz? Geri alınamaz.`)) return
+    const ids = Array.from(selectedIds)
+    setBulkDeleting(true)
+    try {
+      let ok = 0, err = 0
+      for (const id of ids) {
+        try {
+          await deleteTemplate(id)
+          ok++
+        } catch {
+          err++
+        }
+      }
+      setSelectedIds(new Set())
+      loadTemplates()
+      toast({ title: "Toplu silme", description: `${ok} silindi${err > 0 ? `, ${err} hata` : ""}.` })
+    } catch (e: any) {
+      toast({ title: "Hata", description: e.message, variant: "destructive" })
+    } finally {
+      setBulkDeleting(false)
+    }
   }
 
   async function handleDedupe() {
@@ -208,7 +254,28 @@ export default function TemplatesPage() {
               Toplam <span className="font-semibold text-foreground">{templates.length}</span> şablon
               &nbsp;·&nbsp; Sayfa <span className="font-semibold text-foreground">{page}</span> / {totalPages}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleSelectAll}
+              >
+                {pagedTemplates.length > 0 && pagedTemplates.every(t => selectedIds.has(t.id))
+                  ? <><Square className="h-3.5 w-3.5 mr-1.5" /> Seçimi kaldır</>
+                  : <><CheckSquare className="h-3.5 w-3.5 mr-1.5" /> Tümünü işaretle</>
+                }
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                >
+                  {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
+                  Seçilenleri sil ({selectedIds.size})
+                </Button>
+              )}
               <span className="text-xs">Sayfa başına {PAGE_SIZE} şablon</span>
               <Button
                 variant="outline"
@@ -238,10 +305,21 @@ export default function TemplatesPage() {
                   {group.map(t => (
                     <Card key={t.id} className="overflow-hidden">
                         <div
-                          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                          className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${selectedIds.has(t.id) ? "bg-primary/5" : ""}`}
                           onClick={() => toggleExpand(t.id)}
                         >
                           <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); toggleSelect(t.id) }}
+                              className="p-1 rounded hover:bg-muted"
+                              aria-label={selectedIds.has(t.id) ? "Seçimi kaldır" : "İşaretle"}
+                            >
+                              {selectedIds.has(t.id)
+                                ? <CheckSquare className="h-4 w-4 text-primary" />
+                                : <Square className="h-4 w-4 text-muted-foreground" />
+                              }
+                            </button>
                             {expanded.has(t.id)
                               ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               : <ChevronRight className="h-4 w-4 text-muted-foreground" />
