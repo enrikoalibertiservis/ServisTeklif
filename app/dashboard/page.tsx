@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { FileText, PlusCircle, Package, Wrench, Car } from "lucide-react"
 import Link from "next/link"
 import { DashboardBottom } from "@/components/dashboard-bottom"
+import { DashboardStats } from "@/components/dashboard-stats"
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -25,20 +26,99 @@ export default async function DashboardPage() {
     include: { createdBy: { select: { name: true } } },
   })
 
+  // Danışman bazlı teklif sayıları (admin görür)
+  const advisorStats = isAdmin
+    ? await prisma.quote.groupBy({
+        by: ["createdById"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 8,
+      }).then(async (rows) => {
+        const userIds = rows.map(r => r.createdById).filter(Boolean) as string[]
+        const users = await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, name: true },
+        })
+        return rows.map(r => ({
+          name: users.find(u => u.id === r.createdById)?.name ?? "Bilinmiyor",
+          count: r._count.id,
+        }))
+      })
+    : []
+
+  // Şablon tanımlı markalar — MaintenanceTemplate'den marka bazlı şablon sayısı
+  const brandTemplates = await prisma.maintenanceTemplate.groupBy({
+    by: ["brandId"],
+    _count: { id: true },
+    orderBy: { _count: { id: "desc" } },
+    take: 8,
+  }).then(async (rows) => {
+    const brandIds = rows.map(r => r.brandId)
+    const brands = await prisma.brand.findMany({
+      where: { id: { in: brandIds } },
+      select: { id: true, name: true },
+    })
+    return rows.map(r => ({
+      name: brands.find(b => b.id === r.brandId)?.name ?? "?",
+      count: r._count.id,
+    }))
+  })
+
   const todayStr = new Date().toLocaleDateString("tr-TR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   })
+
+  const statCards = [
+    {
+      label: "Teklifler",
+      value: quoteCount,
+      sub: "toplam teklif",
+      icon: FileText,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+      border: "border-blue-100",
+      dot: "bg-blue-500",
+    },
+    {
+      label: "Parçalar",
+      value: partCount,
+      sub: "kayıtlı parça",
+      icon: Package,
+      color: "text-teal-600",
+      bg: "bg-teal-50",
+      border: "border-teal-100",
+      dot: "bg-teal-500",
+    },
+    {
+      label: "İşçilik",
+      value: laborCount,
+      sub: "operasyon tanımı",
+      icon: Wrench,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+      border: "border-amber-100",
+      dot: "bg-amber-500",
+    },
+    {
+      label: "Markalar",
+      value: brandCount,
+      sub: "aktif marka",
+      icon: Car,
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+      border: "border-violet-100",
+      dot: "bg-violet-500",
+    },
+  ]
 
   return (
     <div className="space-y-6">
 
       {/* ── Hero Banner ────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-700 px-6 py-8 text-white shadow-lg min-h-[110px]">
-        {/* dekoratif daireler */}
         <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-12 -left-10 h-40 w-40 rounded-full bg-indigo-800/30" />
         <div className="pointer-events-none absolute top-1/2 right-40 h-24 w-24 -translate-y-1/2 rounded-full bg-white/5" />
-
         <div className="relative flex h-full flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm text-blue-200">{todayStr}</p>
@@ -59,72 +139,41 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── İstatistik Kartları ─────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Teklifler */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5 shadow-lg shadow-blue-200 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-blue-200 uppercase tracking-wide">Teklifler</p>
-              <p className="mt-1 text-3xl font-bold">{quoteCount}</p>
-              <p className="mt-0.5 text-xs text-blue-200">toplam teklif</p>
+      {/* ── Hafif İstatistik Kartları ─────────────────────────── */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((s) => (
+          <div
+            key={s.label}
+            className={`flex items-center gap-4 rounded-xl border ${s.border} ${s.bg} px-4 py-3.5 shadow-sm`}
+          >
+            <div className={`rounded-lg bg-white/80 p-2.5 shadow-sm ${s.color}`}>
+              <s.icon className="h-5 w-5" />
             </div>
-            <div className="rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
-              <FileText className="h-5 w-5 text-white" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">{s.label}</p>
+              <p className={`text-2xl font-bold leading-tight ${s.color}`}>{s.value}</p>
+              <p className="text-[11px] text-muted-foreground">{s.sub}</p>
             </div>
-          </div>
-          <div className="pointer-events-none absolute -bottom-5 -right-5 h-24 w-24 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -top-4 -left-4 h-16 w-16 rounded-full bg-white/5" />
-        </div>
-
-        {/* Parçalar */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-600 p-5 shadow-lg shadow-cyan-200 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-cyan-100 uppercase tracking-wide">Parçalar</p>
-              <p className="mt-1 text-3xl font-bold">{partCount}</p>
-              <p className="mt-0.5 text-xs text-cyan-100">kayıtlı parça</p>
-            </div>
-            <div className="rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
-              <Package className="h-5 w-5 text-white" />
+            {/* mini dekoratif bar */}
+            <div className="ml-auto flex flex-col gap-1 shrink-0">
+              {[0.4, 0.7, 0.5, 1.0].map((h, i) => (
+                <div
+                  key={i}
+                  className={`w-1.5 rounded-full ${s.dot} opacity-30`}
+                  style={{ height: `${h * 20}px` }}
+                />
+              ))}
             </div>
           </div>
-          <div className="pointer-events-none absolute -bottom-5 -right-5 h-24 w-24 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -top-4 -left-4 h-16 w-16 rounded-full bg-white/5" />
-        </div>
-
-        {/* İşçilik */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-5 shadow-lg shadow-amber-200 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-amber-100 uppercase tracking-wide">İşçilik</p>
-              <p className="mt-1 text-3xl font-bold">{laborCount}</p>
-              <p className="mt-0.5 text-xs text-amber-100">operasyon tanımı</p>
-            </div>
-            <div className="rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
-              <Wrench className="h-5 w-5 text-white" />
-            </div>
-          </div>
-          <div className="pointer-events-none absolute -bottom-5 -right-5 h-24 w-24 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -top-4 -left-4 h-16 w-16 rounded-full bg-white/5" />
-        </div>
-
-        {/* Markalar */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 p-5 shadow-lg shadow-violet-200 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-violet-200 uppercase tracking-wide">Markalar</p>
-              <p className="mt-1 text-3xl font-bold">{brandCount}</p>
-              <p className="mt-0.5 text-xs text-violet-200">aktif marka</p>
-            </div>
-            <div className="rounded-xl bg-white/20 p-2.5 backdrop-blur-sm">
-              <Car className="h-5 w-5 text-white" />
-            </div>
-          </div>
-          <div className="pointer-events-none absolute -bottom-5 -right-5 h-24 w-24 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -top-4 -left-4 h-16 w-16 rounded-full bg-white/5" />
-        </div>
+        ))}
       </div>
+
+      {/* ── Grafik İstatistikler ──────────────────────────────── */}
+      <DashboardStats
+        advisorStats={advisorStats}
+        brandTemplates={brandTemplates}
+        isAdmin={isAdmin}
+      />
 
       <DashboardBottom recentQuotes={recentQuotes} isAdmin={isAdmin} />
 
