@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getBrands } from "@/app/actions/vehicle"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, toUpperTR } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
   Search, Package, Trash2, Pencil, CheckSquare, Square, Plus,
@@ -299,11 +299,11 @@ export default function PartsPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Parça Kodu <span className="text-red-500">*</span></Label>
-              <Input placeholder="55282942" value={newPartNo} onChange={e => setNewPartNo(e.target.value)} />
+              <Input placeholder="55282942" value={newPartNo} onChange={e => setNewPartNo(toUpperTR(e.target.value))} />
             </div>
             <div className="space-y-2">
               <Label>Parça Adı <span className="text-red-500">*</span></Label>
-              <Input placeholder="Motor Yağı Filtresi" value={newName} onChange={e => setNewName(e.target.value)} />
+              <Input placeholder="Motor Yağı Filtresi" value={newName} onChange={e => setNewName(toUpperTR(e.target.value))} />
             </div>
             <div className="space-y-2">
               <Label>Birim Fiyat (TL) <span className="text-red-500">*</span></Label>
@@ -328,11 +328,11 @@ export default function PartsPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Parça No</Label>
-                <Input value={editPartNo} onChange={e => setEditPartNo(e.target.value)} />
+                <Input value={editPartNo} onChange={e => setEditPartNo(toUpperTR(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label>Parça Adı</Label>
-                <Input value={editName} onChange={e => setEditName(e.target.value)} />
+                <Input value={editName} onChange={e => setEditName(toUpperTR(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label>Birim Fiyat (TL)</Label>

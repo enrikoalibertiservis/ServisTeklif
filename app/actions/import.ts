@@ -37,7 +37,7 @@ export async function importParts(
       result.errorDetails.push(`Satır ${i + 2}: Fiyat geçersiz (${row.unitPrice})`)
       continue
     }
-    validRows.push({ idx: i, partNo: row.partNo.trim(), name: toUpperTR(row.name?.trim() || "İSİMSİZ PARÇA"), unitPrice: row.unitPrice })
+    validRows.push({ idx: i, partNo: toUpperTR(row.partNo.trim()), name: toUpperTR(row.name?.trim() || "İSİMSİZ PARÇA"), unitPrice: row.unitPrice })
   }
 
   const BATCH = 200
@@ -120,7 +120,7 @@ export async function importLabor(
     }
     validRows.push({
       idx: i,
-      operationCode: row.operationCode.trim(),
+      operationCode: toUpperTR(row.operationCode.trim()),
       name: toUpperTR(row.name?.trim() || "İSİMSİZ OPERASYON"),
       durationHours: row.durationHours,
       hourlyRate: row.hourlyRate,
@@ -259,7 +259,7 @@ export async function importTemplates(
 
       const itemData = items.map((item, idx) => ({
         itemType: item.itemType,
-        referenceCode: item.referenceCode,
+        referenceCode: toUpperTR(item.referenceCode),
         quantity: item.quantity ?? 1,
         durationOverride: item.durationOverride ?? null,
         sortOrder: idx + 1,

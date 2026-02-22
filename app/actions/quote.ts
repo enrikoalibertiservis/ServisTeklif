@@ -178,6 +178,7 @@ export async function addQuoteItem(
     data: {
       quoteId,
       ...item,
+      referenceCode: toUpperTR(item.referenceCode),
       name: toUpperTR(item.name),
       discountPct: 0,
       discountAmount: 0,

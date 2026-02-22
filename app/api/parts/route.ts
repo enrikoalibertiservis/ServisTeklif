@@ -43,13 +43,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "brandId, partNo, name ve unitPrice zorunludur" }, { status: 400 })
   }
 
+  const partNoUpper = toUpperTR(partNo.trim())
   const existing = await prisma.part.findUnique({
-    where: { brandId_partNo: { brandId, partNo: partNo.trim() } },
+    where: { brandId_partNo: { brandId, partNo: partNoUpper } },
   })
-  if (existing) return NextResponse.json({ error: `'${partNo}' parça kodu zaten kayıtlı` }, { status: 409 })
+  if (existing) return NextResponse.json({ error: `'${partNoUpper}' parça kodu zaten kayıtlı` }, { status: 409 })
 
   const created = await prisma.part.create({
-    data: { brandId, partNo: partNo.trim(), name: toUpperTR(name.trim()), unitPrice },
+    data: { brandId, partNo: partNoUpper, name: toUpperTR(name.trim()), unitPrice },
   })
   return NextResponse.json(created, { status: 201 })
 }
@@ -79,7 +80,7 @@ export async function PUT(req: NextRequest) {
   const updated = await prisma.part.update({
     where: { id },
     data: {
-      ...(partNo    !== undefined ? { partNo }                                        : {}),
+      ...(partNo    !== undefined ? { partNo: toUpperTR(partNo) }                    : {}),
       ...(name      !== undefined ? { name: toUpperTR(name) }                         : {}),
       ...(unitPrice !== undefined ? { unitPrice, validFrom: new Date() }              : {}),
     },

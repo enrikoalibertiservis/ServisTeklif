@@ -45,15 +45,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "brandId, operationCode, name ve hourlyRate zorunludur" }, { status: 400 })
   }
 
+  const codeUpper = toUpperTR(operationCode.trim())
   const existing = await prisma.laborOperation.findUnique({
-    where: { brandId_operationCode: { brandId, operationCode: operationCode.trim() } },
+    where: { brandId_operationCode: { brandId, operationCode: codeUpper } },
   })
-  if (existing) return NextResponse.json({ error: `'${operationCode}' kodu zaten kayıtlı` }, { status: 409 })
+  if (existing) return NextResponse.json({ error: `'${codeUpper}' kodu zaten kayıtlı` }, { status: 409 })
 
   const created = await prisma.laborOperation.create({
     data: {
       brandId,
-      operationCode: operationCode.trim(),
+      operationCode: codeUpper,
       name: toUpperTR(name.trim()),
       durationHours: durationHours ?? 1,
       hourlyRate,

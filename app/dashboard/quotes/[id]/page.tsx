@@ -14,7 +14,7 @@ import {
   removeQuoteItem, updateQuoteItem, searchParts, searchLabor, finalizeQuote,
 } from "@/app/actions/quote"
 import { useToast } from "@/hooks/use-toast"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, toUpperTR } from "@/lib/utils"
 import { Trash2, Plus, Search, FileDown, FileSpreadsheet, Save, Check, Loader2, Pencil, User, Clock, PenLine, X } from "lucide-react"
 import { PartSearchDialog } from "@/components/part-search-dialog"
 import { exportQuotePdf, exportQuoteExcel } from "@/lib/export"
@@ -327,11 +327,11 @@ export default function QuoteDetailPage() {
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="space-y-1">
                 <Label className="text-xs">Parça Kodu <span className="text-slate-400">(opsiyonel)</span></Label>
-                <Input className="h-8 text-sm" placeholder="55282942" value={mPartNo} onChange={e => setMPartNo(e.target.value)} />
+                <Input className="h-8 text-sm" placeholder="55282942" value={mPartNo} onChange={e => setMPartNo(toUpperTR(e.target.value))} />
               </div>
               <div className="sm:col-span-1 space-y-1">
                 <Label className="text-xs">Parça Adı <span className="text-red-400">*</span></Label>
-                <Input className="h-8 text-sm" placeholder="Motor Yağı Filtresi" value={mPartName} onChange={e => setMPartName(e.target.value)} />
+                <Input className="h-8 text-sm" placeholder="Motor Yağı Filtresi" value={mPartName} onChange={e => setMPartName(toUpperTR(e.target.value))} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Birim Fiyat (TL) <span className="text-red-400">*</span></Label>
@@ -461,11 +461,11 @@ export default function QuoteDetailPage() {
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="space-y-1">
                 <Label className="text-xs">İşlem Kodu <span className="text-slate-400">(opsiyonel)</span></Label>
-                <Input className="h-8 text-sm" placeholder="LBR-001" value={mLaborCode} onChange={e => setMLaborCode(e.target.value)} />
+                <Input className="h-8 text-sm" placeholder="LBR-001" value={mLaborCode} onChange={e => setMLaborCode(toUpperTR(e.target.value))} />
               </div>
               <div className="sm:col-span-1 space-y-1">
                 <Label className="text-xs">İşlem Adı <span className="text-red-400">*</span></Label>
-                <Input className="h-8 text-sm" placeholder="Motor Yağı Değişimi" value={mLaborName} onChange={e => setMLaborName(e.target.value)} />
+                <Input className="h-8 text-sm" placeholder="Motor Yağı Değişimi" value={mLaborName} onChange={e => setMLaborName(toUpperTR(e.target.value))} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Süre (saat) <span className="text-red-400">*</span></Label>

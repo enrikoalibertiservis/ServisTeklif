@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { toUpperTR } from "@/lib/utils"
 
 export async function getTemplatesForVehicle(brandId: string, modelId?: string, subModelId?: string) {
   const session = await getServerSession(authOptions)
@@ -99,11 +100,11 @@ export async function addItemToTemplate(
   })
   if (!template) throw new Error("Şablon bulunamadı")
 
+  const refUpper = toUpperTR(referenceCode)
   const existing = await prisma.maintenanceTemplateItem.findFirst({
-    where: { templateId, itemType, referenceCode },
+    where: { templateId, itemType, referenceCode: refUpper },
   })
   if (existing) {
-    // Update quantity instead of duplicating
     return prisma.maintenanceTemplateItem.update({
       where: { id: existing.id },
       data: { quantity: existing.quantity + quantity },
@@ -116,7 +117,7 @@ export async function addItemToTemplate(
     data: {
       templateId,
       itemType,
-      referenceCode,
+      referenceCode: refUpper,
       quantity,
       sortOrder: maxSort + 1,
     },

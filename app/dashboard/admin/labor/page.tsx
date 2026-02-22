@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getBrands } from "@/app/actions/vehicle"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, toUpperTR } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
   Search, Wrench, Trash2, Pencil, CheckSquare, Square, Plus,
@@ -300,11 +300,11 @@ export default function LaborPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>İşlem Kodu <span className="text-red-500">*</span></Label>
-              <Input placeholder="LBR-001" value={newCode} onChange={e => setNewCode(e.target.value)} />
+              <Input placeholder="LBR-001" value={newCode} onChange={e => setNewCode(toUpperTR(e.target.value))} />
             </div>
             <div className="space-y-2">
               <Label>İşlem Adı <span className="text-red-500">*</span></Label>
-              <Input placeholder="Motor Yağı Değişimi" value={newName} onChange={e => setNewName(e.target.value)} />
+              <Input placeholder="Motor Yağı Değişimi" value={newName} onChange={e => setNewName(toUpperTR(e.target.value))} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -344,7 +344,7 @@ export default function LaborPage() {
               </div>
               <div className="space-y-2">
                 <Label>Operasyon Adı</Label>
-                <Input value={editName} onChange={e => setEditName(e.target.value)} />
+                <Input value={editName} onChange={e => setEditName(toUpperTR(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label>Saat Ücreti (TL)</Label>
