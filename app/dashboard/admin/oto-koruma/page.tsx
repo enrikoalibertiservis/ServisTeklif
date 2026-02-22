@@ -528,10 +528,9 @@ export default function OtoKorumaPage() {
                   <TableHead className="w-14 pl-4">Sıra</TableHead>
                   <TableHead>Ürün Adı</TableHead>
                   <TableHead>Kategori</TableHead>
-                  <TableHead className="text-right">Servis Fiyatı</TableHead>
                   <TableHead className="text-right">Liste Fiyatı</TableHead>
-                  <TableHead className="text-center">İndirim</TableHead>
-                  <TableHead className="text-center">Durum</TableHead>
+                  <TableHead className="text-right">İndirimli Fiyat</TableHead>
+                  <TableHead className="text-center">İndirim %</TableHead>
                   <TableHead className="w-28 pr-4"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -585,20 +584,23 @@ export default function OtoKorumaPage() {
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-bold text-teal-700">
-                          {p.price > 0 ? fmt(p.price) : "—"}
-                        </span>
-                      </TableCell>
+                      {/* Liste Fiyatı */}
                       <TableCell className="text-right">
                         {p.listPrice && p.listPrice > 0 ? (
-                          <span className={`text-sm ${p.listPrice > p.price ? "line-through text-gray-400" : "text-gray-600"}`}>
+                          <span className="text-sm line-through text-gray-400">
                             {fmt(p.listPrice)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
                       </TableCell>
+                      {/* İndirimli Fiyat */}
+                      <TableCell className="text-right">
+                        <span className="font-bold text-teal-700">
+                          {p.price > 0 ? fmt(p.price) : "—"}
+                        </span>
+                      </TableCell>
+                      {/* İndirim % */}
                       <TableCell className="text-center">
                         {discount > 0 ? (
                           <Badge className="bg-red-100 text-red-700 border-red-200 text-xs font-bold">
@@ -607,11 +609,6 @@ export default function OtoKorumaPage() {
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={p.isActive ? "default" : "secondary"} className="text-xs">
-                          {p.isActive ? "Aktif" : "Pasif"}
-                        </Badge>
                       </TableCell>
                       <TableCell className="pr-4">
                         <div
