@@ -6,9 +6,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { getBrands, getModelsByBrand, getSubModelsByModel } from "@/app/actions/vehicle"
-import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft } from "lucide-react"
+import { deleteTemplate } from "@/app/actions/template"
+import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, ChevronRight as ChevronRightIcon } from "lucide-react"
 import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
 
 const PAGE_SIZE = 20
 
@@ -36,6 +40,7 @@ const SERVICE_LABELS: Record<string, { label: string; color: string }> = {
 }
 
 export default function TemplatesPage() {
+  const { toast } = useToast()
   const [brands, setBrands] = useState<any[]>([])
   const [models, setModels] = useState<any[]>([])
   const [subModels, setSubModels] = useState<any[]>([])
@@ -47,6 +52,10 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
+
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleteLabel, setDeleteLabel] = useState("")
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => { getBrands().then(setBrands) }, [])
 
@@ -64,19 +73,34 @@ export default function TemplatesPage() {
     }
   }, [modelId])
 
-  useEffect(() => {
-    if (!brandId) { setTemplates([]); return }
+  useEffect(() => { loadTemplates() }, [brandId, modelId, subModelId])
 
+  function loadTemplates() {
+    if (!brandId) { setTemplates([]); return }
     setLoading(true)
     const params = new URLSearchParams({ brandId })
     if (subModelId) params.set("subModelId", subModelId)
     else if (modelId) params.set("modelId", modelId)
-
     fetch(`/api/templates?${params}`)
       .then(r => r.json())
       .then(data => { setTemplates(data); setPage(1) })
       .finally(() => setLoading(false))
-  }, [brandId, modelId, subModelId])
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return
+    setDeleting(true)
+    try {
+      await deleteTemplate(deleteId)
+      toast({ title: "Şablon silindi" })
+      setDeleteId(null)
+      setTemplates(prev => prev.filter(t => t.id !== deleteId))
+    } catch (e: any) {
+      toast({ title: "Hata", description: e.message, variant: "destructive" })
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   function toggleExpand(id: string) {
     setExpanded(prev => {
@@ -204,18 +228,31 @@ export default function TemplatesPage() {
                               {t.periodKm !== 0 && t.periodMonth ? ` / ${t.periodMonth} ay` : ""}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                             <Badge variant={t.items.length > 0 ? "default" : "secondary"}>
                               {t.items.length} kalem
                             </Badge>
                             <Link
                               href={`/dashboard/admin/template-editor?templateId=${t.id}`}
-                              onClick={e => e.stopPropagation()}
                               className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 transition-colors"
                             >
                               <Pencil className="h-3 w-3" />
                               Düzenle
                             </Link>
+                            <button
+                              onClick={() => {
+                                const label = t.periodKm === 0
+                                  ? "Hızlı Servis"
+                                  : `${t.periodKm?.toLocaleString("tr-TR")} km${t.periodMonth ? ` / ${t.periodMonth} ay` : ""}`
+                                setDeleteLabel(label)
+                                setDeleteId(t.id)
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors"
+                              title="Şablonu Sil"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Sil
+                            </button>
                           </div>
                         </div>
                       {expanded.has(t.id) && (
@@ -308,6 +345,38 @@ export default function TemplatesPage() {
           )}
         </div>
       )}
+
+      {/* Silme Onay Dialogu */}
+      <Dialog open={!!deleteId} onOpenChange={v => !v && setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Şablonu Sil
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Aşağıdaki bakım şablonunu silmek istediğinizden emin misiniz?
+            </p>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
+              <p className="font-semibold text-red-800 text-sm">{deleteLabel}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Bu işlem geri alınamaz. Şablona ait tüm kalemler de silinir.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleting}>
+              İptal
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Evet, Sil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
