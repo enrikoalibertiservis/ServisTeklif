@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { QuickPriceWidget } from "@/components/quick-price-widget"
-import { TrendingUp, ArrowRight, FileText, PlusCircle, ChevronDown } from "lucide-react"
+import { TrendingUp, ArrowRight, FileText, PlusCircle, BookOpen } from "lucide-react"
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Taslak",
@@ -29,18 +29,106 @@ interface Quote {
   createdBy: { name: string } | null
 }
 
+interface ModelRecipe {
+  brand: string
+  modelCount: number
+}
+
 interface Props {
   recentQuotes: Quote[]
   isAdmin: boolean
+  modelRecipes: ModelRecipe[]
 }
 
-export function DashboardBottom({ recentQuotes, isAdmin }: Props) {
+// Marka renkleri
+const BRAND_COLORS: Record<string, { bar: string; badge: string; dot: string }> = {
+  Fiat:        { bar: "from-red-400 to-red-500",     badge: "bg-red-100 text-red-700",     dot: "bg-red-400" },
+  Jeep:        { bar: "from-green-500 to-emerald-600", badge: "bg-green-100 text-green-700", dot: "bg-green-500" },
+  "Alfa Romeo":{ bar: "from-rose-500 to-red-600",    badge: "bg-rose-100 text-rose-700",   dot: "bg-rose-500" },
+  Lancia:      { bar: "from-blue-400 to-indigo-500", badge: "bg-blue-100 text-blue-700",   dot: "bg-blue-400" },
+}
+const DEFAULT_COLOR = { bar: "from-teal-400 to-teal-500", badge: "bg-teal-100 text-teal-700", dot: "bg-teal-400" }
+
+export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) {
   const [widgetActive, setWidgetActive] = useState(false)
+  const maxModels = Math.max(...modelRecipes.map(r => r.modelCount), 1)
+  const totalModels = modelRecipes.reduce((s, r) => s + r.modelCount, 0)
 
   return (
     <>
-      {/* ── Hızlı Fiyat Sorgula ─────────────────────────────────── */}
-      <QuickPriceWidget onActiveChange={setWidgetActive} />
+      {/* ── Hızlı Fiyat Sorgula + Model Reçete Özeti ─────────────── */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Sol: Hızlı Fiyat Sorgula */}
+        <div className="min-w-0">
+          <QuickPriceWidget onActiveChange={setWidgetActive} />
+        </div>
+
+        {/* Sağ: Reçete Tanımlı Modeller */}
+        <div className="rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50/60 to-emerald-50/30 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
+              <BookOpen className="h-4 w-4 text-teal-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">Reçete Tanımlı Modeller</h3>
+              <p className="text-[11px] text-muted-foreground">Parça &amp; işçilik girişi yapılmış şablonlar</p>
+            </div>
+          </div>
+
+          {modelRecipes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-sm">
+              <BookOpen className="h-8 w-8 opacity-20 mb-2" />
+              Henüz reçete tanımlanmamış.
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {modelRecipes.map((r, i) => {
+                const colors = BRAND_COLORS[r.brand] ?? DEFAULT_COLOR
+                const pct = Math.max(6, Math.round((r.modelCount / maxModels) * 100))
+                return (
+                  <div key={i} className="flex items-center gap-3 group">
+                    {/* Marka adı */}
+                    <div className="w-24 shrink-0 flex items-center gap-1.5">
+                      <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${colors.dot}`} />
+                      <span className="text-xs font-medium text-gray-700 truncate">{r.brand}</span>
+                    </div>
+                    {/* Bar */}
+                    <div className="flex-1 h-6 rounded-full bg-teal-100/60 overflow-hidden relative">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${colors.bar} transition-all duration-700 flex items-center justify-end pr-2`}
+                        style={{ width: `${pct}%` }}
+                      >
+                        {pct > 25 && (
+                          <span className="text-[10px] font-bold text-white">{r.modelCount}</span>
+                        )}
+                      </div>
+                      {pct <= 25 && (
+                        <span className="absolute top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-600"
+                          style={{ left: `calc(${pct}% + 6px)` }}>
+                          {r.modelCount}
+                        </span>
+                      )}
+                    </div>
+                    {/* Badge */}
+                    <span className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${colors.badge}`}>
+                      {r.modelCount} model
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {modelRecipes.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-teal-100 flex items-center justify-between text-xs text-muted-foreground">
+              <span>{modelRecipes.length} marka</span>
+              <span className="font-medium text-teal-600">
+                Toplam: {totalModels} farklı model
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ── Son Teklifler — widget aktifken kapanır ──────────────── */}
       <div
@@ -48,7 +136,6 @@ export function DashboardBottom({ recentQuotes, isAdmin }: Props) {
           widgetActive ? "max-h-0 opacity-0 border-transparent shadow-none" : "max-h-[800px] opacity-100"
         }`}
       >
-        {/* başlık */}
         <div className="flex items-center justify-between border-b bg-gradient-to-r from-slate-50 to-white px-5 py-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-slate-500" />

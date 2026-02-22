@@ -115,7 +115,7 @@ export function DashboardStats({ advisorStats, brandTemplates, isAdmin }: Props)
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-800">Reçete Tanımlı Markalar</h3>
-              <p className="text-[11px] text-muted-foreground">Bakım matrisi kayıt sayısına göre</p>
+              <p className="text-[11px] text-muted-foreground">Parça &amp; işçilik tanımlı şablon sayısına göre</p>
             </div>
           </div>
           <div className="space-y-2.5">

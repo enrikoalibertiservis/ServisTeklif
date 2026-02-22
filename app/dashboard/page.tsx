@@ -46,23 +46,52 @@ export default async function DashboardPage() {
       })
     : []
 
-  // Şablon tanımlı markalar — MaintenanceTemplate'den marka bazlı şablon sayısı
-  const brandTemplates = await prisma.maintenanceTemplate.groupBy({
-    by: ["brandId"],
-    _count: { id: true },
-    orderBy: { _count: { id: "desc" } },
-    take: 8,
-  }).then(async (rows) => {
-    const brandIds = rows.map(r => r.brandId)
-    const brands = await prisma.brand.findMany({
-      where: { id: { in: brandIds } },
+  // Sadece parça/işçilik kalemi olan şablonlar — brand bazlı sayım
+  const templatesWithItems = await prisma.maintenanceTemplate.findMany({
+    where: { items: { some: {} } },
+    select: { brandId: true, modelId: true },
+  })
+  const brandMap: Record<string, number> = {}
+  for (const t of templatesWithItems) {
+    brandMap[t.brandId] = (brandMap[t.brandId] || 0) + 1
+  }
+  const brandIds = Object.keys(brandMap)
+  const brandNames = await prisma.brand.findMany({
+    where: { id: { in: brandIds } },
+    select: { id: true, name: true },
+  })
+  const brandTemplates = brandIds
+    .map(id => ({ name: brandNames.find(b => b.id === id)?.name ?? "?", count: brandMap[id] }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+
+  // Model bazlı reçete özeti — kaç farklı model tanımlı?
+  const modelRecipes = await (async () => {
+    // Benzersiz brand+model çiftleri (reçeteli)
+    const distinct = await prisma.maintenanceTemplate.findMany({
+      where: { items: { some: {} }, modelId: { not: null } },
+      select: { brandId: true, modelId: true },
+      distinct: ["brandId", "modelId"],
+    })
+    // Her brand için kaç farklı model var?
+    const perBrand: Record<string, Set<string>> = {}
+    for (const t of distinct) {
+      if (!perBrand[t.brandId]) perBrand[t.brandId] = new Set()
+      perBrand[t.brandId].add(t.modelId!)
+    }
+    const allBrandIds = Object.keys(perBrand)
+    const allBrands = await prisma.brand.findMany({
+      where: { id: { in: allBrandIds } },
       select: { id: true, name: true },
     })
-    return rows.map(r => ({
-      name: brands.find(b => b.id === r.brandId)?.name ?? "?",
-      count: r._count.id,
-    }))
-  })
+    return allBrandIds
+      .map(id => ({
+        brand: allBrands.find(b => b.id === id)?.name ?? "?",
+        modelCount: perBrand[id].size,
+      }))
+      .sort((a, b) => b.modelCount - a.modelCount)
+      .slice(0, 10)
+  })()
 
   const todayStr = new Date().toLocaleDateString("tr-TR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -175,7 +204,7 @@ export default async function DashboardPage() {
         isAdmin={isAdmin}
       />
 
-      <DashboardBottom recentQuotes={recentQuotes} isAdmin={isAdmin} />
+      <DashboardBottom recentQuotes={recentQuotes} isAdmin={isAdmin} modelRecipes={modelRecipes} />
 
     </div>
   )
