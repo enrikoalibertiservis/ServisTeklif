@@ -241,7 +241,8 @@ export async function dedupeMaintenanceTemplates(): Promise<{ deleted: number }>
     serviceType: string | null
   }) {
     const vehicle = t.subModelId ?? t.modelId ?? ""
-    return [t.brandId, vehicle, t.periodKm ?? "", t.periodMonth ?? "", t.serviceType ?? ""].join("|")
+    const serviceNorm = t.serviceType === "AGIR" ? "NORMAL" : (t.serviceType ?? "")
+    return [t.brandId, vehicle, t.periodKm ?? "", t.periodMonth ?? "", serviceNorm].join("|")
   }
 
   const groups = new Map<string, typeof templates>()

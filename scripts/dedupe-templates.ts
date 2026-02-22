@@ -19,10 +19,11 @@ if (existsSync(resolve(process.cwd(), ".env"))) {
 
 import { prisma } from "../lib/prisma"
 
-/** Aynı araç (marka + alt model veya model) ve aynı periyot = tekilleştirme grubu */
+/** Aynı araç + periyot = tekilleştirme grubu. AGIR ile NORMAL aynı sayılır (ekranda ikisi de Normal Bakım). */
 function key(t: { brandId: string; modelId: string | null; subModelId: string | null; periodKm: number | null; periodMonth: number | null; serviceType: string | null }) {
   const vehicle = t.subModelId ?? t.modelId ?? ""
-  return [t.brandId, vehicle, t.periodKm ?? "", t.periodMonth ?? "", t.serviceType ?? ""].join("|")
+  const serviceNorm = t.serviceType === "AGIR" ? "NORMAL" : (t.serviceType ?? "")
+  return [t.brandId, vehicle, t.periodKm ?? "", t.periodMonth ?? "", serviceNorm].join("|")
 }
 
 async function main() {
