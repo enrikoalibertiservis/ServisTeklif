@@ -51,7 +51,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 2 }).format(n)
+  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n)
 
 const EMPTY_FORM = {
   name: "",
