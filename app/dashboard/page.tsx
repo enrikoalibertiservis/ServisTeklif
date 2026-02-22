@@ -65,41 +65,46 @@ export default async function DashboardPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8)
 
-  // Model bazlı reçete doluluk oranı — reçeteli model / toplam model (brand bazlı)
+  // Alt model (SubModel) bazında reçete doluluk oranı — brand bazlı
   const modelRecipes = await (async () => {
-    // Reçeteli (itemli) benzersiz brand+model çiftleri
+    // Reçeteli (itemli) benzersiz brand+subModel çiftleri
     const withRecipe = await prisma.maintenanceTemplate.findMany({
-      where: { items: { some: {} }, modelId: { not: null } },
-      select: { brandId: true, modelId: true },
-      distinct: ["brandId", "modelId"],
+      where: { items: { some: {} }, subModelId: { not: null } },
+      select: { brandId: true, subModelId: true },
+      distinct: ["brandId", "subModelId"],
     })
     const recipeMap: Record<string, Set<string>> = {}
     for (const t of withRecipe) {
       if (!recipeMap[t.brandId]) recipeMap[t.brandId] = new Set()
-      recipeMap[t.brandId].add(t.modelId!)
+      recipeMap[t.brandId].add(t.subModelId!)
     }
 
-    // Toplam model sayısı — brand bazlı
-    const allModels = await prisma.vehicleModel.findMany({
-      select: { id: true, brandId: true },
+    // Toplam alt model sayısı — brand bazlı (subModel → model → brand üzerinden)
+    const allSubModels = await prisma.subModel.findMany({
+      select: { id: true, model: { select: { brandId: true } } },
     })
     const totalMap: Record<string, number> = {}
-    for (const m of allModels) {
-      totalMap[m.brandId] = (totalMap[m.brandId] || 0) + 1
+    for (const sm of allSubModels) {
+      const bid = sm.model.brandId
+      totalMap[bid] = (totalMap[bid] || 0) + 1
     }
 
-    // Sadece en az 1 reçeteli modeli olan markalar
-    const involvedBrandIds = Object.keys(recipeMap)
+    // Tüm markaları dahil et (reçeteli olanlar + toplamı olan tüm markalar)
+    const allBrandIds = Array.from(new Set([
+      ...Object.keys(recipeMap),
+      ...Object.keys(totalMap),
+    ]))
     const brands = await prisma.brand.findMany({
-      where: { id: { in: involvedBrandIds } },
+      where: { id: { in: allBrandIds } },
       select: { id: true, name: true },
     })
 
-    return involvedBrandIds
+    return allBrandIds
+      .filter(id => (totalMap[id] ?? 0) > 0)   // en az 1 alt modeli olan markalar
       .map(id => ({
-        brand:       brands.find(b => b.id === id)?.name ?? "?",
-        defined:     recipeMap[id].size,
-        total:       totalMap[id] ?? recipeMap[id].size,
+        brand:   brands.find(b => b.id === id)?.name ?? "?",
+        defined: recipeMap[id]?.size ?? 0,
+        total:   totalMap[id] ?? 0,
       }))
       .sort((a, b) => (b.defined / b.total) - (a.defined / a.total))
       .slice(0, 10)

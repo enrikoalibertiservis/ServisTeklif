@@ -72,7 +72,7 @@ export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) 
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-800">Reçete Tanımlı Modeller</h3>
-              <p className="text-[11px] text-muted-foreground">Parça &amp; işçilik girişi yapılmış şablonlar</p>
+              <p className="text-[11px] text-muted-foreground">Alt model bazında reçete doluluk oranı</p>
             </div>
           </div>
 
@@ -97,7 +97,7 @@ export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) 
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-muted-foreground">
-                          {r.defined} / {r.total} model
+                          {r.defined} / {r.total} alt model
                         </span>
                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
                           isComplete ? "bg-green-100 text-green-700" :
@@ -136,8 +136,8 @@ export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) 
             <div className="mt-4 pt-3 border-t border-teal-100 flex items-center justify-between text-xs text-muted-foreground">
               <span>{modelRecipes.length} marka</span>
               <span className="font-medium text-teal-600">
-                {totalDefinedModels} / {totalAllModels} model reçeteli
-                {" "}· %{Math.round((totalDefinedModels / totalAllModels) * 100)} tamamlandı
+                {totalDefinedModels} / {totalAllModels} alt model reçeteli
+                {" "}· %{totalAllModels > 0 ? Math.round((totalDefinedModels / totalAllModels) * 100) : 0} tamamlandı
               </span>
             </div>
           )}
