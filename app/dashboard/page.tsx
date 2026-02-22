@@ -65,31 +65,43 @@ export default async function DashboardPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8)
 
-  // Model bazlı reçete özeti — kaç farklı model tanımlı?
+  // Model bazlı reçete doluluk oranı — reçeteli model / toplam model (brand bazlı)
   const modelRecipes = await (async () => {
-    // Benzersiz brand+model çiftleri (reçeteli)
-    const distinct = await prisma.maintenanceTemplate.findMany({
+    // Reçeteli (itemli) benzersiz brand+model çiftleri
+    const withRecipe = await prisma.maintenanceTemplate.findMany({
       where: { items: { some: {} }, modelId: { not: null } },
       select: { brandId: true, modelId: true },
       distinct: ["brandId", "modelId"],
     })
-    // Her brand için kaç farklı model var?
-    const perBrand: Record<string, Set<string>> = {}
-    for (const t of distinct) {
-      if (!perBrand[t.brandId]) perBrand[t.brandId] = new Set()
-      perBrand[t.brandId].add(t.modelId!)
+    const recipeMap: Record<string, Set<string>> = {}
+    for (const t of withRecipe) {
+      if (!recipeMap[t.brandId]) recipeMap[t.brandId] = new Set()
+      recipeMap[t.brandId].add(t.modelId!)
     }
-    const allBrandIds = Object.keys(perBrand)
-    const allBrands = await prisma.brand.findMany({
-      where: { id: { in: allBrandIds } },
+
+    // Toplam model sayısı — brand bazlı
+    const allModels = await prisma.vehicleModel.findMany({
+      select: { id: true, brandId: true },
+    })
+    const totalMap: Record<string, number> = {}
+    for (const m of allModels) {
+      totalMap[m.brandId] = (totalMap[m.brandId] || 0) + 1
+    }
+
+    // Sadece en az 1 reçeteli modeli olan markalar
+    const involvedBrandIds = Object.keys(recipeMap)
+    const brands = await prisma.brand.findMany({
+      where: { id: { in: involvedBrandIds } },
       select: { id: true, name: true },
     })
-    return allBrandIds
+
+    return involvedBrandIds
       .map(id => ({
-        brand: allBrands.find(b => b.id === id)?.name ?? "?",
-        modelCount: perBrand[id].size,
+        brand:       brands.find(b => b.id === id)?.name ?? "?",
+        defined:     recipeMap[id].size,
+        total:       totalMap[id] ?? recipeMap[id].size,
       }))
-      .sort((a, b) => b.modelCount - a.modelCount)
+      .sort((a, b) => (b.defined / b.total) - (a.defined / a.total))
       .slice(0, 10)
   })()
 

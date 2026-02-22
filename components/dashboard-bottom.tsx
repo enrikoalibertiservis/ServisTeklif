@@ -30,8 +30,9 @@ interface Quote {
 }
 
 interface ModelRecipe {
-  brand: string
-  modelCount: number
+  brand:   string
+  defined: number   // reçeteli model sayısı
+  total:   number   // toplam model sayısı
 }
 
 interface Props {
@@ -51,8 +52,8 @@ const DEFAULT_COLOR = { bar: "from-teal-400 to-teal-500", badge: "bg-teal-100 te
 
 export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) {
   const [widgetActive, setWidgetActive] = useState(false)
-  const maxModels = Math.max(...modelRecipes.map(r => r.modelCount), 1)
-  const totalModels = modelRecipes.reduce((s, r) => s + r.modelCount, 0)
+  const totalDefinedModels = modelRecipes.reduce((s, r) => s + r.defined, 0)
+  const totalAllModels     = modelRecipes.reduce((s, r) => s + r.total, 0)
 
   return (
     <>
@@ -81,38 +82,50 @@ export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) 
               Henüz reçete tanımlanmamış.
             </div>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {modelRecipes.map((r, i) => {
                 const colors = BRAND_COLORS[r.brand] ?? DEFAULT_COLOR
-                const pct = Math.max(6, Math.round((r.modelCount / maxModels) * 100))
+                const pct = Math.round((r.defined / r.total) * 100)
+                const isComplete = pct === 100
                 return (
-                  <div key={i} className="flex items-center gap-3 group">
-                    {/* Marka adı */}
-                    <div className="w-24 shrink-0 flex items-center gap-1.5">
-                      <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${colors.dot}`} />
-                      <span className="text-xs font-medium text-gray-700 truncate">{r.brand}</span>
-                    </div>
-                    {/* Bar */}
-                    <div className="flex-1 h-6 rounded-full bg-teal-100/60 overflow-hidden relative">
-                      <div
-                        className={`h-full rounded-full bg-gradient-to-r ${colors.bar} transition-all duration-700 flex items-center justify-end pr-2`}
-                        style={{ width: `${pct}%` }}
-                      >
-                        {pct > 25 && (
-                          <span className="text-[10px] font-bold text-white">{r.modelCount}</span>
-                        )}
+                  <div key={i} className="space-y-1">
+                    {/* Satır üstü: marka adı + sayaç + oran */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${colors.dot}`} />
+                        <span className="text-xs font-semibold text-gray-700">{r.brand}</span>
                       </div>
-                      {pct <= 25 && (
-                        <span className="absolute top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-600"
-                          style={{ left: `calc(${pct}% + 6px)` }}>
-                          {r.modelCount}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-muted-foreground">
+                          {r.defined} / {r.total} model
                         </span>
-                      )}
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                          isComplete ? "bg-green-100 text-green-700" :
+                          pct >= 60 ? "bg-yellow-100 text-yellow-700" :
+                          "bg-orange-100 text-orange-600"
+                        }`}>
+                          %{pct}
+                        </span>
+                      </div>
                     </div>
-                    {/* Badge */}
-                    <span className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${colors.badge}`}>
-                      {r.modelCount} model
-                    </span>
+                    {/* Çift katmanlı progress bar */}
+                    <div className="relative h-3 rounded-full bg-gray-100 overflow-hidden">
+                      {/* Arka plan (toplam) */}
+                      <div className="absolute inset-0 rounded-full bg-gray-100" />
+                      {/* Ön plan (reçeteli) */}
+                      <div
+                        className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${colors.bar} transition-all duration-700`}
+                        style={{ width: `${pct}%` }}
+                      />
+                      {/* Segment çizgileri: her model için bir çentik */}
+                      {r.total > 1 && Array.from({ length: r.total - 1 }).map((_, idx) => (
+                        <div
+                          key={idx}
+                          className="absolute inset-y-0 w-px bg-white/60"
+                          style={{ left: `${((idx + 1) / r.total) * 100}%` }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )
               })}
@@ -123,7 +136,8 @@ export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) 
             <div className="mt-4 pt-3 border-t border-teal-100 flex items-center justify-between text-xs text-muted-foreground">
               <span>{modelRecipes.length} marka</span>
               <span className="font-medium text-teal-600">
-                Toplam: {totalModels} farklı model
+                {totalDefinedModels} / {totalAllModels} model reçeteli
+                {" "}· %{Math.round((totalDefinedModels / totalAllModels) * 100)} tamamlandı
               </span>
             </div>
           )}
