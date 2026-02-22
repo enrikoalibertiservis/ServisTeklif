@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { FileText, PlusCircle, Package, Wrench, Car } from "lucide-react"
 import Link from "next/link"
-import { DashboardBottom } from "@/components/dashboard-bottom"
+import { DashboardBottom, RecentQuotesList } from "@/components/dashboard-bottom"
 import { DashboardStats } from "@/components/dashboard-stats"
 
 export default async function DashboardPage() {
@@ -207,8 +207,8 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* ── Hızlı Fiyat + Diğer (mobilde önce gelir) ─────────── */}
-      <DashboardBottom recentQuotes={recentQuotes} isAdmin={isAdmin} modelRecipes={modelRecipes} />
+      {/* ── Hızlı Fiyat + Reçete Grafiği ────────────────────── */}
+      <DashboardBottom modelRecipes={modelRecipes} />
 
       {/* ── Grafik İstatistikler ──────────────────────────────── */}
       <DashboardStats
@@ -216,6 +216,9 @@ export default async function DashboardPage() {
         brandQuotes={brandQuotes}
         isAdmin={isAdmin}
       />
+
+      {/* ── Son Teklifler — her zaman en altta ───────────────── */}
+      <RecentQuotesList recentQuotes={recentQuotes} isAdmin={isAdmin} />
 
     </div>
   )
