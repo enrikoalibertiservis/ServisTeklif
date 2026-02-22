@@ -58,10 +58,10 @@ export function DashboardBottom({ recentQuotes, isAdmin, modelRecipes }: Props) 
   return (
     <>
       {/* ── Hızlı Fiyat Sorgula + Model Reçete Özeti ─────────────── */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 items-stretch">
         {/* Sol: Hızlı Fiyat Sorgula */}
-        <div className="min-w-0">
-          <QuickPriceWidget onActiveChange={setWidgetActive} />
+        <div className="min-w-0 flex flex-col">
+          <QuickPriceWidget onActiveChange={setWidgetActive} className="flex-1" />
         </div>
 
         {/* Sağ: Reçete Tanımlı Modeller — mobilde gizli */}

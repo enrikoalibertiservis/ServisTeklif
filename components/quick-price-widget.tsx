@@ -27,9 +27,10 @@ type PreviewResult = Awaited<ReturnType<typeof previewTemplatePrice>>
 
 interface QuickPriceWidgetProps {
   onActiveChange?: (active: boolean) => void
+  className?: string
 }
 
-export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {}) {
+export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceWidgetProps = {}) {
   const [brands, setBrands]         = useState<any[]>([])
   const [models, setModels]         = useState<any[]>([])
   const [subModels, setSubModels]   = useState<any[]>([])
@@ -121,7 +122,7 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
   const selectedSubModel = subModels.find(s => s.id === subModelId)
 
   return (
-    <div className="overflow-hidden rounded-2xl border-2 border-emerald-500 bg-white shadow-md shadow-emerald-100">
+    <div className={`flex flex-col overflow-hidden rounded-2xl border-2 border-emerald-500 bg-white shadow-md shadow-emerald-100 ${className}`}>
       {/* Başlık */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-emerald-200 bg-emerald-50/60">
         <div className="flex items-center gap-2.5">
@@ -143,7 +144,7 @@ export function QuickPriceWidget({ onActiveChange }: QuickPriceWidgetProps = {})
       </div>
 
       {/* İçerik alanı */}
-      <div className="p-5 space-y-4">
+      <div className="flex-1 p-5 space-y-4">
         {/* Araç Seçimi */}
         <div className="grid gap-3 sm:grid-cols-3">
           <Select value={brandId} onValueChange={setBrandId}>
