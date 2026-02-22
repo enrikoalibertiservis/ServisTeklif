@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const recentQuotes = await prisma.quote.findMany({
     where: isAdmin ? {} : { createdById: session!.user.id },
     orderBy: { createdAt: "desc" },
-    take: 5,
+    take: 3,
     include: { createdBy: { select: { name: true } } },
   })
 
@@ -207,15 +207,15 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* ── Hızlı Fiyat + Reçete Grafiği ────────────────────── */}
-      <DashboardBottom modelRecipes={modelRecipes} />
-
-      {/* ── Grafik İstatistikler ──────────────────────────────── */}
+      {/* ── Grafik İstatistikler — grafikler üstte ───────────── */}
       <DashboardStats
         advisorStats={advisorStats}
         brandQuotes={brandQuotes}
         isAdmin={isAdmin}
       />
+
+      {/* ── Hızlı Fiyat + Reçete Grafiği ────────────────────── */}
+      <DashboardBottom modelRecipes={modelRecipes} />
 
       {/* ── Son Teklifler — her zaman en altta ───────────────── */}
       <RecentQuotesList recentQuotes={recentQuotes} isAdmin={isAdmin} />
