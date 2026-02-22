@@ -178,8 +178,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Hafif İstatistik Kartları ─────────────────────────── */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
+      {/* ── Hafif İstatistik Kartları — mobilde gizli ─────────── */}
+      <div className="hidden sm:grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
         {statCards.map((s) => (
           <div
             key={s.label}
@@ -207,14 +207,17 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* ── Grafik İstatistikler ──────────────────────────────── */}
-      <DashboardStats
-        advisorStats={advisorStats}
-        brandQuotes={brandQuotes}
-        isAdmin={isAdmin}
-      />
-
+      {/* ── Hızlı Fiyat + Diğer (mobilde önce gelir) ─────────── */}
       <DashboardBottom recentQuotes={recentQuotes} isAdmin={isAdmin} modelRecipes={modelRecipes} />
+
+      {/* ── Grafik İstatistikler — mobilde gizli ─────────────── */}
+      <div className="hidden sm:block">
+        <DashboardStats
+          advisorStats={advisorStats}
+          brandQuotes={brandQuotes}
+          isAdmin={isAdmin}
+        />
+      </div>
 
     </div>
   )
