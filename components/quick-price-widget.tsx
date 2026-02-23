@@ -41,8 +41,9 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
   const [modelId, setModelId]           = useState("")
   const [subModelId, setSubModelId]     = useState("")
   const [selectedPeriodKm, setSelectedPeriodKm] = useState<number | null>(null)
-  const [basePeriodTemplateId, setBasePeriodTemplateId] = useState("") // getMaintenancePeriods'un döndürdüğü id
+  const [basePeriodTemplateId, setBasePeriodTemplateId] = useState("")
   const [templateId, setTemplateId]     = useState("")
+  const [hasMultipleServiceTypes, setHasMultipleServiceTypes] = useState(false)
 
   const [loading, setLoading]   = useState(false)
   const [result, setResult]     = useState<PreviewResult | null>(null)
@@ -79,22 +80,32 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
   useEffect(() => {
     if (!brandId || !modelId) return
     if (subModels.length > 0 && !subModelId) {
-      setPeriods([]); setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); return
+      setPeriods([]); setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); setHasMultipleServiceTypes(false); return
     }
     getMaintenancePeriods(brandId, modelId, subModelId || undefined).then(setPeriods)
-    setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); setResult(null)
+    setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); setHasMultipleServiceTypes(false); setResult(null)
   }, [brandId, modelId, subModelId, subModels])
 
-  // Servis tipleri — bulunan template'in kendi bağlamında arar
+  // Servis tipleri — sadece "başka seçenek var mı?" kontrolü için
+  // templateId period tıklanınca zaten set edilmiş olur, burada sadece sibling'leri yükleriz
   useEffect(() => {
     if (!basePeriodTemplateId) {
-      setServiceTypes([]); setTemplateId(""); return
+      setServiceTypes([])
+      setHasMultipleServiceTypes(false)
+      return
     }
     getServiceTypesByTemplate(basePeriodTemplateId).then((types) => {
-      setServiceTypes(types)
-      setTemplateId(types.length === 1 ? types[0].id : "")
+      const visible = types.filter(t => t.serviceType !== "AGIR")
+      setServiceTypes(visible)
+      setHasMultipleServiceTypes(visible.length > 1)
+      // templateId zaten period onClick'te set edildi.
+      // Sadece başka tip seçilmediyse ilk seçeneği doğrula (AGIR değilse)
+      setTemplateId(prev => {
+        if (prev) return prev            // kullanıcı zaten bir seçim yapmış
+        const first = visible[0]
+        return first ? first.id : prev   // fallback: ilk visible tip
+      })
     })
-    setResult(null)
   }, [basePeriodTemplateId])
 
   // Şablon seçilince otomatik fiyat hesapla
@@ -111,6 +122,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
     setBrandId(""); setModelId(""); setSubModelId("")
     setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId("")
     setModels([]); setSubModels([]); setPeriods([]); setServiceTypes([])
+    setHasMultipleServiceTypes(false)
     setResult(null); setError("")
   }
 
@@ -195,6 +207,9 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                     const toggled = selectedPeriodKm === 0
                     setSelectedPeriodKm(toggled ? null : 0)
                     setBasePeriodTemplateId(toggled ? "" : hizliServis.id)
+                    setTemplateId(toggled ? "" : hizliServis.id)
+                    setServiceTypes([]); setHasMultipleServiceTypes(false)
+                    setResult(null); setError("")
                   }}
                   className={`px-3 py-1.5 rounded-md border-2 text-sm font-medium transition-all flex items-center gap-1.5 ${
                     selectedPeriodKm === 0
@@ -213,6 +228,9 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                     const toggled = selectedPeriodKm === p.periodKm
                     setSelectedPeriodKm(toggled ? null : p.periodKm)
                     setBasePeriodTemplateId(toggled ? "" : p.id)
+                    setTemplateId(toggled ? "" : p.id)
+                    setServiceTypes([]); setHasMultipleServiceTypes(false)
+                    setResult(null); setError("")
                   }}
                   className={`px-3 py-1.5 rounded-md border-2 text-sm font-medium transition-all ${
                     selectedPeriodKm === p.periodKm
@@ -228,8 +246,8 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
           </div>
         )}
 
-        {/* Servis tipi */}
-        {serviceTypes.length > 1 && (
+        {/* Servis tipi — birden fazla seçenek varsa göster */}
+        {hasMultipleServiceTypes && (
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Servis Tipi</p>
             <div className="flex flex-wrap gap-2">
@@ -403,7 +421,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                 ? "Bu araç için tanımlı bakım şablonu bulunamadı."
                 : selectedPeriodKm === null
                 ? "Bakım periyodunu seçin."
-                : serviceTypes.length > 1 && !templateId
+                : hasMultipleServiceTypes && !templateId
                 ? "Servis tipini seçin."
                 : ""}
             </p>
