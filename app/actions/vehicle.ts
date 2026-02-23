@@ -31,22 +31,20 @@ export async function getMaintenancePeriods(brandId: string, modelId?: string, s
   const select = { id: true, periodKm: true, periodMonth: true, name: true, serviceType: true } as const
   const order  = { periodKm: "asc" } as const
 
-  // Kademeli arama: subModel → model → brand
-  const candidates: any[] = []
+  // Kademeli arama: subModel → model (herhangi subModel) → brand
+  let candidates: any[] = []
 
   if (subModelId) {
-    const r = await prisma.maintenanceTemplate.findMany({ where: { brandId, subModelId }, select, orderBy: order })
-    if (r.length) candidates.push(...r)
+    candidates = await prisma.maintenanceTemplate.findMany({ where: { brandId, subModelId }, select, orderBy: order })
   }
 
   if (!candidates.length && modelId) {
-    const r = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId, subModelId: null }, select, orderBy: order })
-    if (r.length) candidates.push(...r)
+    // subModelId kısıtı olmadan: model'e ait TÜM şablonlar (null veya başka bir subModel)
+    candidates = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId }, select, orderBy: order })
   }
 
   if (!candidates.length) {
-    const r = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId: null, subModelId: null }, select, orderBy: order })
-    candidates.push(...r)
+    candidates = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId: null, subModelId: null }, select, orderBy: order })
   }
 
   // periodKm bazında tekilleştir
@@ -71,7 +69,8 @@ export async function getServiceTypes(brandId: string, modelId?: string, subMode
   }
 
   if (!templates.length && modelId) {
-    templates = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId, subModelId: null, periodKm: km }, select, orderBy: order })
+    // subModelId kısıtı olmadan: model'e ait TÜM periodKm eşleşmeleri
+    templates = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId, periodKm: km }, select, orderBy: order })
   }
 
   if (!templates.length) {
