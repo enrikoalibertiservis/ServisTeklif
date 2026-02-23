@@ -1,12 +1,21 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect, useCallback } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, CalendarDays, X } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useToast } from "@/hooks/use-toast"
+import {
+  Search, FileText, Trash2, CheckSquare, Square,
+  Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  PlusCircle, ExternalLink,
+} from "lucide-react"
 import Link from "next/link"
+
+const PAGE_SIZE = 20
 
 type Quote = {
   id: string
@@ -18,253 +27,273 @@ type Quote = {
   plateNo: string | null
   customerName: string | null
   grandTotal: number
-  createdAt: Date
+  createdAt: string
   createdBy: { name: string | null }
 }
 
-interface QuotesListProps {
-  quotes: Quote[]
-  isAdmin: boolean
-}
-
-const statusLabel: Record<string, string> = {
+const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Taslak",
   FINALIZED: "Kesin",
   CANCELLED: "İptal",
 }
-
-type DatePreset = "all" | "today" | "week" | "month" | "custom"
-
-const presets: { key: DatePreset; label: string }[] = [
-  { key: "all", label: "Tümü" },
-  { key: "today", label: "Bugün" },
-  { key: "week", label: "Bu Hafta" },
-  { key: "month", label: "Bu Ay" },
-  { key: "custom", label: "Özel" },
-]
-
-function getPresetRange(preset: DatePreset): { from: Date | null; to: Date | null } {
-  const now = new Date()
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
-
-  if (preset === "today") {
-    return { from: startOfDay(now), to: endOfDay(now) }
-  }
-  if (preset === "week") {
-    const day = now.getDay()
-    const diffToMonday = (day === 0 ? -6 : 1 - day)
-    const monday = new Date(now)
-    monday.setDate(now.getDate() + diffToMonday)
-    return { from: startOfDay(monday), to: endOfDay(now) }
-  }
-  if (preset === "month") {
-    return {
-      from: new Date(now.getFullYear(), now.getMonth(), 1),
-      to: endOfDay(now),
-    }
-  }
-  return { from: null, to: null }
+const STATUS_COLOR: Record<string, string> = {
+  DRAFT:     "bg-yellow-100 text-yellow-700 border-yellow-200",
+  FINALIZED: "bg-green-100 text-green-700 border-green-200",
+  CANCELLED: "bg-red-100 text-red-700 border-red-200",
 }
 
-function toInputValue(d: Date | null): string {
-  if (!d) return ""
-  return d.toISOString().slice(0, 10)
-}
+const fmt = (n: number) =>
+  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(n)
 
-export function QuotesList({ quotes, isAdmin }: QuotesListProps) {
-  const [search, setSearch] = useState("")
-  const [preset, setPreset] = useState<DatePreset>("all")
-  const [customFrom, setCustomFrom] = useState("")
-  const [customTo, setCustomTo] = useState("")
+const fmtDate = (d: string) =>
+  new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" })
 
-  const filtered = useMemo(() => {
-    let result = quotes
+interface Props { isAdmin: boolean }
 
-    // --- tarih filtresi ---
-    if (preset !== "all") {
-      let from: Date | null = null
-      let to: Date | null = null
+export function QuotesList({ isAdmin }: Props) {
+  const { toast } = useToast()
+  const [quotes, setQuotes]     = useState<Quote[]>([])
+  const [total, setTotal]       = useState(0)
+  const [page, setPage]         = useState(1)
+  const [search, setSearch]     = useState("")
+  const [status, setStatus]     = useState("ALL")
+  const [loading, setLoading]   = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
 
-      if (preset === "custom") {
-        from = customFrom ? new Date(customFrom + "T00:00:00") : null
-        to = customTo ? new Date(customTo + "T23:59:59") : null
-      } else {
-        const range = getPresetRange(preset)
-        from = range.from
-        to = range.to
-      }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-      result = result.filter((q) => {
-        const date = new Date(q.createdAt)
-        if (from && date < from) return false
-        if (to && date > to) return false
-        return true
-      })
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
+      if (search) params.set("q", search)
+      if (status !== "ALL") params.set("status", status)
+      const res  = await fetch(`/api/quotes?${params}`)
+      const data = await res.json()
+      setQuotes(data.items ?? [])
+      setTotal(data.total ?? 0)
+      setSelected(new Set())
+    } finally {
+      setLoading(false)
     }
+  }, [page, search, status])
 
-    // --- metin araması ---
-    const q = search.toLowerCase().trim()
-    if (q) {
-      result = result.filter((quote) => {
-        const haystack = [
-          quote.quoteNo,
-          quote.brandName,
-          quote.modelName,
-          quote.subModelName ?? "",
-          quote.plateNo ?? "",
-          quote.customerName ?? "",
-          quote.createdBy.name ?? "",
-          statusLabel[quote.status] ?? "",
-        ]
-          .join(" ")
-          .toLowerCase()
-        return haystack.includes(q)
-      })
-    }
+  useEffect(() => { load() }, [load])
 
-    return result
-  }, [quotes, search, preset, customFrom, customTo])
+  // arama değişince sayfayı sıfırla
+  useEffect(() => { setPage(1) }, [search, status])
 
-  const isFiltered = preset !== "all" || search.trim() !== ""
+  const allSelected = quotes.length > 0 && selected.size === quotes.length
 
-  function clearFilters() {
-    setSearch("")
-    setPreset("all")
-    setCustomFrom("")
-    setCustomTo("")
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(quotes.map(q => q.id)))
   }
+  function toggleOne(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  async function handleDelete(ids: string[]) {
+    if (!confirm(`${ids.length} teklif silinecek. Emin misiniz?`)) return
+    setDeleting(true)
+    try {
+      const res = await fetch("/api/quotes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) throw new Error()
+      toast({ title: "Silindi", description: `${ids.length} teklif silindi.` })
+      load()
+    } catch {
+      toast({ title: "Hata", description: "Silme işlemi başarısız.", variant: "destructive" })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const startIdx = (page - 1) * PAGE_SIZE + 1
+  const endIdx   = Math.min(page * PAGE_SIZE, total)
 
   return (
     <div className="space-y-4">
-      {/* Arama + tarih satırı */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      {/* Filtre satırı */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-52">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Teklif no, plaka, müşteri, araç ara…"
+            placeholder="Teklif no, araç, müşteri, plaka ara…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 border-2 border-green-300 focus:border-green-500 focus-visible:ring-green-200 bg-green-50/40"
+            onChange={e => { setSearch(e.target.value) }}
+            className="pl-9"
           />
         </div>
-      </div>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Durum" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Tüm Durumlar</SelectItem>
+            <SelectItem value="DRAFT">Taslak</SelectItem>
+            <SelectItem value="FINALIZED">Kesin</SelectItem>
+            <SelectItem value="CANCELLED">İptal</SelectItem>
+          </SelectContent>
+        </Select>
 
-      {/* Tarih preset butonları */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
-        {presets.map((p) => (
+        {selected.size > 0 && isAdmin && (
           <Button
-            key={p.key}
-            variant={preset === p.key ? "default" : "outline"}
             size="sm"
-            onClick={() => setPreset(p.key)}
-            className="h-8 text-xs"
+            variant="destructive"
+            onClick={() => handleDelete(Array.from(selected))}
+            disabled={deleting}
           >
-            {p.label}
-          </Button>
-        ))}
-        {isFiltered && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="h-8 text-xs text-muted-foreground"
-          >
-            <X className="h-3 w-3 mr-1" />
-            Temizle
+            {deleting
+              ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              : <Trash2 className="h-4 w-4 mr-1" />}
+            {selected.size} Teklifi Sil
           </Button>
         )}
+
+        <Link href="/dashboard/quotes/new" className="ml-auto">
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+            <PlusCircle className="h-4 w-4 mr-1" /> Yeni Teklif
+          </Button>
+        </Link>
       </div>
 
-      {/* Özel tarih aralığı */}
-      {preset === "custom" && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <Input
-            type="date"
-            value={customFrom}
-            onChange={(e) => setCustomFrom(e.target.value)}
-            className="w-40 h-8 text-sm"
-            max={customTo || toInputValue(new Date())}
-          />
-          <span className="text-muted-foreground text-sm">–</span>
-          <Input
-            type="date"
-            value={customTo}
-            onChange={(e) => setCustomTo(e.target.value)}
-            className="w-40 h-8 text-sm"
-            min={customFrom}
-            max={toInputValue(new Date())}
-          />
-        </div>
-      )}
-
-      {/* Sonuç sayısı */}
-      {isFiltered && (
-        <p className="text-sm text-muted-foreground">
-          {filtered.length} sonuç bulundu
-        </p>
-      )}
-
-      {/* Liste */}
-      {filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            {isFiltered ? "Seçili filtrelere uyan teklif bulunamadı." : "Henüz teklif oluşturulmamış."}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((q) => (
-            <Link key={q.id} href={`/dashboard/quotes/${q.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="space-y-0.5">
-                      {/* Araç modeli — büyük ve belirgin */}
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-base text-slate-900">
-                          {q.brandName} {q.modelName}{q.subModelName ? ` ${q.subModelName}` : ""}
-                        </span>
-                        <Badge
-                          variant={q.status === "FINALIZED" ? "default" : "secondary"}
-                          className="text-xs"
-                        >
-                          {statusLabel[q.status] ?? q.status}
-                        </Badge>
+      {/* Tablo */}
+      <Card>
+        <CardHeader className="py-3 px-5 border-b">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <FileText className="h-4 w-4 text-blue-500" />
+              Teklifler
+              <Badge variant="secondary" className="text-xs">{total}</Badge>
+            </CardTitle>
+            {isAdmin && (
+              <button
+                onClick={toggleAll}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {allSelected
+                  ? <CheckSquare className="h-4 w-4 text-blue-500" />
+                  : <Square className="h-4 w-4" />}
+                Sayfadakileri Seç
+              </button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" /> Yükleniyor…
+            </div>
+          ) : quotes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <FileText className="h-10 w-10 opacity-20 mb-3" />
+              <p className="text-sm">Teklif bulunamadı.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  {isAdmin && <TableHead className="w-10 pl-5" />}
+                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500">Araç</TableHead>
+                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500">Teklif No</TableHead>
+                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500 hidden sm:table-cell">Müşteri / Plaka</TableHead>
+                  {isAdmin && <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500 hidden md:table-cell">Danışman</TableHead>}
+                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500">Durum</TableHead>
+                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500 text-right">Tutar</TableHead>
+                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500 hidden lg:table-cell">Tarih</TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quotes.map((q, idx) => (
+                  <TableRow
+                    key={q.id}
+                    className={`${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"} hover:bg-blue-50/40 transition-colors`}
+                  >
+                    {isAdmin && (
+                      <TableCell className="pl-5 w-10">
+                        <button onClick={() => toggleOne(q.id)}>
+                          {selected.has(q.id)
+                            ? <CheckSquare className="h-4 w-4 text-blue-500" />
+                            : <Square className="h-4 w-4 text-slate-300 hover:text-slate-500" />}
+                        </button>
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <div className="font-semibold text-sm text-slate-900 leading-tight">
+                        {q.brandName} {q.modelName}
                       </div>
-                      {/* Teklif no + müşteri / plaka — küçük ve soluk */}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-mono">{q.quoteNo}</span>
-                        {q.plateNo && <><span>·</span><span>{q.plateNo}</span></>}
-                        {q.customerName && <><span>·</span><span>{q.customerName}</span></>}
-                      </div>
-                      {isAdmin && (
-                        <div className="text-xs text-muted-foreground">
-                          Danışman: {q.createdBy.name}
-                        </div>
+                      {q.subModelName && (
+                        <div className="text-xs text-slate-400">{q.subModelName}</div>
                       )}
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-lg tabular-nums">
-                        {new Intl.NumberFormat("tr-TR", {
-                          style: "currency",
-                          currency: "TRY",
-                        }).format(q.grandTotal)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(q.createdAt).toLocaleDateString("tr-TR", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs text-slate-500">{q.quoteNo}</span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <div className="text-sm text-slate-700">{q.customerName ?? "—"}</div>
+                      {q.plateNo && (
+                        <div className="text-xs font-mono text-slate-400">{q.plateNo}</div>
+                      )}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="hidden md:table-cell">
+                        <span className="text-xs text-slate-500">{q.createdBy.name ?? "—"}</span>
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[q.status] ?? "bg-slate-100 text-slate-600"}`}>
+                        {STATUS_LABEL[q.status] ?? q.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="font-semibold text-sm tabular-nums">{fmt(q.grandTotal)}</span>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <span className="text-xs text-slate-400">{fmtDate(q.createdAt)}</span>
+                    </TableCell>
+                    <TableCell className="pr-3">
+                      <Link href={`/dashboard/quotes/${q.id}`}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-blue-600">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sayfalama */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{startIdx}–{endIdx} / {total} teklif</span>
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setPage(1)} disabled={page === 1}>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="px-3 py-1 rounded border bg-white text-xs font-medium">{page} / {totalPages}</span>
+            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setPage(totalPages)} disabled={page === totalPages}>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
