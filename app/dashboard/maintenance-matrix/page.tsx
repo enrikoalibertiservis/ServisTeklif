@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Check, Minus, Car, ClipboardList } from "lucide-react"
-import { getBrands, getModelsByBrand } from "@/app/actions/vehicle"
+import { getBrands, getModelsByBrand, getSubModelsByModel } from "@/app/actions/vehicle"
 import { formatCurrency } from "@/lib/utils"
 
 interface MatrixData {
@@ -29,8 +29,10 @@ interface MatrixData {
 export default function MaintenanceMatrixPage() {
   const [brands, setBrands] = useState<any[]>([])
   const [models, setModels] = useState<any[]>([])
+  const [subModels, setSubModels] = useState<any[]>([])
   const [brandId, setBrandId] = useState("")
   const [modelId, setModelId] = useState("")
+  const [subModelId, setSubModelId] = useState("")
   const [matrix, setMatrix] = useState<MatrixData | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -42,24 +44,37 @@ export default function MaintenanceMatrixPage() {
     if (brandId) {
       getModelsByBrand(brandId).then(setModels)
       setModelId("")
+      setSubModelId("")
+      setSubModels([])
       setMatrix(null)
     }
   }, [brandId])
 
   useEffect(() => {
-    if (brandId) {
-      setLoading(true)
-      const url = modelId
-        ? `/api/maintenance-matrix?brandId=${brandId}&modelId=${modelId}`
-        : `/api/maintenance-matrix?brandId=${brandId}`
-      fetch(url)
-        .then((r) => r.json())
-        .then(setMatrix)
-        .finally(() => setLoading(false))
+    if (modelId && modelId !== "ALL") {
+      getSubModelsByModel(modelId).then(setSubModels)
+      setSubModelId("")
+    } else {
+      setSubModels([])
+      setSubModelId("")
     }
-  }, [brandId, modelId])
+  }, [modelId])
 
-  const selectedBrand = brands.find((b) => b.id === brandId)
+  useEffect(() => {
+    if (!brandId) return
+    setLoading(true)
+    const params = new URLSearchParams({ brandId })
+    if (modelId && modelId !== "ALL") params.set("modelId", modelId)
+    if (subModelId && subModelId !== "ALL") params.set("subModelId", subModelId)
+    fetch(`/api/maintenance-matrix?${params}`)
+      .then((r) => r.json())
+      .then(setMatrix)
+      .finally(() => setLoading(false))
+  }, [brandId, modelId, subModelId])
+
+  const selectedBrand    = brands.find((b) => b.id === brandId)
+  const selectedModel    = models.find((m) => m.id === modelId)
+  const selectedSubModel = subModels.find((sm) => sm.id === subModelId)
 
   return (
     <div className="space-y-6">
@@ -77,7 +92,7 @@ export default function MaintenanceMatrixPage() {
         <div className="space-y-1">
           <label className="text-sm font-medium">Marka</label>
           <Select value={brandId} onValueChange={setBrandId}>
-            <SelectTrigger className="w-52">
+            <SelectTrigger className="w-44">
               <SelectValue placeholder="Marka seçin" />
             </SelectTrigger>
             <SelectContent>
@@ -88,15 +103,33 @@ export default function MaintenanceMatrixPage() {
           </Select>
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium">Model (opsiyonel)</label>
+          <label className="text-sm font-medium">Model</label>
           <Select value={modelId} onValueChange={setModelId} disabled={!brandId}>
-            <SelectTrigger className="w-52">
-              <SelectValue placeholder="Tümü" />
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Tüm Modeller" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Tüm Modeller</SelectItem>
               {models.map((m) => (
                 <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Alt Model</label>
+          <Select
+            value={subModelId}
+            onValueChange={setSubModelId}
+            disabled={!modelId || modelId === "ALL" || subModels.length === 0}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Tüm Alt Modeller" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tüm Alt Modeller</SelectItem>
+              {subModels.map((sm) => (
+                <SelectItem key={sm.id} value={sm.id}>{sm.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -132,8 +165,11 @@ export default function MaintenanceMatrixPage() {
       {!loading && matrix && matrix.periods.length > 0 && (
         <Card>
           <CardHeader className="pb-0">
-            <CardTitle className="text-lg">
-              {selectedBrand?.name} Bakım Matrisi
+            <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
+              {selectedBrand?.name}
+              {selectedModel && <span className="text-muted-foreground font-normal text-base">/ {selectedModel.name}</span>}
+              {selectedSubModel && <span className="text-muted-foreground font-normal text-base">/ {selectedSubModel.name}</span>}
+              <span className="text-base font-normal text-muted-foreground">Bakım Matrisi</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 mt-4">

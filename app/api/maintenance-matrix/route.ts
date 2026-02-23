@@ -9,17 +9,18 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ periods: [], partRows: [], laborRows: [], periodTotals: [] }, { status: 401 })
   const { searchParams } = new URL(req.url)
-  const brandId = searchParams.get("brandId")
-  const modelId = searchParams.get("modelId")
+  const brandId    = searchParams.get("brandId")
+  const modelId    = searchParams.get("modelId")
+  const subModelId = searchParams.get("subModelId")
 
   if (!brandId) return NextResponse.json({ periods: [], partRows: [], laborRows: [], periodTotals: [] })
 
   const whereClause: any = { brandId }
-  if (modelId && modelId !== "ALL") {
-    whereClause.OR = [
-      { modelId: null },
-      { modelId },
-    ]
+
+  if (subModelId && subModelId !== "ALL") {
+    whereClause.subModelId = subModelId
+  } else if (modelId && modelId !== "ALL") {
+    whereClause.modelId = modelId
   }
 
   const templates = await prisma.maintenanceTemplate.findMany({
