@@ -114,7 +114,7 @@ interface Props {
 const BRAND_COLORS: Record<string, { bar: string; badge: string; dot: string }> = {
   Fiat:        { bar: "from-red-400 to-red-500",     badge: "bg-red-100 text-red-700",     dot: "bg-red-400" },
   Jeep:        { bar: "from-green-500 to-emerald-600", badge: "bg-green-100 text-green-700", dot: "bg-green-500" },
-  "Alfa Romeo":{ bar: "from-rose-500 to-red-600",    badge: "bg-rose-100 text-rose-700",   dot: "bg-rose-500" },
+  "Alfa Romeo":{ bar: "from-orange-400 to-amber-500", badge: "bg-orange-100 text-orange-700", dot: "bg-orange-400" },
   Lancia:      { bar: "from-blue-400 to-indigo-500", badge: "bg-blue-100 text-blue-700",   dot: "bg-blue-400" },
 }
 const DEFAULT_COLOR = { bar: "from-teal-400 to-teal-500", badge: "bg-teal-100 text-teal-700", dot: "bg-teal-400" }

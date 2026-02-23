@@ -14,7 +14,7 @@ interface Props {
 const BRAND_COLORS: Record<string, string> = {
   "Fiat":         "from-red-400 to-red-500",
   "Jeep":         "from-green-500 to-emerald-500",
-  "Alfa Romeo":   "from-rose-500 to-red-600",
+  "Alfa Romeo":   "from-orange-400 to-amber-500",
   "Lancia":       "from-blue-400 to-indigo-500",
 }
 const DEFAULT_BAR = "from-violet-400 to-purple-500"
