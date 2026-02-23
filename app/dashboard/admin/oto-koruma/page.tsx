@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useTransition } from "react"
+import { useSession } from "next-auth/react"
 import {
   getOtoKorumaProducts,
   createOtoKorumaProduct,
@@ -203,6 +204,8 @@ function ProductDetailDialog({
 // ── Ana Sayfa ──────────────────────────────────────────────────────
 export default function OtoKorumaPage() {
   const { toast } = useToast()
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === "ADMIN"
   const [products, setProducts] = useState<OtoKorumaProductData[]>([])
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
@@ -486,10 +489,12 @@ export default function OtoKorumaPage() {
             <FileDown className="h-4 w-4 text-red-500" />
             PDF
           </Button>
-          <Button onClick={openNew} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Yeni Ürün
-          </Button>
+          {isAdmin && (
+            <Button onClick={openNew} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Yeni Ürün
+            </Button>
+          )}
         </div>
       </div>
 
@@ -513,10 +518,12 @@ export default function OtoKorumaPage() {
             <div className="text-center py-14 text-muted-foreground">
               <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
               <p>Henüz ürün eklenmemiş.</p>
-              <Button variant="outline" className="mt-3" onClick={openNew}>
-                <Plus className="h-4 w-4 mr-2" />
-                İlk Ürünü Ekle
-              </Button>
+              {isAdmin && (
+                <Button variant="outline" className="mt-3" onClick={openNew}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  İlk Ürünü Ekle
+                </Button>
+              )}
             </div>
           ) : (
             <Table>
@@ -544,25 +551,29 @@ export default function OtoKorumaPage() {
                       onClick={() => setDetailProduct(p)}
                     >
                       <TableCell className="pl-4">
-                        <div className="flex items-center gap-1">
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
-                          <div className="flex flex-col">
-                            <button
-                              onClick={e => { e.stopPropagation(); moveItem(index, "up") }}
-                              disabled={index === 0}
-                              className="text-muted-foreground hover:text-foreground disabled:opacity-20"
-                            >
-                              <ChevronUp className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); moveItem(index, "down") }}
-                              disabled={index === products.length - 1}
-                              className="text-muted-foreground hover:text-foreground disabled:opacity-20"
-                            >
-                              <ChevronDown className="h-3 w-3" />
-                            </button>
+                        {isAdmin ? (
+                          <div className="flex items-center gap-1">
+                            <GripVertical className="h-4 w-4 text-muted-foreground" />
+                            <div className="flex flex-col">
+                              <button
+                                onClick={e => { e.stopPropagation(); moveItem(index, "up") }}
+                                disabled={index === 0}
+                                className="text-muted-foreground hover:text-foreground disabled:opacity-20"
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); moveItem(index, "down") }}
+                                disabled={index === products.length - 1}
+                                className="text-muted-foreground hover:text-foreground disabled:opacity-20"
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground pl-1">{index + 1}</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-0.5">
@@ -621,24 +632,28 @@ export default function OtoKorumaPage() {
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => openEdit(p)}
-                            title="Düzenle"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => setDeleteId(p.id)}
-                            title="Sil"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => openEdit(p)}
+                                title="Düzenle"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => setDeleteId(p.id)}
+                                title="Sil"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

@@ -54,6 +54,12 @@ const advisorGroups: NavGroup[] = [
       { href: "/dashboard/maintenance-matrix",  label: "Bakım Matrisi",  icon: Grid3X3,     color: "text-purple-500" },
     ],
   },
+  {
+    title: "Oto Koruma",
+    items: [
+      { href: "/dashboard/admin/oto-koruma", label: "Oto Koruma Ürünleri", icon: Shield, color: "text-emerald-500" },
+    ],
+  },
 ]
 
 const adminGroups: NavGroup[] = [
