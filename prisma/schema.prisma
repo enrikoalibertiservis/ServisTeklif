@@ -31,6 +31,8 @@ model LoginLog {
   email     String
   success   Boolean
   ip        String?
+  city      String?
+  country   String?
   userAgent String?
   createdAt DateTime @default(now())
 

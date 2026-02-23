@@ -15,6 +15,19 @@ function getUA(req: any): string | null {
   try { return req?.headers?.["user-agent"] ?? null } catch { return null }
 }
 
+function getCity(req: any): string | null {
+  try {
+    // Vercel otomatik olarak bu header'ı ekler (URL encode edilmiş)
+    const raw = req?.headers?.["x-vercel-ip-city"]
+    if (!raw) return null
+    return decodeURIComponent(raw)
+  } catch { return null }
+}
+
+function getCountry(req: any): string | null {
+  try { return req?.headers?.["x-vercel-ip-country"] ?? null } catch { return null }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -24,36 +37,34 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Şifre", type: "password" },
       },
       async authorize(credentials, req) {
-        const email = credentials?.email ?? ""
-        const ip    = getIp(req)
-        const ua    = getUA(req)
+        const email   = credentials?.email ?? ""
+        const ip      = getIp(req)
+        const ua      = getUA(req)
+        const city    = getCity(req)
+        const country = getCountry(req)
 
         if (!credentials?.email || !credentials?.password) return null
 
         const user = await prisma.user.findUnique({ where: { email } })
 
-        // Başarısız — kullanıcı yok
         if (!user) {
-          await prisma.loginLog.create({ data: { email, success: false, ip, userAgent: ua } }).catch(() => {})
+          await prisma.loginLog.create({ data: { email, success: false, ip, city, country, userAgent: ua } }).catch(() => {})
           return null
         }
 
-        // Başarısız — hesap pasif
         if (!user.active) {
-          await prisma.loginLog.create({ data: { userId: user.id, email, success: false, ip, userAgent: ua } }).catch(() => {})
+          await prisma.loginLog.create({ data: { userId: user.id, email, success: false, ip, city, country, userAgent: ua } }).catch(() => {})
           return null
         }
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash)
 
-        // Başarısız — şifre yanlış
         if (!valid) {
-          await prisma.loginLog.create({ data: { userId: user.id, email, success: false, ip, userAgent: ua } }).catch(() => {})
+          await prisma.loginLog.create({ data: { userId: user.id, email, success: false, ip, city, country, userAgent: ua } }).catch(() => {})
           return null
         }
 
-        // Başarılı giriş
-        await prisma.loginLog.create({ data: { userId: user.id, email, success: true, ip, userAgent: ua } }).catch(() => {})
+        await prisma.loginLog.create({ data: { userId: user.id, email, success: true, ip, city, country, userAgent: ua } }).catch(() => {})
 
         return { id: user.id, email: user.email, name: user.name, role: user.role }
       },
