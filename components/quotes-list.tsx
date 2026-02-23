@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import {
   Search, FileText, Trash2, CheckSquare, Square,
   Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  PlusCircle, ExternalLink,
+  PlusCircle, ChevronUp, ChevronDown, ChevronsUpDown,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -31,6 +32,9 @@ type Quote = {
   createdBy: { name: string | null }
 }
 
+type SortKey = "araç" | "quoteNo" | "müşteri" | "durum" | "tutar" | "tarih" | "danışman"
+type SortDir = "asc" | "desc"
+
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Taslak",
   FINALIZED: "Kesin",
@@ -44,24 +48,47 @@ const STATUS_COLOR: Record<string, string> = {
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(n)
-
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" })
+
+function sortQuotes(quotes: Quote[], key: SortKey, dir: SortDir): Quote[] {
+  return [...quotes].sort((a, b) => {
+    let va: string | number = ""
+    let vb: string | number = ""
+    if (key === "araç")     { va = `${a.brandName} ${a.modelName}`; vb = `${b.brandName} ${b.modelName}` }
+    if (key === "quoteNo")  { va = a.quoteNo;      vb = b.quoteNo }
+    if (key === "müşteri")  { va = a.customerName ?? ""; vb = b.customerName ?? "" }
+    if (key === "danışman") { va = a.createdBy.name ?? ""; vb = b.createdBy.name ?? "" }
+    if (key === "durum")    { va = STATUS_LABEL[a.status] ?? ""; vb = STATUS_LABEL[b.status] ?? "" }
+    if (key === "tutar")    { va = a.grandTotal;   vb = b.grandTotal }
+    if (key === "tarih")    { va = a.createdAt;    vb = b.createdAt }
+    if (typeof va === "number") return dir === "asc" ? va - (vb as number) : (vb as number) - va
+    return dir === "asc"
+      ? String(va).localeCompare(String(vb), "tr")
+      : String(vb).localeCompare(String(va), "tr")
+  })
+}
 
 interface Props { isAdmin: boolean }
 
 export function QuotesList({ isAdmin }: Props) {
+  const router   = useRouter()
   const { toast } = useToast()
+
   const [quotes, setQuotes]     = useState<Quote[]>([])
   const [total, setTotal]       = useState(0)
+  const [allIds, setAllIds]     = useState<string[]>([])   // tüm filtrelenmiş ID'ler
   const [page, setPage]         = useState(1)
   const [search, setSearch]     = useState("")
   const [status, setStatus]     = useState("ALL")
   const [loading, setLoading]   = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
+  const [sortKey, setSortKey]   = useState<SortKey>("tarih")
+  const [sortDir, setSortDir]   = useState<SortDir>("desc")
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const sorted = sortQuotes(quotes, sortKey, sortDir)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -79,16 +106,39 @@ export function QuotesList({ isAdmin }: Props) {
     }
   }, [page, search, status])
 
-  useEffect(() => { load() }, [load])
+  // "Tümünü Seç" için tüm ID'leri çek (sayfa bağımsız)
+  const loadAllIds = useCallback(async () => {
+    const params = new URLSearchParams({ all: "true" })
+    if (search) params.set("q", search)
+    if (status !== "ALL") params.set("status", status)
+    const res  = await fetch(`/api/quotes?${params}`)
+    const data = await res.json()
+    setAllIds((data.items ?? []).map((q: Quote) => q.id))
+  }, [search, status])
 
-  // arama değişince sayfayı sıfırla
+  useEffect(() => { load() }, [load])
   useEffect(() => { setPage(1) }, [search, status])
 
-  const allSelected = quotes.length > 0 && selected.size === quotes.length
+  const pageSelected   = quotes.length > 0 && quotes.every(q => selected.has(q.id))
+  const allPagesSelected = allIds.length > 0 && allIds.every(id => selected.has(id))
 
-  function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(quotes.map(q => q.id)))
+  function togglePage() {
+    if (pageSelected) {
+      setSelected(prev => { const next = new Set(prev); quotes.forEach(q => next.delete(q.id)); return next })
+    } else {
+      setSelected(prev => { const next = new Set(prev); quotes.forEach(q => next.add(q.id)); return next })
+    }
   }
+
+  async function toggleAllPages() {
+    if (allPagesSelected) {
+      setSelected(new Set())
+    } else {
+      await loadAllIds()
+      setSelected(new Set(allIds))
+    }
+  }
+
   function toggleOne(id: string) {
     setSelected(prev => {
       const next = new Set(prev)
@@ -108,6 +158,7 @@ export function QuotesList({ isAdmin }: Props) {
       })
       if (!res.ok) throw new Error()
       toast({ title: "Silindi", description: `${ids.length} teklif silindi.` })
+      setAllIds([])
       load()
     } catch {
       toast({ title: "Hata", description: "Silme işlemi başarısız.", variant: "destructive" })
@@ -115,6 +166,27 @@ export function QuotesList({ isAdmin }: Props) {
       setDeleting(false)
     }
   }
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc")
+    else { setSortKey(key); setSortDir("asc") }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col) return <ChevronsUpDown className="h-3 w-3 ml-1 opacity-30 inline" />
+    return sortDir === "asc"
+      ? <ChevronUp className="h-3 w-3 ml-1 text-blue-500 inline" />
+      : <ChevronDown className="h-3 w-3 ml-1 text-blue-500 inline" />
+  }
+
+  const SortHead = ({ col, label, className = "" }: { col: SortKey; label: string; className?: string }) => (
+    <TableHead
+      className={`font-semibold text-xs uppercase tracking-wide text-slate-500 cursor-pointer select-none hover:text-slate-800 transition-colors ${className}`}
+      onClick={() => handleSort(col)}
+    >
+      {label}<SortIcon col={col} />
+    </TableHead>
+  )
 
   const startIdx = (page - 1) * PAGE_SIZE + 1
   const endIdx   = Math.min(page * PAGE_SIZE, total)
@@ -128,7 +200,7 @@ export function QuotesList({ isAdmin }: Props) {
           <Input
             placeholder="Teklif no, araç, müşteri, plaka ara…"
             value={search}
-            onChange={e => { setSearch(e.target.value) }}
+            onChange={e => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
@@ -145,15 +217,8 @@ export function QuotesList({ isAdmin }: Props) {
         </Select>
 
         {selected.size > 0 && isAdmin && (
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => handleDelete(Array.from(selected))}
-            disabled={deleting}
-          >
-            {deleting
-              ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              : <Trash2 className="h-4 w-4 mr-1" />}
+          <Button size="sm" variant="destructive" onClick={() => handleDelete(Array.from(selected))} disabled={deleting}>
+            {deleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
             {selected.size} Teklifi Sil
           </Button>
         )}
@@ -168,22 +233,33 @@ export function QuotesList({ isAdmin }: Props) {
       {/* Tablo */}
       <Card>
         <CardHeader className="py-3 px-5 border-b">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <FileText className="h-4 w-4 text-blue-500" />
               Teklifler
               <Badge variant="secondary" className="text-xs">{total}</Badge>
             </CardTitle>
             {isAdmin && (
-              <button
-                onClick={toggleAll}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {allSelected
-                  ? <CheckSquare className="h-4 w-4 text-blue-500" />
-                  : <Square className="h-4 w-4" />}
-                Sayfadakileri Seç
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={togglePage}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {pageSelected
+                    ? <CheckSquare className="h-4 w-4 text-blue-500" />
+                    : <Square className="h-4 w-4" />}
+                  Sayfadakileri Seç
+                </button>
+                <button
+                  onClick={toggleAllPages}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {allPagesSelected
+                    ? <CheckSquare className="h-4 w-4 text-blue-500" />
+                    : <Square className="h-4 w-4" />}
+                  Tümünü Seç ({total})
+                </button>
+              </div>
             )}
           </div>
         </CardHeader>
@@ -202,24 +278,24 @@ export function QuotesList({ isAdmin }: Props) {
               <TableHeader>
                 <TableRow className="bg-slate-50 hover:bg-slate-50">
                   {isAdmin && <TableHead className="w-10 pl-5" />}
-                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500">Araç</TableHead>
-                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500">Teklif No</TableHead>
-                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500 hidden sm:table-cell">Müşteri / Plaka</TableHead>
-                  {isAdmin && <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500 hidden md:table-cell">Danışman</TableHead>}
-                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500">Durum</TableHead>
-                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500 text-right">Tutar</TableHead>
-                  <TableHead className="font-semibold text-xs uppercase tracking-wide text-slate-500 hidden lg:table-cell">Tarih</TableHead>
-                  <TableHead className="w-10" />
+                  <SortHead col="araç"     label="Araç" />
+                  <SortHead col="quoteNo"  label="Teklif No" />
+                  <SortHead col="müşteri"  label="Müşteri / Plaka" className="hidden sm:table-cell" />
+                  {isAdmin && <SortHead col="danışman" label="Danışman" className="hidden md:table-cell" />}
+                  <SortHead col="durum"    label="Durum" />
+                  <SortHead col="tutar"    label="Tutar" className="text-right" />
+                  <SortHead col="tarih"    label="Tarih"  className="hidden lg:table-cell" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {quotes.map((q, idx) => (
+                {sorted.map((q, idx) => (
                   <TableRow
                     key={q.id}
-                    className={`${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"} hover:bg-blue-50/40 transition-colors`}
+                    onClick={() => router.push(`/dashboard/quotes/${q.id}`)}
+                    className={`cursor-pointer ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"} hover:bg-blue-50/50 transition-colors`}
                   >
                     {isAdmin && (
-                      <TableCell className="pl-5 w-10">
+                      <TableCell className="pl-5 w-10" onClick={e => e.stopPropagation()}>
                         <button onClick={() => toggleOne(q.id)}>
                           {selected.has(q.id)
                             ? <CheckSquare className="h-4 w-4 text-blue-500" />
@@ -231,18 +307,14 @@ export function QuotesList({ isAdmin }: Props) {
                       <div className="font-semibold text-sm text-slate-900 leading-tight">
                         {q.brandName} {q.modelName}
                       </div>
-                      {q.subModelName && (
-                        <div className="text-xs text-slate-400">{q.subModelName}</div>
-                      )}
+                      {q.subModelName && <div className="text-xs text-slate-400">{q.subModelName}</div>}
                     </TableCell>
                     <TableCell>
                       <span className="font-mono text-xs text-slate-500">{q.quoteNo}</span>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <div className="text-sm text-slate-700">{q.customerName ?? "—"}</div>
-                      {q.plateNo && (
-                        <div className="text-xs font-mono text-slate-400">{q.plateNo}</div>
-                      )}
+                      {q.plateNo && <div className="text-xs font-mono text-slate-400">{q.plateNo}</div>}
                     </TableCell>
                     {isAdmin && (
                       <TableCell className="hidden md:table-cell">
@@ -259,13 +331,6 @@ export function QuotesList({ isAdmin }: Props) {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       <span className="text-xs text-slate-400">{fmtDate(q.createdAt)}</span>
-                    </TableCell>
-                    <TableCell className="pr-3">
-                      <Link href={`/dashboard/quotes/${q.id}`}>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-blue-600">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Button>
-                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}
