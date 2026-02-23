@@ -155,16 +155,16 @@ export function Sidebar({ user }: SidebarProps) {
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150",
                       isActive
-                        ? "bg-blue-500/20 text-blue-300 font-medium shadow-sm"
+                        ? "bg-white/8 text-white font-medium"
                         : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
                     )}
                   >
-                    <Icon
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        isActive ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"
-                      )}
-                    />
+                    <span className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded-md shrink-0 transition-all",
+                      isActive ? "bg-white/15" : "bg-white/5"
+                    )}>
+                      <Icon className={cn("h-3.5 w-3.5", isActive ? "text-white" : item.color)} />
+                    </span>
                     {item.label}
                   </Link>
                 )
