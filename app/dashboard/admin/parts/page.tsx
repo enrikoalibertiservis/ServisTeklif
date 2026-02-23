@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getBrands } from "@/app/actions/vehicle"
-import { formatCurrency, toUpperTR } from "@/lib/utils"
+import { formatCurrency, toUpperTR, normalizeSpaces } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
   Search, Package, Trash2, Pencil, CheckSquare, Square, Plus, FileSpreadsheet,
@@ -161,8 +161,8 @@ export default function PartsPage() {
       const allParts: typeof parts = data.items ?? []
       const rows = allParts.map((p, i) => ({
         "#": i + 1,
-        "Parça No": p.partNo,
-        "Parça Adı": p.name,
+        "Parça No": normalizeSpaces(p.partNo),
+        "Parça Adı": normalizeSpaces(p.name),
         "Birim Fiyat (TL)": p.unitPrice,
         "Son Güncelleme": new Date(p.validFrom).toLocaleDateString("tr-TR"),
       }))

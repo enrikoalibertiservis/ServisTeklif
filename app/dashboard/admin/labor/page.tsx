@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getBrands } from "@/app/actions/vehicle"
-import { formatCurrency, toUpperTR } from "@/lib/utils"
+import { formatCurrency, toUpperTR, normalizeSpaces } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
   Search, Wrench, Trash2, Pencil, CheckSquare, Square, Plus, FileSpreadsheet,
@@ -162,8 +162,8 @@ export default function LaborPage() {
       const allOps: typeof operations = data.items ?? []
       const rows = allOps.map((op, i) => ({
         "#": i + 1,
-        "İşlem Kodu": op.operationCode,
-        "İşlem Adı": op.name,
+        "İşlem Kodu": normalizeSpaces(op.operationCode),
+        "İşlem Adı": normalizeSpaces(op.name),
         "Süre (Saat)": op.durationHours,
         "Saatlik Ücret (TL)": op.hourlyRate,
         "Toplam Tutar (TL)": op.durationHours * op.hourlyRate,
