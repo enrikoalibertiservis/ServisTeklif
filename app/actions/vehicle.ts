@@ -105,6 +105,10 @@ export async function deleteBrand(id: string) {
   return prisma.brand.delete({ where: { id } })
 }
 
+export async function updateBrand(id: string, name: string) {
+  return prisma.brand.update({ where: { id }, data: { name } })
+}
+
 export async function createModel(brandId: string, name: string) {
   return prisma.vehicleModel.create({ data: { brandId, name } })
 }
@@ -113,12 +117,20 @@ export async function deleteModel(id: string) {
   return prisma.vehicleModel.delete({ where: { id } })
 }
 
+export async function updateModel(id: string, name: string) {
+  return prisma.vehicleModel.update({ where: { id }, data: { name } })
+}
+
 export async function createSubModel(modelId: string, name: string) {
   return prisma.subModel.create({ data: { modelId, name } })
 }
 
 export async function deleteSubModel(id: string) {
   return prisma.subModel.delete({ where: { id } })
+}
+
+export async function updateSubModel(id: string, name: string) {
+  return prisma.subModel.update({ where: { id }, data: { name } })
 }
 
 export async function upsertSpec(subModelId: string, specKey: string, specValue: string) {

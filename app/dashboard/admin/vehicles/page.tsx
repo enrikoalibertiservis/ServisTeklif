@@ -8,10 +8,13 @@ import {
   getSpecsBySubModel,
   createBrand,
   deleteBrand,
+  updateBrand,
   createModel,
   deleteModel,
+  updateModel,
   createSubModel,
   deleteSubModel,
+  updateSubModel,
   upsertSpec,
   deleteSpec,
 } from "@/app/actions/vehicle"
@@ -29,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Trash2, Car, ChevronRight } from "lucide-react"
+import { Plus, Trash2, Car, ChevronRight, Pencil, Check, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function VehiclesAdminPage() {
@@ -52,6 +55,14 @@ export default function VehiclesAdminPage() {
   const [newSpecValue, setNewSpecValue] = useState("")
   const [editingSpecId, setEditingSpecId] = useState<string | null>(null)
   const [editSpecValue, setEditSpecValue] = useState("")
+
+  // Inline edit states
+  const [editingBrandId, setEditingBrandId] = useState<string | null>(null)
+  const [editBrandName, setEditBrandName] = useState("")
+  const [editingModelId, setEditingModelId] = useState<string | null>(null)
+  const [editModelName, setEditModelName] = useState("")
+  const [editingSubModelId, setEditingSubModelId] = useState<string | null>(null)
+  const [editSubModelName, setEditSubModelName] = useState("")
 
   const loadBrands = () => {
     startTransition(async () => {
@@ -304,6 +315,51 @@ export default function VehiclesAdminPage() {
     })
   }
 
+  const handleSaveBrand = async (id: string) => {
+    const name = editBrandName.trim()
+    if (!name) return
+    startTransition(async () => {
+      try {
+        await updateBrand(id, name)
+        setEditingBrandId(null)
+        loadBrands()
+        toast({ title: "Başarılı", description: "Marka adı güncellendi." })
+      } catch {
+        toast({ title: "Hata", description: "Güncelleme başarısız.", variant: "destructive" })
+      }
+    })
+  }
+
+  const handleSaveModel = async (id: string) => {
+    const name = editModelName.trim()
+    if (!name) return
+    startTransition(async () => {
+      try {
+        await updateModel(id, name)
+        setEditingModelId(null)
+        if (selectedBrandId) loadModels(selectedBrandId)
+        toast({ title: "Başarılı", description: "Model adı güncellendi." })
+      } catch {
+        toast({ title: "Hata", description: "Güncelleme başarısız.", variant: "destructive" })
+      }
+    })
+  }
+
+  const handleSaveSubModel = async (id: string) => {
+    const name = editSubModelName.trim()
+    if (!name) return
+    startTransition(async () => {
+      try {
+        await updateSubModel(id, name)
+        setEditingSubModelId(null)
+        if (selectedModelId) loadSubModels(selectedModelId)
+        toast({ title: "Başarılı", description: "Alt model adı güncellendi." })
+      } catch {
+        toast({ title: "Hata", description: "Güncelleme başarısız.", variant: "destructive" })
+      }
+    })
+  }
+
   const handleDeleteSpec = async (id: string) => {
     if (!confirm("Bu teknik özelliği silmek istediğinize emin misiniz?")) return
     startTransition(async () => {
@@ -358,28 +414,42 @@ export default function VehiclesAdminPage() {
                 brands.map((b) => (
                   <div
                     key={b.id}
-                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors ${
+                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
                       selectedBrandId === b.id ? "bg-primary/10 text-primary" : "hover:bg-muted"
                     }`}
-                    onClick={() => setSelectedBrandId(b.id)}
                   >
-                    <span className="truncate">{b.name}</span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteBrand(b.id, b.name)
-                        }}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    {editingBrandId === b.id ? (
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <Input
+                          autoFocus
+                          value={editBrandName}
+                          onChange={(e) => setEditBrandName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleSaveBrand(b.id); if (e.key === "Escape") setEditingBrandId(null) }}
+                          className="h-7 text-sm py-0 px-2"
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-green-600 shrink-0" onClick={() => handleSaveBrand(b.id)} disabled={isPending}>
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setEditingBrandId(null)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="truncate cursor-pointer flex-1" onClick={() => setSelectedBrandId(b.id)}>{b.name}</span>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); setEditingBrandId(b.id); setEditBrandName(b.name) }} disabled={isPending}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteBrand(b.id, b.name) }} disabled={isPending}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))
               )}
@@ -420,28 +490,42 @@ export default function VehiclesAdminPage() {
                 models.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors ${
+                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
                       selectedModelId === m.id ? "bg-primary/10 text-primary" : "hover:bg-muted"
                     }`}
-                    onClick={() => setSelectedModelId(m.id)}
                   >
-                    <span className="truncate">{m.name}</span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteModel(m.id, m.name)
-                        }}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    {editingModelId === m.id ? (
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <Input
+                          autoFocus
+                          value={editModelName}
+                          onChange={(e) => setEditModelName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleSaveModel(m.id); if (e.key === "Escape") setEditingModelId(null) }}
+                          className="h-7 text-sm py-0 px-2"
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-green-600 shrink-0" onClick={() => handleSaveModel(m.id)} disabled={isPending}>
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setEditingModelId(null)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="truncate cursor-pointer flex-1" onClick={() => setSelectedModelId(m.id)}>{m.name}</span>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); setEditingModelId(m.id); setEditModelName(m.name) }} disabled={isPending}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteModel(m.id, m.name) }} disabled={isPending}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))
               )}
@@ -482,28 +566,42 @@ export default function VehiclesAdminPage() {
                 subModels.map((sm) => (
                   <div
                     key={sm.id}
-                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors ${
+                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
                       selectedSubModelId === sm.id ? "bg-primary/10 text-primary" : "hover:bg-muted"
                     }`}
-                    onClick={() => setSelectedSubModelId(sm.id)}
                   >
-                    <span className="truncate">{sm.name}</span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteSubModel(sm.id, sm.name)
-                        }}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    {editingSubModelId === sm.id ? (
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <Input
+                          autoFocus
+                          value={editSubModelName}
+                          onChange={(e) => setEditSubModelName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleSaveSubModel(sm.id); if (e.key === "Escape") setEditingSubModelId(null) }}
+                          className="h-7 text-sm py-0 px-2"
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-green-600 shrink-0" onClick={() => handleSaveSubModel(sm.id)} disabled={isPending}>
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setEditingSubModelId(null)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="truncate cursor-pointer flex-1" onClick={() => setSelectedSubModelId(sm.id)}>{sm.name}</span>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); setEditingSubModelId(sm.id); setEditSubModelName(sm.name) }} disabled={isPending}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteSubModel(sm.id, sm.name) }} disabled={isPending}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))
               )}
