@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { toUpperTR } from "@/lib/utils"
+import { toUpperTR, normalizeSpaces } from "@/lib/utils"
 
 interface ImportResult {
   added: number
@@ -37,7 +37,7 @@ export async function importParts(
       result.errorDetails.push(`Satır ${i + 2}: Fiyat geçersiz (${row.unitPrice})`)
       continue
     }
-    validRows.push({ idx: i, partNo: toUpperTR(row.partNo.trim()), name: toUpperTR(row.name?.trim() || "İSİMSİZ PARÇA"), unitPrice: row.unitPrice })
+    validRows.push({ idx: i, partNo: toUpperTR(normalizeSpaces(row.partNo)), name: toUpperTR(normalizeSpaces(row.name || "İSİMSİZ PARÇA")), unitPrice: row.unitPrice })
   }
 
   const BATCH = 200
@@ -60,12 +60,12 @@ export async function importParts(
         updateOps.push(
           prisma.part.update({
             where: { id: ex.id },
-            data: { name: toUpperTR(row.name || ex.name), unitPrice: row.unitPrice, validFrom: new Date() },
+            data: { name: toUpperTR(normalizeSpaces(row.name || ex.name)), unitPrice: row.unitPrice, validFrom: new Date() },
           })
         )
         result.updated++
       } else {
-        toCreate.push({ brandId: brand.id, partNo: row.partNo, name: row.name, unitPrice: row.unitPrice })
+        toCreate.push({ brandId: brand.id, partNo: row.partNo, name: toUpperTR(normalizeSpaces(row.name)), unitPrice: row.unitPrice })
         result.added++
       }
     }
@@ -121,7 +121,7 @@ export async function importLabor(
     validRows.push({
       idx: i,
       operationCode: toUpperTR(row.operationCode.trim()),
-      name: toUpperTR(row.name?.trim() || "İSİMSİZ OPERASYON"),
+      name: toUpperTR(normalizeSpaces(row.name || "İSİMSİZ OPERASYON")),
       durationHours: row.durationHours,
       hourlyRate: row.hourlyRate,
       totalPrice: row.totalPrice,
@@ -149,7 +149,7 @@ export async function importLabor(
           prisma.laborOperation.update({
             where: { id: ex.id },
             data: {
-              name: toUpperTR(row.name || ex.name),
+              name: toUpperTR(normalizeSpaces(row.name || ex.name)),
               durationHours: row.durationHours,
               hourlyRate: row.hourlyRate,
               totalPrice: row.totalPrice ?? null,
@@ -161,8 +161,8 @@ export async function importLabor(
       } else {
         toCreate.push({
           brandId: brand.id,
-          operationCode: row.operationCode,
-          name: row.name,
+          operationCode: toUpperTR(normalizeSpaces(row.operationCode)),
+          name: toUpperTR(normalizeSpaces(row.name)),
           durationHours: row.durationHours,
           hourlyRate: row.hourlyRate,
           totalPrice: row.totalPrice ?? null,

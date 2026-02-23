@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { toUpperTR } from "@/lib/utils"
+import { toUpperTR, normalizeSpaces } from "@/lib/utils"
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   if (existing) return NextResponse.json({ error: `'${partNoUpper}' parça kodu zaten kayıtlı` }, { status: 409 })
 
   const created = await prisma.part.create({
-    data: { brandId, partNo: partNoUpper, name: toUpperTR(name.trim()), unitPrice },
+    data: { brandId, partNo: partNoUpper, name: toUpperTR(normalizeSpaces(name)), unitPrice },
   })
   return NextResponse.json(created, { status: 201 })
 }
@@ -80,8 +80,8 @@ export async function PUT(req: NextRequest) {
   const updated = await prisma.part.update({
     where: { id },
     data: {
-      ...(partNo    !== undefined ? { partNo: toUpperTR(partNo) }                    : {}),
-      ...(name      !== undefined ? { name: toUpperTR(name) }                         : {}),
+      ...(partNo    !== undefined ? { partNo: toUpperTR(normalizeSpaces(partNo)) }    : {}),
+      ...(name      !== undefined ? { name: toUpperTR(normalizeSpaces(name)) }        : {}),
       ...(unitPrice !== undefined ? { unitPrice, validFrom: new Date() }              : {}),
     },
   })

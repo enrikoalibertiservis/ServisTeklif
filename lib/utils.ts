@@ -25,6 +25,11 @@ export function toUpperTR(str: string): string {
   return str.toLocaleUpperCase("tr-TR")
 }
 
+/** Ardışık boşlukları (tab, çift boşluk vb.) tek boşluğa indirir ve baş/son boşlukları kaldırır */
+export function normalizeSpaces(str: string): string {
+  return str.replace(/\s+/g, " ").trim()
+}
+
 export function generateQuoteNo(): string {
   const now = new Date()
   const y = now.getFullYear().toString().slice(-2)
