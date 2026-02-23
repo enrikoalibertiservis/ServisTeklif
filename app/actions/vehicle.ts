@@ -56,12 +56,12 @@ export async function getMaintenancePeriods(brandId: string, modelId?: string, s
   return Array.from(unique.values())
 }
 
+/** Eski imza — geriye dönük uyumluluk için bırakıldı */
 export async function getServiceTypes(brandId: string, modelId?: string, subModelId?: string, periodKm?: number) {
   const km     = periodKm ?? 0
   const select = { id: true, serviceType: true, name: true, periodKm: true, periodMonth: true } as const
   const order  = { serviceType: "asc" } as const
 
-  // Kademeli arama: subModel → model → brand (getMaintenancePeriods ile aynı mantık)
   let templates: any[] = []
 
   if (subModelId) {
@@ -69,7 +69,6 @@ export async function getServiceTypes(brandId: string, modelId?: string, subMode
   }
 
   if (!templates.length && modelId) {
-    // subModelId kısıtı olmadan: model'e ait TÜM periodKm eşleşmeleri
     templates = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId, periodKm: km }, select, orderBy: order })
   }
 
@@ -77,7 +76,37 @@ export async function getServiceTypes(brandId: string, modelId?: string, subMode
     templates = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId: null, subModelId: null, periodKm: km }, select, orderBy: order })
   }
 
-  // Tekilleştir — AGIR gösterilmez
+  const unique = new Map<string | null, typeof templates[0]>()
+  for (const t of templates) {
+    if (t.serviceType === "AGIR") continue
+    if (!unique.has(t.serviceType)) unique.set(t.serviceType, t)
+  }
+  return Array.from(unique.values())
+}
+
+/**
+ * getMaintenancePeriods'un döndürdüğü template ID'sini baz alır.
+ * O template'in kendi brandId/modelId/subModelId'sini kullanarak
+ * aynı periyottaki kardeş servis tiplerini getirir.
+ */
+export async function getServiceTypesByTemplate(baseTemplateId: string) {
+  const base = await prisma.maintenanceTemplate.findUnique({
+    where: { id: baseTemplateId },
+    select: { brandId: true, modelId: true, subModelId: true, periodKm: true },
+  })
+  if (!base) return []
+
+  const templates = await prisma.maintenanceTemplate.findMany({
+    where: {
+      brandId:    base.brandId,
+      modelId:    base.modelId,
+      subModelId: base.subModelId,
+      periodKm:   base.periodKm,
+    },
+    select:  { id: true, serviceType: true, name: true, periodKm: true, periodMonth: true },
+    orderBy: { serviceType: "asc" },
+  })
+
   const unique = new Map<string | null, typeof templates[0]>()
   for (const t of templates) {
     if (t.serviceType === "AGIR") continue

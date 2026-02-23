@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   getBrands, getModelsByBrand, getSubModelsByModel,
-  getMaintenancePeriods, getServiceTypes,
+  getMaintenancePeriods, getServiceTypesByTemplate,
 } from "@/app/actions/vehicle"
 import { previewTemplatePrice } from "@/app/actions/quote"
 import {
@@ -41,6 +41,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
   const [modelId, setModelId]           = useState("")
   const [subModelId, setSubModelId]     = useState("")
   const [selectedPeriodKm, setSelectedPeriodKm] = useState<number | null>(null)
+  const [basePeriodTemplateId, setBasePeriodTemplateId] = useState("") // getMaintenancePeriods'un döndürdüğü id
   const [templateId, setTemplateId]     = useState("")
 
   const [loading, setLoading]   = useState(false)
@@ -78,23 +79,23 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
   useEffect(() => {
     if (!brandId || !modelId) return
     if (subModels.length > 0 && !subModelId) {
-      setPeriods([]); setSelectedPeriodKm(null); setTemplateId(""); setServiceTypes([]); return
+      setPeriods([]); setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); return
     }
     getMaintenancePeriods(brandId, modelId, subModelId || undefined).then(setPeriods)
-    setSelectedPeriodKm(null); setTemplateId(""); setServiceTypes([]); setResult(null)
+    setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); setResult(null)
   }, [brandId, modelId, subModelId, subModels])
 
-  // Servis tipleri
+  // Servis tipleri — bulunan template'in kendi bağlamında arar
   useEffect(() => {
-    if (selectedPeriodKm === null || !brandId || !modelId) {
+    if (!basePeriodTemplateId) {
       setServiceTypes([]); setTemplateId(""); return
     }
-    getServiceTypes(brandId, modelId, subModelId || undefined, selectedPeriodKm).then((types) => {
+    getServiceTypesByTemplate(basePeriodTemplateId).then((types) => {
       setServiceTypes(types)
       setTemplateId(types.length === 1 ? types[0].id : "")
     })
     setResult(null)
-  }, [selectedPeriodKm, brandId, modelId, subModelId])
+  }, [basePeriodTemplateId])
 
   // Şablon seçilince otomatik fiyat hesapla
   useEffect(() => {
@@ -108,7 +109,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
 
   function reset() {
     setBrandId(""); setModelId(""); setSubModelId("")
-    setSelectedPeriodKm(null); setTemplateId("")
+    setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId("")
     setModels([]); setSubModels([]); setPeriods([]); setServiceTypes([])
     setResult(null); setError("")
   }
@@ -190,7 +191,11 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
             <div className="flex flex-wrap gap-2">
               {hizliServis && (
                 <button
-                  onClick={() => setSelectedPeriodKm(selectedPeriodKm === 0 ? null : 0)}
+                  onClick={() => {
+                    const toggled = selectedPeriodKm === 0
+                    setSelectedPeriodKm(toggled ? null : 0)
+                    setBasePeriodTemplateId(toggled ? "" : hizliServis.id)
+                  }}
                   className={`px-3 py-1.5 rounded-md border-2 text-sm font-medium transition-all flex items-center gap-1.5 ${
                     selectedPeriodKm === 0
                       ? "border-green-600 bg-green-500 text-white shadow-sm shadow-green-200"
@@ -204,7 +209,11 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
               {regularPeriods.map(p => (
                 <button
                   key={p.periodKm}
-                  onClick={() => setSelectedPeriodKm(selectedPeriodKm === p.periodKm ? null : p.periodKm)}
+                  onClick={() => {
+                    const toggled = selectedPeriodKm === p.periodKm
+                    setSelectedPeriodKm(toggled ? null : p.periodKm)
+                    setBasePeriodTemplateId(toggled ? "" : p.id)
+                  }}
                   className={`px-3 py-1.5 rounded-md border-2 text-sm font-medium transition-all ${
                     selectedPeriodKm === p.periodKm
                       ? "border-primary bg-primary/10 text-primary"
