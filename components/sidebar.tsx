@@ -19,6 +19,7 @@ import {
   Grid3X3,
   FileCog,
   Shield,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -94,8 +95,9 @@ const adminGroups: NavGroup[] = [
   {
     title: "Sistem",
     items: [
-      { href: "/dashboard/admin/users",    label: "Kullanıcılar", icon: Users,    color: "text-rose-500" },
-      { href: "/dashboard/admin/settings", label: "Ayarlar",      icon: Settings, color: "text-gray-500" },
+      { href: "/dashboard/admin/users",      label: "Kullanıcılar",   icon: Users,       color: "text-rose-500"   },
+      { href: "/dashboard/admin/login-logs", label: "Giriş Kayıtları", icon: ShieldCheck, color: "text-indigo-400" },
+      { href: "/dashboard/admin/settings",   label: "Ayarlar",        icon: Settings,    color: "text-gray-500"   },
     ],
   },
 ]

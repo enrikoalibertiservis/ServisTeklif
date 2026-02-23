@@ -22,6 +22,19 @@ model User {
 
   quotes       Quote[]
   importLogs   PriceListVersion[]
+  loginLogs    LoginLog[]
+}
+
+model LoginLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  success   Boolean
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 // ─── Vehicle Catalog ─────────────────────────────────────────
