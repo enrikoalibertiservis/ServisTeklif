@@ -147,21 +147,34 @@ export default function PartsPage() {
     } finally { setNewSaving(false) }
   }
 
-  function exportPartsExcel() {
-    const brandName = brands.find(b => b.id === brandId)?.name ?? "Marka"
-    const rows = parts.map((p, i) => ({
-      "#": i + 1,
-      "Parça No": p.partNo,
-      "Parça Adı": p.name,
-      "Birim Fiyat (TL)": p.unitPrice,
-      "Son Güncelleme": new Date(p.validFrom).toLocaleDateString("tr-TR"),
-    }))
-    const ws = XLSX.utils.json_to_sheet(rows)
-    ws["!cols"] = [{ wch: 5 }, { wch: 18 }, { wch: 40 }, { wch: 18 }, { wch: 16 }]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Parçalar")
-    XLSX.writeFile(wb, `${brandName}_Parca_Listesi_Sayfa${page}.xlsx`)
-    toast({ title: "Excel indirildi", description: `${rows.length} parça dışa aktarıldı.` })
+  const [exporting, setExporting] = useState(false)
+
+  async function exportPartsExcel() {
+    if (!brandId) return
+    setExporting(true)
+    try {
+      const brandName = brands.find(b => b.id === brandId)?.name ?? "Marka"
+      const params = new URLSearchParams({ brandId, all: "true" })
+      if (search) params.set("q", search)
+      const res = await fetch(`/api/parts?${params}`)
+      const data = await res.json()
+      const allParts: typeof parts = data.items ?? []
+      const rows = allParts.map((p, i) => ({
+        "#": i + 1,
+        "Parça No": p.partNo,
+        "Parça Adı": p.name,
+        "Birim Fiyat (TL)": p.unitPrice,
+        "Son Güncelleme": new Date(p.validFrom).toLocaleDateString("tr-TR"),
+      }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      ws["!cols"] = [{ wch: 5 }, { wch: 18 }, { wch: 40 }, { wch: 18 }, { wch: 16 }]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "Parçalar")
+      XLSX.writeFile(wb, `${brandName}_Parca_Listesi_Tumu.xlsx`)
+      toast({ title: "Excel indirildi", description: `${rows.length} parça dışa aktarıldı.` })
+    } finally {
+      setExporting(false)
+    }
   }
 
   const allSelected = parts.length > 0 && selected.size === parts.length
@@ -198,9 +211,10 @@ export default function PartsPage() {
           variant="outline"
           className="border-emerald-400 text-emerald-700 hover:bg-emerald-50"
           onClick={exportPartsExcel}
-          disabled={!brandId || parts.length === 0}
+          disabled={!brandId || parts.length === 0 || exporting}
         >
-          <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel'e Aktar
+          {exporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-1" />}
+          {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
         </Button>
 
         <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700" onClick={() => setNewOpen(true)} disabled={!brandId}>

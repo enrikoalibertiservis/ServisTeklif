@@ -148,23 +148,36 @@ export default function LaborPage() {
     } finally { setNewSaving(false) }
   }
 
-  function exportLaborExcel() {
-    const brandName = brands.find(b => b.id === brandId)?.name ?? "Marka"
-    const rows = operations.map((op, i) => ({
-      "#": i + 1,
-      "İşlem Kodu": op.operationCode,
-      "İşlem Adı": op.name,
-      "Süre (Saat)": op.durationHours,
-      "Saatlik Ücret (TL)": op.hourlyRate,
-      "Toplam Tutar (TL)": op.durationHours * op.hourlyRate,
-      "Son Güncelleme": new Date(op.createdAt).toLocaleDateString("tr-TR"),
-    }))
-    const ws = XLSX.utils.json_to_sheet(rows)
-    ws["!cols"] = [{ wch: 5 }, { wch: 16 }, { wch: 40 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 16 }]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "İşçilik")
-    XLSX.writeFile(wb, `${brandName}_Iscilik_Listesi_Sayfa${page}.xlsx`)
-    toast({ title: "Excel indirildi", description: `${rows.length} işlem dışa aktarıldı.` })
+  const [exporting, setExporting] = useState(false)
+
+  async function exportLaborExcel() {
+    if (!brandId) return
+    setExporting(true)
+    try {
+      const brandName = brands.find(b => b.id === brandId)?.name ?? "Marka"
+      const params = new URLSearchParams({ brandId, all: "true" })
+      if (search) params.set("q", search)
+      const res = await fetch(`/api/labor?${params}`)
+      const data = await res.json()
+      const allOps: typeof operations = data.items ?? []
+      const rows = allOps.map((op, i) => ({
+        "#": i + 1,
+        "İşlem Kodu": op.operationCode,
+        "İşlem Adı": op.name,
+        "Süre (Saat)": op.durationHours,
+        "Saatlik Ücret (TL)": op.hourlyRate,
+        "Toplam Tutar (TL)": op.durationHours * op.hourlyRate,
+        "Son Güncelleme": new Date(op.createdAt).toLocaleDateString("tr-TR"),
+      }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      ws["!cols"] = [{ wch: 5 }, { wch: 16 }, { wch: 40 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 16 }]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "İşçilik")
+      XLSX.writeFile(wb, `${brandName}_Iscilik_Listesi_Tumu.xlsx`)
+      toast({ title: "Excel indirildi", description: `${rows.length} işlem dışa aktarıldı.` })
+    } finally {
+      setExporting(false)
+    }
   }
 
   const allSelected = operations.length > 0 && selected.size === operations.length
@@ -201,9 +214,10 @@ export default function LaborPage() {
           variant="outline"
           className="border-emerald-400 text-emerald-700 hover:bg-emerald-50"
           onClick={exportLaborExcel}
-          disabled={!brandId || operations.length === 0}
+          disabled={!brandId || operations.length === 0 || exporting}
         >
-          <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel'e Aktar
+          {exporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-1" />}
+          {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
         </Button>
 
         <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setNewOpen(true)} disabled={!brandId}>

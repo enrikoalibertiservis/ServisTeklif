@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get("q") || ""
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "20")))
+  const all = searchParams.get("all") === "true"
 
   if (!brandId) return NextResponse.json({ items: [], total: 0 })
 
@@ -24,8 +25,7 @@ export async function GET(req: NextRequest) {
     prisma.part.findMany({
       where,
       orderBy: { partNo: "asc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      ...(all ? {} : { skip: (page - 1) * pageSize, take: pageSize }),
     }),
     prisma.part.count({ where }),
   ])
