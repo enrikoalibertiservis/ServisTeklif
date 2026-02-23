@@ -13,9 +13,10 @@ import { getBrands } from "@/app/actions/vehicle"
 import { formatCurrency, toUpperTR } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
-  Search, Package, Trash2, Pencil, CheckSquare, Square, Plus,
+  Search, Package, Trash2, Pencil, CheckSquare, Square, Plus, FileSpreadsheet,
   Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react"
+import * as XLSX from "xlsx"
 
 const PAGE_SIZE = 20
 
@@ -146,6 +147,23 @@ export default function PartsPage() {
     } finally { setNewSaving(false) }
   }
 
+  function exportPartsExcel() {
+    const brandName = brands.find(b => b.id === brandId)?.name ?? "Marka"
+    const rows = parts.map((p, i) => ({
+      "#": i + 1,
+      "Parça No": p.partNo,
+      "Parça Adı": p.name,
+      "Birim Fiyat (TL)": p.unitPrice,
+      "Son Güncelleme": new Date(p.validFrom).toLocaleDateString("tr-TR"),
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    ws["!cols"] = [{ wch: 5 }, { wch: 18 }, { wch: 40 }, { wch: 18 }, { wch: 16 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Parçalar")
+    XLSX.writeFile(wb, `${brandName}_Parca_Listesi_Sayfa${page}.xlsx`)
+    toast({ title: "Excel indirildi", description: `${rows.length} parça dışa aktarıldı.` })
+  }
+
   const allSelected = parts.length > 0 && selected.size === parts.length
   const startIdx = (page - 1) * PAGE_SIZE + 1
   const endIdx = Math.min(page * PAGE_SIZE, total)
@@ -174,6 +192,16 @@ export default function PartsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Parça no veya adı ile arayın..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+          onClick={exportPartsExcel}
+          disabled={!brandId || parts.length === 0}
+        >
+          <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel'e Aktar
+        </Button>
 
         <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700" onClick={() => setNewOpen(true)} disabled={!brandId}>
           <Plus className="h-4 w-4 mr-1" /> Yeni Parça Ekle

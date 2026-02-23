@@ -13,9 +13,10 @@ import { getBrands } from "@/app/actions/vehicle"
 import { formatCurrency, toUpperTR } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import {
-  Search, Wrench, Trash2, Pencil, CheckSquare, Square, Plus,
+  Search, Wrench, Trash2, Pencil, CheckSquare, Square, Plus, FileSpreadsheet,
   Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 } from "lucide-react"
+import * as XLSX from "xlsx"
 
 const PAGE_SIZE = 20
 
@@ -147,6 +148,25 @@ export default function LaborPage() {
     } finally { setNewSaving(false) }
   }
 
+  function exportLaborExcel() {
+    const brandName = brands.find(b => b.id === brandId)?.name ?? "Marka"
+    const rows = operations.map((op, i) => ({
+      "#": i + 1,
+      "İşlem Kodu": op.operationCode,
+      "İşlem Adı": op.name,
+      "Süre (Saat)": op.durationHours,
+      "Saatlik Ücret (TL)": op.hourlyRate,
+      "Toplam Tutar (TL)": op.durationHours * op.hourlyRate,
+      "Son Güncelleme": new Date(op.createdAt).toLocaleDateString("tr-TR"),
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    ws["!cols"] = [{ wch: 5 }, { wch: 16 }, { wch: 40 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 16 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "İşçilik")
+    XLSX.writeFile(wb, `${brandName}_Iscilik_Listesi_Sayfa${page}.xlsx`)
+    toast({ title: "Excel indirildi", description: `${rows.length} işlem dışa aktarıldı.` })
+  }
+
   const allSelected = operations.length > 0 && selected.size === operations.length
   const startIdx = (page - 1) * PAGE_SIZE + 1
   const endIdx = Math.min(page * PAGE_SIZE, total)
@@ -175,6 +195,16 @@ export default function LaborPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Operasyon kodu veya adı ile arayın..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+          onClick={exportLaborExcel}
+          disabled={!brandId || operations.length === 0}
+        >
+          <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel'e Aktar
+        </Button>
 
         <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setNewOpen(true)} disabled={!brandId}>
           <Plus className="h-4 w-4 mr-1" /> Yeni İşçilik Ekle
