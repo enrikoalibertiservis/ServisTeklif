@@ -28,62 +28,61 @@ export async function getSpecsBySubModel(subModelId: string) {
 }
 
 export async function getMaintenancePeriods(brandId: string, modelId?: string, subModelId?: string) {
-  const where: any = { brandId }
+  const select = { id: true, periodKm: true, periodMonth: true, name: true, serviceType: true } as const
+  const order  = { periodKm: "asc" } as const
+
+  // Kademeli arama: subModel → model → brand
+  const candidates: any[] = []
 
   if (subModelId) {
-    where.subModelId = subModelId
-  } else if (modelId) {
-    where.modelId = modelId
+    const r = await prisma.maintenanceTemplate.findMany({ where: { brandId, subModelId }, select, orderBy: order })
+    if (r.length) candidates.push(...r)
   }
 
-  const templates = await prisma.maintenanceTemplate.findMany({
-    where,
-    select: { id: true, periodKm: true, periodMonth: true, name: true, serviceType: true },
-    orderBy: { periodKm: "asc" },
-  })
-
-  if (templates.length === 0 && (subModelId || modelId)) {
-    const fallback = await prisma.maintenanceTemplate.findMany({
-      where: { brandId, modelId: null, subModelId: null },
-      select: { id: true, periodKm: true, periodMonth: true, name: true, serviceType: true },
-      orderBy: { periodKm: "asc" },
-    })
-    return fallback
+  if (!candidates.length && modelId) {
+    const r = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId, subModelId: null }, select, orderBy: order })
+    if (r.length) candidates.push(...r)
   }
 
-  // periodKm bazında tekilleştir (servis tiplerini görmezden gel)
-  const unique = new Map<number | null, typeof templates[0]>()
-  for (const t of templates) {
+  if (!candidates.length) {
+    const r = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId: null, subModelId: null }, select, orderBy: order })
+    candidates.push(...r)
+  }
+
+  // periodKm bazında tekilleştir
+  const unique = new Map<number, typeof candidates[0]>()
+  for (const t of candidates) {
     const key = t.periodKm ?? -1
-    if (!unique.has(key)) {
-      unique.set(key, t)
-    }
+    if (!unique.has(key)) unique.set(key, t)
   }
   return Array.from(unique.values())
 }
 
 export async function getServiceTypes(brandId: string, modelId?: string, subModelId?: string, periodKm?: number) {
-  const where: any = { brandId, periodKm: periodKm ?? 0 }
+  const km     = periodKm ?? 0
+  const select = { id: true, serviceType: true, name: true, periodKm: true, periodMonth: true } as const
+  const order  = { serviceType: "asc" } as const
+
+  // Kademeli arama: subModel → model → brand (getMaintenancePeriods ile aynı mantık)
+  let templates: any[] = []
 
   if (subModelId) {
-    where.subModelId = subModelId
-  } else if (modelId) {
-    where.modelId = modelId
+    templates = await prisma.maintenanceTemplate.findMany({ where: { brandId, subModelId, periodKm: km }, select, orderBy: order })
   }
 
-  const templates = await prisma.maintenanceTemplate.findMany({
-    where,
-    select: { id: true, serviceType: true, name: true, periodKm: true, periodMonth: true },
-    orderBy: { serviceType: "asc" },
-  })
+  if (!templates.length && modelId) {
+    templates = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId, subModelId: null, periodKm: km }, select, orderBy: order })
+  }
 
-  // Tekilleştir (serviceType bazında) — AGIR gösterilmez
+  if (!templates.length) {
+    templates = await prisma.maintenanceTemplate.findMany({ where: { brandId, modelId: null, subModelId: null, periodKm: km }, select, orderBy: order })
+  }
+
+  // Tekilleştir — AGIR gösterilmez
   const unique = new Map<string | null, typeof templates[0]>()
   for (const t of templates) {
     if (t.serviceType === "AGIR") continue
-    if (!unique.has(t.serviceType)) {
-      unique.set(t.serviceType, t)
-    }
+    if (!unique.has(t.serviceType)) unique.set(t.serviceType, t)
   }
   return Array.from(unique.values())
 }
