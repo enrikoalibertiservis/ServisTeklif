@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { getBrands, getModelsByBrand, getSubModelsByModel } from "@/app/actions/vehicle"
 import { deleteTemplate, dedupeMaintenanceTemplates } from "@/app/actions/template"
-import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, Merge, CheckSquare, Square } from "lucide-react"
+import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, Merge, CheckSquare, Square, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 
@@ -22,6 +22,7 @@ interface Template {
   periodKm: number | null
   periodMonth: number | null
   serviceType: string | null
+  isApproved: boolean
   model: { name: string } | null
   subModel: { name: string } | null
   items: Array<{
@@ -334,6 +335,12 @@ export default function TemplatesPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                            {t.isApproved && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                                <ShieldCheck className="h-3 w-3" />
+                                Onaylı
+                              </span>
+                            )}
                             <Badge variant={t.items.length > 0 ? "default" : "secondary"}>
                               {t.items.length} kalem
                             </Badge>
