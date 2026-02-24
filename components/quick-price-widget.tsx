@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -13,7 +14,6 @@ import {
   Zap, Shield, Gauge, Wrench, Car, ChevronRight, ChevronDown,
   Loader2, RotateCcw, PlusCircle, Package, ShieldCheck,
 } from "lucide-react"
-import Link from "next/link"
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(n)
@@ -31,6 +31,7 @@ interface QuickPriceWidgetProps {
 }
 
 export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceWidgetProps = {}) {
+  const router = useRouter()
   const [brands, setBrands]         = useState<any[]>([])
   const [models, setModels]         = useState<any[]>([])
   const [subModels, setSubModels]   = useState<any[]>([])
@@ -410,15 +411,18 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
 
               {/* Teklif Oluştur Butonu */}
               <div className="pt-1">
-                <Link
-                  href={`/dashboard/quotes/new?brandId=${brandId}&modelId=${modelId}&subModelId=${subModelId}&templateId=${templateId}`}
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams({ brandId, modelId, templateId })
+                    if (subModelId) params.set("subModelId", subModelId)
+                    router.push(`/dashboard/quotes/new?${params}`)
+                  }}
+                  className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-sm py-3.5 px-5 transition-all shadow-sm shadow-orange-200"
                 >
-                  <button className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-orange-100 hover:bg-orange-200 border border-orange-300 text-orange-900 font-bold text-sm py-3.5 px-5 transition-all">
-                    <PlusCircle className="h-5 w-5 shrink-0 text-orange-500" />
-                    Bu Fiyatla Teklif Oluştur
-                    <ChevronRight className="h-4 w-4 shrink-0 text-orange-400" />
-                  </button>
-                </Link>
+                  <PlusCircle className="h-5 w-5 shrink-0" />
+                  Bu Fiyatla Teklif Oluştur
+                  <ChevronRight className="h-4 w-4 shrink-0 opacity-80" />
+                </button>
               </div>
             </div>
           )
