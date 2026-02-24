@@ -296,18 +296,19 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
           return (
             <div className="space-y-3">
               {/* Onay rozeti */}
-              {isApprovedTemplate ? (
-                <div className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 shadow-sm">
-                  <ShieldCheck className="h-4 w-4 text-white shrink-0" />
-                  <span className="text-sm font-bold text-white tracking-wide">Onaylı Reçete</span>
-                  <span className="text-xs text-emerald-100 ml-auto">Yetkili tarafından onaylanmıştır</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 rounded-lg bg-slate-100 border border-slate-200 px-3 py-2">
-                  <ShieldCheck className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span className="text-sm font-medium text-slate-500">Henüz onaylanmamış reçete</span>
-                </div>
-              )}
+              <div>
+                {isApprovedTemplate ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Onaylı Reçete
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Onaylanmamış
+                  </span>
+                )}
+              </div>
 
               {/* Parçalar — indigo/mavi tema */}
               {partItems.length > 0 && (
