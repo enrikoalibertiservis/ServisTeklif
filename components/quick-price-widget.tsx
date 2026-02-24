@@ -296,48 +296,49 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
             <div className="space-y-3">
               {/* Onay rozeti */}
               {isApprovedTemplate ? (
-                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span className="text-sm font-semibold text-emerald-700">Onaylı Reçete</span>
-                  <span className="text-xs text-emerald-500 ml-auto">Yetkili tarafından onaylanmıştır</span>
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 shadow-sm">
+                  <ShieldCheck className="h-4 w-4 text-white shrink-0" />
+                  <span className="text-sm font-bold text-white tracking-wide">Onaylı Reçete</span>
+                  <span className="text-xs text-emerald-100 ml-auto">Yetkili tarafından onaylanmıştır</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-                  <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0" />
-                  <span className="text-sm font-medium text-amber-700">Henüz onaylanmamış reçete</span>
+                <div className="flex items-center gap-2 rounded-lg bg-slate-100 border border-slate-200 px-3 py-2">
+                  <ShieldCheck className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span className="text-sm font-medium text-slate-500">Henüz onaylanmamış reçete</span>
                 </div>
               )}
-              {/* Parçalar */}
+
+              {/* Parçalar — indigo/mavi tema */}
               {partItems.length > 0 && (
-                <div className="rounded-lg border border-cyan-200 overflow-hidden">
+                <div className="rounded-lg border border-indigo-200 overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setPartsOpen(o => !o)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 bg-cyan-50 border-b-2 border-cyan-200 cursor-pointer hover:bg-cyan-100/60 transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-indigo-50 border-b-2 border-indigo-200 cursor-pointer hover:bg-indigo-100/70 transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
-                      <ChevronDown className={`h-4 w-4 text-cyan-500 transition-transform ${partsOpen ? "rotate-0" : "-rotate-90"}`} />
-                      <Package className="h-4 w-4 text-cyan-600" />
-                      <span className="text-sm font-bold text-cyan-800 uppercase tracking-wide">Parçalar</span>
-                      <span className="text-xs text-cyan-500 font-medium ml-1">({partItems.length})</span>
+                      <ChevronDown className={`h-4 w-4 text-indigo-400 transition-transform ${partsOpen ? "rotate-0" : "-rotate-90"}`} />
+                      <Package className="h-4 w-4 text-indigo-600" />
+                      <span className="text-sm font-bold text-indigo-800 uppercase tracking-wide">Parçalar</span>
+                      <span className="text-xs text-indigo-400 font-medium ml-1">({partItems.length})</span>
                     </div>
-                    <span className="text-sm font-bold text-cyan-700 tabular-nums">{fmt(result.partsSubtotal)}</span>
+                    <span className="text-sm font-bold text-indigo-700 tabular-nums">{fmt(result.partsSubtotal)}</span>
                   </button>
                   {partsOpen && partItems.map((item, idx) => (
                     <div
                       key={idx}
                       className={`flex items-center gap-2 px-0 py-2 text-sm border-b last:border-0 ${
-                        idx % 2 === 0 ? "bg-white" : "bg-slate-50/70"
+                        idx % 2 === 0 ? "bg-white" : "bg-indigo-50/40"
                       }`}
                     >
-                      <div className="w-1 self-stretch rounded-r bg-cyan-400 shrink-0" />
+                      <div className="w-1 self-stretch rounded-r bg-indigo-400 shrink-0" />
                       <span className="text-[11px] text-slate-400 font-mono w-5 text-right shrink-0">{idx + 1}</span>
                       <div className="flex-1 min-w-0 pr-1">
                         <span className="block truncate font-medium text-slate-800">{item.name}</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-[11px] font-mono text-slate-400">{item.referenceCode}</span>
                           {item.quantity > 1 && (
-                            <span className="inline-flex items-center rounded bg-cyan-100 text-cyan-700 text-[10px] font-bold px-1.5 py-0">
+                            <span className="inline-flex items-center rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold px-1.5 py-0">
                               ×{item.quantity}
                             </span>
                           )}
@@ -349,37 +350,37 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                 </div>
               )}
 
-              {/* İşçilik */}
+              {/* İşçilik — amber/turuncu tema */}
               {laborItems.length > 0 && (
-                <div className="rounded-lg border border-emerald-200 overflow-hidden">
+                <div className="rounded-lg border border-amber-200 overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setLaborOpen(o => !o)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 bg-emerald-50/70 border-b-2 border-emerald-100 cursor-pointer hover:bg-emerald-100/60 transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-amber-50 border-b-2 border-amber-200 cursor-pointer hover:bg-amber-100/70 transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
-                      <ChevronDown className={`h-4 w-4 text-emerald-500 transition-transform ${laborOpen ? "rotate-0" : "-rotate-90"}`} />
-                      <Wrench className="h-4 w-4 text-emerald-600" />
-                      <span className="text-sm font-bold text-emerald-800 uppercase tracking-wide">İşçilik</span>
-                      <span className="text-xs text-emerald-500 font-medium ml-1">({laborItems.length})</span>
+                      <ChevronDown className={`h-4 w-4 text-amber-400 transition-transform ${laborOpen ? "rotate-0" : "-rotate-90"}`} />
+                      <Wrench className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-bold text-amber-800 uppercase tracking-wide">İşçilik</span>
+                      <span className="text-xs text-amber-400 font-medium ml-1">({laborItems.length})</span>
                     </div>
-                    <span className="text-sm font-bold text-emerald-700 tabular-nums">{fmt(result.laborSubtotal)}</span>
+                    <span className="text-sm font-bold text-amber-700 tabular-nums">{fmt(result.laborSubtotal)}</span>
                   </button>
                   {laborOpen && laborItems.map((item, idx) => (
                     <div
                       key={idx}
                       className={`flex items-center gap-2 px-0 py-2 text-sm border-b last:border-0 ${
-                        idx % 2 === 0 ? "bg-white" : "bg-emerald-50/40"
+                        idx % 2 === 0 ? "bg-white" : "bg-amber-50/40"
                       }`}
                     >
-                      <div className="w-1 self-stretch rounded-r bg-emerald-400 shrink-0" />
+                      <div className="w-1 self-stretch rounded-r bg-amber-400 shrink-0" />
                       <span className="text-[11px] text-slate-400 font-mono w-5 text-right shrink-0">{idx + 1}</span>
                       <div className="flex-1 min-w-0 pr-1">
                         <span className="block truncate font-medium text-slate-800">{item.name}</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-[11px] font-mono text-slate-400">{item.referenceCode}</span>
                           {item.durationHours && (
-                            <span className="inline-flex items-center rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0">
+                            <span className="inline-flex items-center rounded bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0">
                               {item.durationHours} saat
                             </span>
                           )}
