@@ -300,7 +300,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                 {isApprovedTemplate ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
                     <ShieldCheck className="h-3.5 w-3.5" />
-                    Onaylı Reçete
+                    Onaylı
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500">
