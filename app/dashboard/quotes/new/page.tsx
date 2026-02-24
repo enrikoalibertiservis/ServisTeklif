@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select"
 import {
   getBrands, getModelsByBrand, getSubModelsByModel,
-  getMaintenancePeriods, getServiceTypes, getTemplatePeriod,
+  getMaintenancePeriods, getServiceTypesByTemplate, getTemplatePeriod,
 } from "@/app/actions/vehicle"
 import { createQuoteFromTemplate } from "@/app/actions/quote"
 import { useToast } from "@/hooks/use-toast"
@@ -118,36 +118,38 @@ export default function NewQuotePage() {
     getMaintenancePeriods(brandId, modelId, subModelId || undefined).then(async p => {
       setPeriods(p)
       if (pending.current.templateId) {
-        // Şablonun hangi periyoda ait olduğunu bul
+        // Şablonun periyodunu bul ve templateId'yi HEMEN set et (butonu aktif et)
         const km = await getTemplatePeriod(pending.current.templateId)
         setSelectedPeriodKm(km)
+        setTemplateId(pending.current.templateId) // anında set — buton aktif
       } else {
         setSelectedPeriodKm(null); setTemplateId(""); setServiceTypes([])
       }
     })
   }, [brandId, modelId, subModelId, subModels])
 
-  // ── 5. selectedPeriodKm değişince servis tipleri yükle
+  // ── 5. templateId değişince servis tiplerini yükle (getServiceTypesByTemplate ile)
   useEffect(() => {
-    if (selectedPeriodKm === null || !brandId || !modelId) {
-      setServiceTypes([]); setTemplateId(""); return
+    if (!templateId) {
+      setServiceTypes([])
+      return
     }
-    getServiceTypes(brandId, modelId, subModelId || undefined, selectedPeriodKm).then(types => {
-      setServiceTypes(types)
-      const pTemplateId = pending.current.templateId
-      if (pTemplateId && types.some(t => t.id === pTemplateId)) {
-        setTemplateId(pTemplateId)
-        pending.current.templateId = "" // tüketildi
-      } else if (types.length === 1) {
-        setTemplateId(types[0].id)
-      } else {
-        setTemplateId("")
+    getServiceTypesByTemplate(templateId).then(types => {
+      const visible = types.filter(t => t.serviceType !== "AGIR")
+      setServiceTypes(visible)
+      // pending tüket
+      if (pending.current.templateId === templateId) {
+        pending.current.templateId = ""
       }
     })
-  }, [selectedPeriodKm, brandId, modelId, subModelId])
+  }, [templateId])
 
   function handlePeriodSelect(periodKm: number) {
     pending.current.templateId = "" // el ile seçim, pending'i temizle
+    const p = periods.find(x => x.periodKm === periodKm)
+    if (p) {
+      setTemplateId(prev => prev === p.id ? "" : p.id) // anında set
+    }
     setSelectedPeriodKm(prev => prev === periodKm ? null : periodKm)
   }
 
