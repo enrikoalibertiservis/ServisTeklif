@@ -11,7 +11,7 @@ import {
 import { previewTemplatePrice } from "@/app/actions/quote"
 import {
   Zap, Shield, Gauge, Wrench, Car, ChevronRight, ChevronDown,
-  Loader2, RotateCcw, PlusCircle, Package,
+  Loader2, RotateCcw, PlusCircle, Package, ShieldCheck,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -44,6 +44,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
   const [basePeriodTemplateId, setBasePeriodTemplateId] = useState("")
   const [templateId, setTemplateId]     = useState("")
   const [hasMultipleServiceTypes, setHasMultipleServiceTypes] = useState(false)
+  const [isApprovedTemplate, setIsApprovedTemplate] = useState(false)
 
   const [loading, setLoading]   = useState(false)
   const [result, setResult]     = useState<PreviewResult | null>(null)
@@ -80,10 +81,10 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
   useEffect(() => {
     if (!brandId || !modelId) return
     if (subModels.length > 0 && !subModelId) {
-      setPeriods([]); setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); setHasMultipleServiceTypes(false); return
+      setPeriods([]); setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); setHasMultipleServiceTypes(false); setIsApprovedTemplate(false); return
     }
     getMaintenancePeriods(brandId, modelId, subModelId || undefined).then(setPeriods)
-    setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); setHasMultipleServiceTypes(false); setResult(null)
+    setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId(""); setServiceTypes([]); setHasMultipleServiceTypes(false); setIsApprovedTemplate(false); setResult(null)
   }, [brandId, modelId, subModelId, subModels])
 
   // Servis tipleri — sadece "başka seçenek var mı?" kontrolü için
@@ -123,6 +124,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
     setSelectedPeriodKm(null); setBasePeriodTemplateId(""); setTemplateId("")
     setModels([]); setSubModels([]); setPeriods([]); setServiceTypes([])
     setHasMultipleServiceTypes(false)
+    setIsApprovedTemplate(false)
     setResult(null); setError("")
   }
 
@@ -208,6 +210,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                     setSelectedPeriodKm(toggled ? null : 0)
                     setBasePeriodTemplateId(toggled ? "" : hizliServis.id)
                     setTemplateId(toggled ? "" : hizliServis.id)
+                    setIsApprovedTemplate(toggled ? false : !!hizliServis.isApproved)
                     setServiceTypes([]); setHasMultipleServiceTypes(false)
                     setResult(null); setError("")
                   }}
@@ -229,6 +232,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                     setSelectedPeriodKm(toggled ? null : p.periodKm)
                     setBasePeriodTemplateId(toggled ? "" : p.id)
                     setTemplateId(toggled ? "" : p.id)
+                    setIsApprovedTemplate(toggled ? false : !!p.isApproved)
                     setServiceTypes([]); setHasMultipleServiceTypes(false)
                     setResult(null); setError("")
                   }}
@@ -290,6 +294,19 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
           const laborItems = result.items.filter(i => i.itemType === "LABOR")
           return (
             <div className="space-y-3">
+              {/* Onay rozeti */}
+              {isApprovedTemplate ? (
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span className="text-sm font-semibold text-emerald-700">Onaylı Reçete</span>
+                  <span className="text-xs text-emerald-500 ml-auto">Yetkili tarafından onaylanmıştır</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                  <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span className="text-sm font-medium text-amber-700">Henüz onaylanmamış reçete</span>
+                </div>
+              )}
               {/* Parçalar */}
               {partItems.length > 0 && (
                 <div className="rounded-lg border border-cyan-200 overflow-hidden">

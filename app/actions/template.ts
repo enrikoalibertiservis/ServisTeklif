@@ -222,6 +222,20 @@ export async function deleteTemplate(templateId: string) {
   return prisma.maintenanceTemplate.delete({ where: { id: templateId } })
 }
 
+export async function approveTemplate(templateId: string, approve: boolean) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== "ADMIN") throw new Error("Yetkisiz")
+
+  return prisma.maintenanceTemplate.update({
+    where: { id: templateId },
+    data: {
+      isApproved:   approve,
+      approvedAt:   approve ? new Date() : null,
+      approvedById: approve ? session.user.id : null,
+    },
+  })
+}
+
 /** Mükerrer bakım şablonlarını siler (aynı araç + periyot). Kalem sayısı en fazla olan bırakılır. */
 export async function dedupeMaintenanceTemplates(): Promise<{ deleted: number }> {
   const session = await getServerSession(authOptions)

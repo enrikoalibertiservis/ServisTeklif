@@ -26,11 +26,13 @@ import {
   createTemplate,
   deleteTemplate,
   dedupeMaintenanceTemplates,
+  approveTemplate,
 } from "@/app/actions/template"
 import { formatCurrency } from "@/lib/utils"
 import {
   ClipboardList, Plus, Trash2, Search, Loader2, Copy, Package,
   Wrench, AlertTriangle, Check, Minus, ChevronRight, FileCog, PlusCircle, X,
+  ShieldCheck, ShieldOff,
 } from "lucide-react"
 
 interface TemplateItem {
@@ -69,6 +71,7 @@ export default function TemplateEditorPage() {
   const [templateDetails, setTemplateDetails] = useState<any>(null)
   const [items, setItems] = useState<TemplateItem[]>([])
   const [loadingDetails, setLoadingDetails] = useState(false)
+  const [approving, setApproving] = useState(false)
 
   // Search dialog
   const [searchOpen, setSearchOpen] = useState(false)
@@ -350,6 +353,27 @@ export default function TemplateEditorPage() {
     }
   }
 
+  async function handleApprove(approve: boolean) {
+    if (!selectedTemplateId) return
+    setApproving(true)
+    try {
+      const updated = await approveTemplate(selectedTemplateId, approve)
+      setTemplateDetails((prev: any) => prev ? { ...prev, isApproved: updated.isApproved, approvedAt: updated.approvedAt } : prev)
+      // Templates listesini de güncelle
+      setTemplates(prev => prev.map(t => t.id === selectedTemplateId ? { ...t, isApproved: updated.isApproved } : t))
+      toast({
+        title: approve ? "Reçete Onaylandı ✓" : "Onay Kaldırıldı",
+        description: approve
+          ? "Danışmanlar bu reçetenin onaylı olduğunu görecek."
+          : "Reçetenin onay işareti kaldırıldı.",
+      })
+    } catch (err: any) {
+      toast({ title: "Hata", description: err.message, variant: "destructive" })
+    } finally {
+      setApproving(false)
+    }
+  }
+
   const partsTotal = items.filter(i => i.itemType === "PART").reduce((s, i) => s + (i.unitPrice * i.quantity), 0)
   const laborTotal = items.filter(i => i.itemType === "LABOR").reduce((s, i) => s + (i.unitPrice * i.quantity), 0)
 
@@ -503,7 +527,29 @@ export default function TemplateEditorPage() {
                     : `${templateDetails.periodKm?.toLocaleString("tr-TR")} km Bakım Reçetesi`)
                   : "Yükleniyor..."}
               </CardTitle>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                {/* Onayla / Onayı Kaldır */}
+                {templateDetails?.isApproved ? (
+                  <Button
+                    variant="ghost" size="sm"
+                    className="bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                    onClick={() => handleApprove(false)}
+                    disabled={approving}
+                  >
+                    {approving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1" />}
+                    Onaylı — Kaldır
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost" size="sm"
+                    className="bg-amber-50 text-amber-700 border border-amber-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
+                    onClick={() => handleApprove(true)}
+                    disabled={approving || items.length === 0}
+                  >
+                    {approving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1" />}
+                    Onayla
+                  </Button>
+                )}
                 <Button
                   variant="ghost" size="sm"
                   className="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"

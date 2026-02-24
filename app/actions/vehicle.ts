@@ -28,7 +28,7 @@ export async function getSpecsBySubModel(subModelId: string) {
 }
 
 export async function getMaintenancePeriods(brandId: string, modelId?: string, subModelId?: string) {
-  const select = { id: true, periodKm: true, periodMonth: true, name: true, serviceType: true } as const
+  const select = { id: true, periodKm: true, periodMonth: true, name: true, serviceType: true, isApproved: true } as const
   const order  = { periodKm: "asc" } as const
 
   // Kademeli arama: subModel → model (herhangi subModel) → brand

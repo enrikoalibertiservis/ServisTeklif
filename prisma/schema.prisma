@@ -20,9 +20,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  quotes       Quote[]
-  importLogs   PriceListVersion[]
-  loginLogs    LoginLog[]
+  quotes              Quote[]
+  importLogs          PriceListVersion[]
+  loginLogs           LoginLog[]
+  approvedTemplates   MaintenanceTemplate[] @relation("ApprovedTemplates")
 }
 
 model LoginLog {
@@ -144,9 +145,14 @@ model MaintenanceTemplate {
   name        String?
   createdAt   DateTime @default(now())
 
+  isApproved    Boolean   @default(false)
+  approvedAt    DateTime?
+  approvedById  String?
+
   brand       Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
   model       VehicleModel? @relation(fields: [modelId], references: [id])
   subModel    SubModel?     @relation(fields: [subModelId], references: [id])
+  approvedBy  User?         @relation("ApprovedTemplates", fields: [approvedById], references: [id])
   items       MaintenanceTemplateItem[]
 
   @@index([brandId, modelId, subModelId, periodKm, serviceType])
