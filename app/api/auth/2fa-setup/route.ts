@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { authenticator } from "otplib"
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { authenticator } = require("otplib") as {
+  authenticator: {
+    generateSecret: () => string
+    verify: (opts: { token: string; secret: string }) => boolean
+    keyuri: (user: string, service: string, secret: string) => string
+  }
+}
 import QRCode from "qrcode"
 
 /** Admin: belirli bir kullanıcı için QR kod + secret üret */

@@ -1,7 +1,10 @@
 import { type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
-import { authenticator } from "otplib"
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { authenticator } = require("otplib") as {
+  authenticator: { verify: (opts: { token: string; secret: string }) => boolean }
+}
 import { prisma } from "./prisma"
 
 function getIp(req: any): string | null {
