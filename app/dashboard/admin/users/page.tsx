@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Users, Plus, UserCheck, UserX, Eye, EyeOff } from "lucide-react"
+import { Users, Plus, UserCheck, UserX, Eye, EyeOff, KeyRound } from "lucide-react"
 
 // Şifre kural kontrolü
 function checkPassword(pwd: string) {
@@ -66,6 +66,8 @@ function PasswordStrength({ password }: { password: string }) {
 export default function UsersPage() {
   const { toast } = useToast()
   const [users, setUsers] = useState<any[]>([])
+
+  // Yeni kullanıcı dialog
   const [dialogOpen, setDialogOpen] = useState(false)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -73,6 +75,13 @@ export default function UsersPage() {
   const [showPwd, setShowPwd] = useState(false)
   const [role, setRole] = useState("ADVISOR")
   const [saving, setSaving] = useState(false)
+
+  // Şifre güncelleme dialog
+  const [pwdDialogUser, setPwdDialogUser] = useState<{ id: string; name: string } | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [newPassword2, setNewPassword2] = useState("")
+  const [showNewPwd, setShowNewPwd] = useState(false)
+  const [pwdSaving, setPwdSaving] = useState(false)
 
   async function loadUsers() {
     const res = await fetch("/api/users")
@@ -116,6 +125,30 @@ export default function UsersPage() {
     toast({ title: currentActive ? "Kullanıcı devre dışı bırakıldı" : "Kullanıcı aktifleştirildi" })
   }
 
+  async function handleUpdatePassword() {
+    if (!pwdDialogUser) return
+    if (!newPassword) {
+      toast({ title: "Hata", description: "Yeni şifre boş olamaz.", variant: "destructive" }); return
+    }
+    if (newPassword !== newPassword2) {
+      toast({ title: "Hata", description: "Şifreler eşleşmiyor.", variant: "destructive" }); return
+    }
+    setPwdSaving(true)
+    const res = await fetch("/api/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: pwdDialogUser.id, password: newPassword }),
+    })
+    setPwdSaving(false)
+    if (!res.ok) {
+      const err = await res.json()
+      toast({ title: "Hata", description: err.error, variant: "destructive" }); return
+    }
+    toast({ title: "Şifre güncellendi", description: `${pwdDialogUser.name} kullanıcısının şifresi değiştirildi.` })
+    setPwdDialogUser(null)
+    setNewPassword(""); setNewPassword2(""); setShowNewPwd(false)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -148,7 +181,7 @@ export default function UsersPage() {
                 <TableHead>Rol</TableHead>
                 <TableHead>Durum</TableHead>
                 <TableHead>Kayıt Tarihi</TableHead>
-                <TableHead className="w-24">İşlem</TableHead>
+                <TableHead className="w-28">İşlem</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -170,13 +203,24 @@ export default function UsersPage() {
                     {new Date(u.createdAt).toLocaleDateString("tr-TR")}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleActive(u.id, u.active)}
-                    >
-                      {u.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={u.active ? "Devre dışı bırak" : "Aktifleştir"}
+                        onClick={() => toggleActive(u.id, u.active)}
+                      >
+                        {u.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Şifre güncelle"
+                        onClick={() => { setPwdDialogUser({ id: u.id, name: u.name }); setNewPassword(""); setNewPassword2(""); setShowNewPwd(false) }}
+                      >
+                        <KeyRound className="h-4 w-4 text-amber-500" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -185,6 +229,66 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
+      {/* Şifre Güncelleme Dialog */}
+      <Dialog open={!!pwdDialogUser} onOpenChange={open => { if (!open) { setPwdDialogUser(null); setNewPassword(""); setNewPassword2("") } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-amber-500" />
+              Şifre Güncelle — {pwdDialogUser?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Yeni Şifre</Label>
+              <div className="relative">
+                <Input
+                  type={showNewPwd ? "text" : "password"}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="pr-10"
+                  placeholder="Yeni şifre girin"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPwd(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <PasswordStrength password={newPassword} />
+            </div>
+            <div className="space-y-2">
+              <Label>Şifre Tekrar</Label>
+              <Input
+                type="password"
+                value={newPassword2}
+                onChange={e => setNewPassword2(e.target.value)}
+                placeholder="Şifreyi tekrar girin"
+              />
+              {newPassword2 && newPassword !== newPassword2 && (
+                <p className="text-xs text-red-500">Şifreler eşleşmiyor</p>
+              )}
+              {newPassword2 && newPassword === newPassword2 && newPassword.length > 0 && (
+                <p className="text-xs text-green-600">✓ Şifreler eşleşiyor</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwdDialogUser(null)}>İptal</Button>
+            <Button
+              onClick={handleUpdatePassword}
+              disabled={pwdSaving || !newPassword || newPassword !== newPassword2}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              {pwdSaving ? "Kaydediliyor..." : "Şifreyi Güncelle"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Yeni Kullanıcı Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>

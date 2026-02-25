@@ -62,12 +62,24 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { id, active } = body
+  const { id, active, password } = body
 
-  await prisma.user.update({
-    where: { id },
-    data: { active },
-  })
+  if (password !== undefined) {
+    // Şifre güncelleme
+    const pwdErrors: string[] = []
+    if (password.length < 8)           pwdErrors.push("En az 8 karakter")
+    if (!/[A-Z]/.test(password))       pwdErrors.push("En az 1 büyük harf")
+    if (!/[a-z]/.test(password))       pwdErrors.push("En az 1 küçük harf")
+    if (!/[0-9]/.test(password))       pwdErrors.push("En az 1 rakam")
+    if (!/[^A-Za-z0-9]/.test(password)) pwdErrors.push("En az 1 özel karakter")
+    if (pwdErrors.length > 0) {
+      return NextResponse.json({ error: `Şifre gereksinimleri: ${pwdErrors.join(", ")}` }, { status: 400 })
+    }
+    const passwordHash = await bcrypt.hash(password, 10)
+    await prisma.user.update({ where: { id }, data: { passwordHash } })
+    return NextResponse.json({ success: true })
+  }
 
+  await prisma.user.update({ where: { id }, data: { active } })
   return NextResponse.json({ success: true })
 }
