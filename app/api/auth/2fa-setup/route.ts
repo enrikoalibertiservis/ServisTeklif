@@ -2,14 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { authenticator } = require("otplib") as {
-  authenticator: {
-    generateSecret: () => string
-    verify: (opts: { token: string; secret: string }) => boolean
-    keyuri: (user: string, service: string, secret: string) => string
-  }
-}
+import { generateSecret, keyuri, verifyTotp } from "@/lib/totp"
 import QRCode from "qrcode"
 
 /** Admin: belirli bir kullanıcı için QR kod + secret üret */
@@ -22,9 +15,8 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: userId } })
   if (!user) return NextResponse.json({ error: "Kullanıcı bulunamadı" }, { status: 404 })
 
-  // Yeni secret üret (henüz DB'ye kaydetme — doğrulama sonrası kaydedilecek)
-  const secret = authenticator.generateSecret()
-  const otpauth = authenticator.keyuri(user.email, "Servis Teklif", secret)
+  const secret = generateSecret()
+  const otpauth = keyuri(user.email, "Servis Teklif", secret)
   const qrDataUrl = await QRCode.toDataURL(otpauth)
 
   return NextResponse.json({ secret, qrDataUrl, email: user.email })
@@ -37,7 +29,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })
 
   const { userId, secret, token } = await req.json()
-  const isValid = authenticator.verify({ token, secret })
+  const isValid = verifyTotp(token, secret)
   if (!isValid) return NextResponse.json({ error: "Kod hatalı. Lütfen tekrar deneyin." }, { status: 400 })
 
   await prisma.user.update({

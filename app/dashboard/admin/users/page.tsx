@@ -163,17 +163,31 @@ export default function UsersPage() {
     setTfaDialogUser(user)
     setTfaStep("qr")
     setTfaToken("")
+    setTfaSecret("")
+    setTfaQr("")
     if (!user.twoFactorEnabled) {
       setTfaLoading(true)
-      const res = await fetch("/api/auth/2fa-setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
-      })
-      const data = await res.json()
-      setTfaSecret(data.secret)
-      setTfaQr(data.qrDataUrl)
-      setTfaLoading(false)
+      try {
+        const res = await fetch("/api/auth/2fa-setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast({ title: "Hata", description: err.error ?? "QR kod oluşturulamadı.", variant: "destructive" })
+          setTfaDialogUser(null)
+          return
+        }
+        const data = await res.json()
+        setTfaSecret(data.secret)
+        setTfaQr(data.qrDataUrl)
+      } catch {
+        toast({ title: "Hata", description: "Sunucuya bağlanılamadı.", variant: "destructive" })
+        setTfaDialogUser(null)
+      } finally {
+        setTfaLoading(false)
+      }
     }
   }
 

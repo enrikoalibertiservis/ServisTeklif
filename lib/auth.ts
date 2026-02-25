@@ -1,10 +1,7 @@
 import { type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { authenticator } = require("otplib") as {
-  authenticator: { verify: (opts: { token: string; secret: string }) => boolean }
-}
+import { verifyTotp } from "./totp"
 import { prisma } from "./prisma"
 
 function getIp(req: any): string | null {
@@ -70,8 +67,8 @@ export const authOptions: NextAuthOptions = {
 
         // 2FA kontrolü
         if (user.twoFactorEnabled && user.twoFactorSecret) {
-          const totp = credentials.totp ?? ""
-          const totpValid = authenticator.verify({ token: totp, secret: user.twoFactorSecret })
+          const totpCode = credentials.totp ?? ""
+          const totpValid = verifyTotp(totpCode, user.twoFactorSecret)
           if (!totpValid) {
             await prisma.loginLog.create({ data: { userId: user.id, email, success: false, ip, city, country, userAgent: ua } }).catch(() => {})
             return null
