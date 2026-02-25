@@ -423,6 +423,7 @@ export default function QuoteDetailPage() {
                     {isDraft ? (
                       <div className="flex items-center justify-center gap-1">
                         <Input
+                          key={`part-disc-${item.id}-${item.discountPct}`}
                           type="number" min="0" max="100" step="0.5"
                           className="w-16 text-center h-7 text-sm"
                           defaultValue={item.discountPct ?? 0}
@@ -553,6 +554,7 @@ export default function QuoteDetailPage() {
                     {isDraft ? (
                       <div className="flex items-center justify-center gap-1">
                         <Input
+                          key={`labor-disc-${item.id}-${item.discountPct}`}
                           type="number" min="0" max="100" step="0.5"
                           className="w-16 text-center h-7 text-sm"
                           defaultValue={item.discountPct ?? 0}
