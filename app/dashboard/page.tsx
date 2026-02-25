@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { FileText, PlusCircle, Package, Wrench, Car } from "lucide-react"
 import Link from "next/link"
-import { DashboardBottom, RecentQuotesList } from "@/components/dashboard-bottom"
+import { DashboardBottom } from "@/components/dashboard-bottom"
 import { DashboardStats } from "@/components/dashboard-stats"
 
 export default async function DashboardPage() {
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const recentQuotes = await prisma.quote.findMany({
     where: isAdmin ? {} : { createdById: session!.user.id },
     orderBy: { createdAt: "desc" },
-    take: 3,
+    take: 5,
     include: { createdBy: { select: { name: true } } },
   })
 
@@ -45,18 +45,6 @@ export default async function DashboardPage() {
         }))
       })
     : []
-
-  // Marka bazlı teklif sayıları
-  const brandQuoteRows = await prisma.quote.groupBy({
-    by: ["brandName"],
-    _count: { id: true },
-    orderBy: { _count: { id: "desc" } },
-    take: 8,
-  })
-  const brandQuotes = brandQuoteRows.map(r => ({
-    name:  r.brandName,
-    count: r._count.id,
-  }))
 
   // Alt model (SubModel) bazında reçete doluluk oranı — brand bazlı
   const modelRecipes = await (async () => {
@@ -207,18 +195,15 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* ── Grafik İstatistikler — grafikler üstte ───────────── */}
+      {/* ── Grafik İstatistikler: Danışman + Reçete Tanımlı Modeller ── */}
       <DashboardStats
         advisorStats={advisorStats}
-        brandQuotes={brandQuotes}
+        modelRecipes={modelRecipes}
         isAdmin={isAdmin}
       />
 
-      {/* ── Hızlı Fiyat + Reçete Grafiği ────────────────────── */}
-      <DashboardBottom modelRecipes={modelRecipes} />
-
-      {/* ── Son Teklifler — her zaman en altta ───────────────── */}
-      <RecentQuotesList recentQuotes={recentQuotes} isAdmin={isAdmin} />
+      {/* ── Hızlı Fiyat Sorgulama + Son Teklifler ───────────────────── */}
+      <DashboardBottom recentQuotes={recentQuotes} isAdmin={isAdmin} />
 
     </div>
   )

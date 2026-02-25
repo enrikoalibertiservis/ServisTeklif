@@ -1,23 +1,23 @@
 "use client"
 
-import { Car, Users } from "lucide-react"
+import { BookOpen, Users } from "lucide-react"
 
 interface AdvisorStat { name: string; count: number }
-interface BrandQuote   { name: string; count: number }
+interface ModelRecipe { brand: string; defined: number; total: number }
 
 interface Props {
   advisorStats:  AdvisorStat[]
-  brandQuotes:   BrandQuote[]
+  modelRecipes:  ModelRecipe[]
   isAdmin: boolean
 }
 
-const BRAND_COLORS: Record<string, string> = {
-  "Fiat":         "from-red-400 to-red-500",
-  "Jeep":         "from-green-500 to-emerald-500",
-  "Alfa Romeo":   "from-orange-400 to-amber-500",
-  "Lancia":       "from-blue-400 to-indigo-500",
+const BRAND_COLORS: Record<string, { bar: string; dot: string }> = {
+  Fiat:        { bar: "from-red-400 to-red-500",     dot: "bg-red-400" },
+  Jeep:        { bar: "from-green-500 to-emerald-600", dot: "bg-green-500" },
+  "Alfa Romeo":{ bar: "from-orange-400 to-amber-500", dot: "bg-orange-400" },
+  Lancia:      { bar: "from-blue-400 to-indigo-500", dot: "bg-blue-400" },
 }
-const DEFAULT_BAR = "from-violet-400 to-purple-500"
+const DEFAULT_COLOR = { bar: "from-teal-400 to-teal-500", dot: "bg-teal-400" }
 
 function HorizontalBar({
   label,
@@ -65,14 +65,12 @@ function HorizontalBar({
   )
 }
 
-export function DashboardStats({ advisorStats, brandQuotes, isAdmin }: Props) {
+export function DashboardStats({ advisorStats, modelRecipes, isAdmin }: Props) {
   const maxAdvisor = Math.max(...advisorStats.map(a => a.count), 1)
-  const maxBrand   = Math.max(...brandQuotes.map(b => b.count), 1)
-
   const hasAdvisor = isAdmin && advisorStats.length > 0
-  const hasBrand   = brandQuotes.length > 0
+  const hasRecipes = modelRecipes.length > 0
 
-  if (!hasAdvisor && !hasBrand) return null
+  if (!hasAdvisor && !hasRecipes) return null
 
   return (
     <div className="grid gap-4 lg:grid-cols-2 items-stretch">
@@ -115,39 +113,67 @@ export function DashboardStats({ advisorStats, brandQuotes, isAdmin }: Props) {
         </div>
       )}
 
-      {/* Marka Bazlı Teklif Sayıları */}
-      {hasBrand && (
-        <div className="flex flex-col rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/60 to-purple-50/40 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-              <Car className="h-4 w-4 text-violet-600" />
+      {/* Reçete Tanımlı Modeller */}
+      {hasRecipes && (
+        <div className="flex flex-col rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50/60 to-emerald-50/30 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
+              <BookOpen className="h-4 w-4 text-teal-600" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-800">Marka Bazlı Teklifler</h3>
-              <p className="text-[11px] text-muted-foreground">Markaya göre teklif dağılımı</p>
+              <h3 className="text-sm font-semibold text-gray-800">Reçete Tanımlı Modeller</h3>
+              <p className="text-[11px] text-muted-foreground">Alt model bazında reçete doluluk oranı</p>
             </div>
           </div>
-          <div className="flex-1 space-y-2.5">
-            {brandQuotes.map((b, i) => (
-              <HorizontalBar
-                key={i}
-                label={b.name}
-                value={b.count}
-                max={maxBrand}
-                barClass={BRAND_COLORS[b.name] ?? (
-                  i === 0 ? "from-violet-500 to-purple-500" :
-                  i === 1 ? "from-violet-400 to-violet-500" :
-                            "from-violet-300 to-violet-400"
-                )}
-                bgClass="bg-violet-100/60"
-                badge={`${b.count} teklif`}
-              />
-            ))}
+          <div className="flex-1 space-y-3">
+            {modelRecipes.map((r, i) => {
+              const colors = BRAND_COLORS[r.brand] ?? DEFAULT_COLOR
+              const pct = Math.round((r.defined / r.total) * 100)
+              const isComplete = pct === 100
+              return (
+                <div key={i} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${colors.dot}`} />
+                      <span className="text-xs font-semibold text-gray-700">{r.brand}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground">
+                        {r.defined} / {r.total} alt model
+                      </span>
+                      <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                        isComplete ? "bg-green-100 text-green-700" :
+                        pct >= 60 ? "bg-yellow-100 text-yellow-700" :
+                        "bg-orange-100 text-orange-600"
+                      }`}>
+                        %{pct}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="relative h-3 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${colors.bar} transition-all duration-700`}
+                      style={{ width: `${pct}%` }}
+                    />
+                    {r.total > 1 && Array.from({ length: r.total - 1 }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="absolute inset-y-0 w-px bg-white/60"
+                        style={{ left: `${((idx + 1) / r.total) * 100}%` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-          <div className="mt-4 pt-3 border-t border-violet-100 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{brandQuotes.length} marka</span>
-            <span className="font-medium text-violet-600">
-              Toplam: {brandQuotes.reduce((s, b) => s + b.count, 0)} teklif
+          <div className="mt-4 pt-3 border-t border-teal-100 flex items-center justify-between text-xs text-muted-foreground">
+            <span>{modelRecipes.length} marka</span>
+            <span className="font-medium text-teal-600">
+              {modelRecipes.reduce((s, r) => s + r.defined, 0)} / {modelRecipes.reduce((s, r) => s + r.total, 0)} alt model reçeteli
+              {" "}· %{modelRecipes.reduce((s, r) => s + r.total, 0) > 0
+                ? Math.round((modelRecipes.reduce((s, r) => s + r.defined, 0) / modelRecipes.reduce((s, r) => s + r.total, 0)) * 100)
+                : 0} tamamlandı
             </span>
           </div>
         </div>
