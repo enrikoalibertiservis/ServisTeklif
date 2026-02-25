@@ -423,7 +423,7 @@ export default function QuoteDetailPage() {
             </div>
           </div>
         )}
-        <CardContent className="p-0">
+        <CardContent className="p-0 pt-3">
           <Table className="table-fixed w-full">
             <colgroup>
               <col className="w-[5%]" />
@@ -575,13 +575,13 @@ export default function QuoteDetailPage() {
             </div>
           </div>
         )}
-        <CardContent className="p-0">
+        <CardContent className="p-0 pt-3">
           <Table className="table-fixed w-full">
             <colgroup>
               <col className="w-[5%]" />
               <col className="w-[16%]" />
               <col />{/* Operasyon Adı — kalan alan */}
-              <col className="w-[9%]" />
+              <col className="w-[8%]" />
               <col className="w-[14%]" />
               <col className="w-[10%]" />
               <col className="w-[14%]" />
