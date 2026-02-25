@@ -4,12 +4,21 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Check, Minus, Car, ClipboardList } from "lucide-react"
+import { Car, ClipboardList, ChevronDown, ChevronRight, Wrench, Package } from "lucide-react"
 import { getBrands, getModelsByBrand, getSubModelsByModel } from "@/app/actions/vehicle"
 import { formatCurrency } from "@/lib/utils"
 
+const KDV_RATE = 0.20
+
+interface Period {
+  km: number | null
+  month: number | null
+  name: string
+  templateId: string
+}
+
 interface MatrixData {
-  periods: Array<{ km: number | null; month: number | null; name: string; templateId: string }>
+  periods: Period[]
   partRows: Array<{
     referenceCode: string
     name: string
@@ -27,26 +36,22 @@ interface MatrixData {
 }
 
 export default function MaintenanceMatrixPage() {
-  const [brands, setBrands] = useState<any[]>([])
-  const [models, setModels] = useState<any[]>([])
+  const [brands, setBrands]       = useState<any[]>([])
+  const [models, setModels]       = useState<any[]>([])
   const [subModels, setSubModels] = useState<any[]>([])
-  const [brandId, setBrandId] = useState("")
-  const [modelId, setModelId] = useState("")
+  const [brandId, setBrandId]     = useState("")
+  const [modelId, setModelId]     = useState("")
   const [subModelId, setSubModelId] = useState("")
-  const [matrix, setMatrix] = useState<MatrixData | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [matrix, setMatrix]       = useState<MatrixData | null>(null)
+  const [loading, setLoading]     = useState(false)
+  const [expanded, setExpanded]   = useState<Set<number>>(new Set())
 
-  useEffect(() => {
-    getBrands().then(setBrands)
-  }, [])
+  useEffect(() => { getBrands().then(setBrands) }, [])
 
   useEffect(() => {
     if (brandId) {
       getModelsByBrand(brandId).then(setModels)
-      setModelId("")
-      setSubModelId("")
-      setSubModels([])
-      setMatrix(null)
+      setModelId(""); setSubModelId(""); setSubModels([]); setMatrix(null)
     }
   }, [brandId])
 
@@ -55,8 +60,7 @@ export default function MaintenanceMatrixPage() {
       getSubModelsByModel(modelId).then(setSubModels)
       setSubModelId("")
     } else {
-      setSubModels([])
-      setSubModelId("")
+      setSubModels([]); setSubModelId("")
     }
   }, [modelId])
 
@@ -67,52 +71,53 @@ export default function MaintenanceMatrixPage() {
     if (modelId && modelId !== "ALL") params.set("modelId", modelId)
     if (subModelId && subModelId !== "ALL") params.set("subModelId", subModelId)
     fetch(`/api/maintenance-matrix?${params}`)
-      .then((r) => r.json())
-      .then(setMatrix)
+      .then(r => r.json())
+      .then(data => { setMatrix(data); setExpanded(new Set()) })
       .finally(() => setLoading(false))
   }, [brandId, modelId, subModelId])
 
-  const selectedBrand    = brands.find((b) => b.id === brandId)
-  const selectedModel    = models.find((m) => m.id === modelId)
-  const selectedSubModel = subModels.find((sm) => sm.id === subModelId)
+  function toggleExpand(idx: number) {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) { next.delete(idx) } else { next.add(idx) }
+      return next
+    })
+  }
+
+  const selectedBrand    = brands.find(b => b.id === brandId)
+  const selectedModel    = models.find(m => m.id === modelId)
+  const selectedSubModel = subModels.find(sm => sm.id === subModelId)
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <ClipboardList className="h-6 w-6 text-purple-500" />
-          Bakım Matrisi
+          Bakım Periyot Fiyatları
         </h1>
         <p className="text-muted-foreground">
-          Periyodik bakımlarda hangi parça ve işçiliklerin uygulandığını tek tabloda görüntüleyin.
+          Seçili araç için tanımlı bakım periyotlarını ve maliyet özetini görüntüleyin.
         </p>
       </div>
 
+      {/* Filtreler */}
       <div className="flex gap-4 flex-wrap items-end">
         <div className="space-y-1">
           <label className="text-sm font-medium">Marka</label>
           <Select value={brandId} onValueChange={setBrandId}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Marka seçin" />
-            </SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Marka seçin" /></SelectTrigger>
             <SelectContent>
-              {brands.map((b) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
+              {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium">Model</label>
           <Select value={modelId} onValueChange={setModelId} disabled={!brandId}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Tüm Modeller" />
-            </SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Tüm Modeller" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Tüm Modeller</SelectItem>
-              {models.map((m) => (
-                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-              ))}
+              {models.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -123,25 +128,22 @@ export default function MaintenanceMatrixPage() {
             onValueChange={setSubModelId}
             disabled={!modelId || modelId === "ALL" || subModels.length === 0}
           >
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Tüm Alt Modeller" />
-            </SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Tüm Alt Modeller" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Tüm Alt Modeller</SelectItem>
-              {subModels.map((sm) => (
-                <SelectItem key={sm.id} value={sm.id}>{sm.name}</SelectItem>
-              ))}
+              {subModels.map(sm => <SelectItem key={sm.id} value={sm.id}>{sm.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
 
+      {/* Boş durum */}
       {!brandId && (
         <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
             <Car className="h-16 w-16 mx-auto mb-4 opacity-20" />
             <p className="text-lg">Lütfen bir marka seçin</p>
-            <p className="text-sm mt-1">Bakım matrisini görüntülemek için yukarıdan marka seçin.</p>
+            <p className="text-sm mt-1">Bakım periyotlarını görüntülemek için yukarıdan marka seçin.</p>
           </CardContent>
         </Card>
       )}
@@ -162,157 +164,202 @@ export default function MaintenanceMatrixPage() {
         </Card>
       )}
 
+      {/* Periyot Listesi */}
       {!loading && matrix && matrix.periods.length > 0 && (
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">
               {selectedBrand?.name}
-              {selectedModel && <span className="text-muted-foreground font-normal text-base">/ {selectedModel.name}</span>}
-              {selectedSubModel && <span className="text-muted-foreground font-normal text-base">/ {selectedSubModel.name}</span>}
-              <span className="text-base font-normal text-muted-foreground">Bakım Matrisi</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 mt-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-primary text-primary-foreground">
-                    <th className="text-left p-3 font-semibold sticky left-0 bg-primary z-10 min-w-[250px]">
-                      Parça / İşçilik
-                    </th>
-                    <th className="text-right p-3 font-semibold min-w-[100px]">Birim Fiyat</th>
-                    {matrix.periods.map((p, i) => (
-                      <th key={i} className="text-center p-3 font-semibold min-w-[100px]">
-                        <div>{p.km ? `${(p.km / 1000)}K` : ""}</div>
-                        <div className="text-xs font-normal opacity-80">
-                          {p.km ? `${p.km.toLocaleString("tr-TR")} km` : `${p.month} ay`}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Parts section header */}
-                  {matrix.partRows.length > 0 && (
-                    <tr className="bg-blue-50">
-                      <td colSpan={2 + matrix.periods.length} className="p-2 font-bold text-primary text-xs uppercase tracking-wider">
-                        Parçalar
-                      </td>
-                    </tr>
-                  )}
-                  {matrix.partRows.map((row, ri) => (
-                    <tr key={`p-${ri}`} className={ri % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-                      <td className="p-2.5 sticky left-0 bg-inherit z-10 border-r">
-                        <div className="font-medium">{row.name}</div>
-                        <div className="text-xs text-muted-foreground">{row.referenceCode}</div>
-                      </td>
-                      <td className="p-2.5 text-right text-muted-foreground whitespace-nowrap">
-                        {formatCurrency(row.unitPrice)}
-                      </td>
-                      {row.cells.map((cell, ci) => (
-                        <td key={ci} className="p-2.5 text-center">
-                          {cell.included ? (
-                            <div className="flex flex-col items-center">
-                              <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center">
-                                <Check className="h-4 w-4 text-green-600" />
-                              </div>
-                              {cell.quantity > 1 && (
-                                <span className="text-xs text-muted-foreground mt-0.5">x{cell.quantity}</span>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="flex justify-center">
-                              <Minus className="h-4 w-4 text-gray-300" />
-                            </div>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-
-                  {/* Labor section header */}
-                  {matrix.laborRows.length > 0 && (
-                    <tr className="bg-orange-50">
-                      <td colSpan={2 + matrix.periods.length} className="p-2 font-bold text-orange-700 text-xs uppercase tracking-wider">
-                        İşçilik
-                      </td>
-                    </tr>
-                  )}
-                  {matrix.laborRows.map((row, ri) => (
-                    <tr key={`l-${ri}`} className={ri % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-                      <td className="p-2.5 sticky left-0 bg-inherit z-10 border-r">
-                        <div className="font-medium">{row.name}</div>
-                        <div className="text-xs text-muted-foreground">{row.referenceCode}</div>
-                      </td>
-                      <td className="p-2.5 text-right text-muted-foreground whitespace-nowrap">
-                        {formatCurrency(row.totalPrice)}
-                        <div className="text-xs">{row.durationHours} saat</div>
-                      </td>
-                      {row.cells.map((cell, ci) => (
-                        <td key={ci} className="p-2.5 text-center">
-                          {cell.included ? (
-                            <div className="flex justify-center">
-                              <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center">
-                                <Check className="h-4 w-4 text-green-600" />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex justify-center">
-                              <Minus className="h-4 w-4 text-gray-300" />
-                            </div>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-
-                  {/* Totals */}
-                  <tr className="bg-gray-100 border-t-2 border-primary/20">
-                    <td className="p-3 font-bold sticky left-0 bg-gray-100 z-10">Parça Toplamı</td>
-                    <td className="p-3"></td>
-                    {matrix.periodTotals.map((t, i) => (
-                      <td key={i} className="p-3 text-center font-semibold text-sm">
-                        {formatCurrency(t.partsTotal)}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr className="bg-gray-100">
-                    <td className="p-3 font-bold sticky left-0 bg-gray-100 z-10">İşçilik Toplamı</td>
-                    <td className="p-3"></td>
-                    {matrix.periodTotals.map((t, i) => (
-                      <td key={i} className="p-3 text-center font-semibold text-sm">
-                        {formatCurrency(t.laborTotal)}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr className="bg-primary text-primary-foreground">
-                    <td className="p-3 font-bold sticky left-0 bg-primary z-10 text-lg">GENEL TOPLAM</td>
-                    <td className="p-3"></td>
-                    {matrix.periodTotals.map((t, i) => (
-                      <td key={i} className="p-3 text-center font-bold text-base">
-                        {formatCurrency(t.grandTotal)}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Legend */}
-      {!loading && matrix && matrix.periods.length > 0 && (
-        <div className="flex gap-6 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-              <Check className="h-3.5 w-3.5 text-green-600" />
-            </div>
-            Dahil
+              {selectedModel && ` / ${selectedModel.name}`}
+              {selectedSubModel && ` / ${selectedSubModel.name}`}
+            </span>
+            <span>·</span>
+            <span>{matrix.periods.length} periyot tanımlı</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Minus className="h-4 w-4 text-gray-300" />
-            Dahil değil
+
+          {/* Özet tablo (masaüstü) */}
+          <Card>
+            <CardHeader className="pb-2 pt-4 px-5">
+              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Periyot Fiyat Özeti
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      <th className="text-left p-3 pl-5 font-semibold">Periyot</th>
+                      <th className="text-right p-3 font-semibold">Parça Toplamı</th>
+                      <th className="text-right p-3 font-semibold">İşçilik Toplamı</th>
+                      <th className="text-right p-3 font-semibold">Ara Toplam</th>
+                      <th className="text-right p-3 font-semibold text-muted-foreground">KDV (%20)</th>
+                      <th className="text-right p-3 pr-5 font-semibold text-primary">Genel Toplam</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrix.periods.map((p, i) => {
+                      const t = matrix.periodTotals[i]
+                      const kdv = t.grandTotal * KDV_RATE
+                      const withKdv = t.grandTotal + kdv
+                      return (
+                        <tr key={i} className={`border-b last:border-0 ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
+                          <td className="p-3 pl-5">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs font-semibold tabular-nums">
+                                {p.km ? `${p.km.toLocaleString("tr-TR")} km` : `${p.month} ay`}
+                              </Badge>
+                              {p.month && p.km ? (
+                                <span className="text-xs text-muted-foreground">/ {p.month} ay</span>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="p-3 text-right tabular-nums text-muted-foreground">{formatCurrency(t.partsTotal)}</td>
+                          <td className="p-3 text-right tabular-nums text-muted-foreground">{formatCurrency(t.laborTotal)}</td>
+                          <td className="p-3 text-right tabular-nums font-medium">{formatCurrency(t.grandTotal)}</td>
+                          <td className="p-3 text-right tabular-nums text-muted-foreground text-xs">{formatCurrency(kdv)}</td>
+                          <td className="p-3 pr-5 text-right tabular-nums font-bold text-primary">{formatCurrency(withKdv)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Periyot detay kartları (genişletilebilir) */}
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Periyot Detayları</p>
+            {matrix.periods.map((p, i) => {
+              const t = matrix.periodTotals[i]
+              const kdv = t.grandTotal * KDV_RATE
+              const withKdv = t.grandTotal + kdv
+              const isOpen = expanded.has(i)
+
+              const periodParts  = matrix.partRows.filter(r => r.cells[i]?.included)
+              const periodLabors = matrix.laborRows.filter(r => r.cells[i]?.included)
+
+              return (
+                <Card key={i} className="overflow-hidden">
+                  <button
+                    className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors text-left"
+                    onClick={() => toggleExpand(i)}
+                  >
+                    <div className="flex items-center gap-3">
+                      {isOpen
+                        ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      }
+                      <Badge variant="outline" className="text-sm font-semibold tabular-nums px-3 py-0.5">
+                        {p.km ? `${p.km.toLocaleString("tr-TR")} km` : `${p.month} ay`}
+                        {p.km && p.month ? ` / ${p.month} ay` : ""}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground hidden sm:inline">
+                        {periodParts.length} parça · {periodLabors.length} işçilik
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-muted-foreground hidden md:inline">
+                        Ara: <span className="font-medium text-foreground tabular-nums">{formatCurrency(t.grandTotal)}</span>
+                      </span>
+                      <span className="font-bold text-primary tabular-nums">{formatCurrency(withKdv)}</span>
+                      <span className="text-xs text-muted-foreground hidden sm:inline">KDV dahil</span>
+                    </div>
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t px-5 py-4 space-y-4 bg-muted/10">
+                      {/* Parçalar */}
+                      {periodParts.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                            <Package className="h-3.5 w-3.5" /> Parçalar
+                          </div>
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-xs text-muted-foreground border-b">
+                                <th className="text-left pb-1.5 font-medium">Parça Adı</th>
+                                <th className="text-left pb-1.5 font-medium">Kodu</th>
+                                <th className="text-center pb-1.5 font-medium">Adet</th>
+                                <th className="text-right pb-1.5 font-medium">Birim Fiyat</th>
+                                <th className="text-right pb-1.5 font-medium">Toplam</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {periodParts.map((row, ri) => (
+                                <tr key={ri} className="border-b last:border-0">
+                                  <td className="py-1.5 font-medium">{row.name}</td>
+                                  <td className="py-1.5 text-muted-foreground text-xs">{row.referenceCode}</td>
+                                  <td className="py-1.5 text-center">{row.cells[i].quantity}</td>
+                                  <td className="py-1.5 text-right tabular-nums text-muted-foreground">{formatCurrency(row.unitPrice)}</td>
+                                  <td className="py-1.5 text-right tabular-nums font-medium">{formatCurrency(row.unitPrice * row.cells[i].quantity)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* İşçilik */}
+                      {periodLabors.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-orange-700 uppercase tracking-wide">
+                            <Wrench className="h-3.5 w-3.5" /> İşçilik
+                          </div>
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-xs text-muted-foreground border-b">
+                                <th className="text-left pb-1.5 font-medium">Operasyon</th>
+                                <th className="text-left pb-1.5 font-medium">Kodu</th>
+                                <th className="text-right pb-1.5 font-medium">Süre (saat)</th>
+                                <th className="text-right pb-1.5 font-medium">Toplam</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {periodLabors.map((row, ri) => (
+                                <tr key={ri} className="border-b last:border-0">
+                                  <td className="py-1.5 font-medium">{row.name}</td>
+                                  <td className="py-1.5 text-muted-foreground text-xs">{row.referenceCode}</td>
+                                  <td className="py-1.5 text-right tabular-nums text-muted-foreground">{row.durationHours}</td>
+                                  <td className="py-1.5 text-right tabular-nums font-medium">{formatCurrency(row.totalPrice)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* Özet */}
+                      <div className="flex justify-end">
+                        <div className="text-sm space-y-1 min-w-[220px]">
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Parça Toplamı</span>
+                            <span className="tabular-nums">{formatCurrency(t.partsTotal)}</span>
+                          </div>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>İşçilik Toplamı</span>
+                            <span className="tabular-nums">{formatCurrency(t.laborTotal)}</span>
+                          </div>
+                          <div className="flex justify-between font-medium border-t pt-1">
+                            <span>Ara Toplam</span>
+                            <span className="tabular-nums">{formatCurrency(t.grandTotal)}</span>
+                          </div>
+                          <div className="flex justify-between text-muted-foreground text-xs">
+                            <span>KDV (%20)</span>
+                            <span className="tabular-nums">{formatCurrency(kdv)}</span>
+                          </div>
+                          <div className="flex justify-between font-bold text-primary text-base border-t pt-1">
+                            <span>Genel Toplam</span>
+                            <span className="tabular-nums">{formatCurrency(withKdv)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              )
+            })}
           </div>
         </div>
       )}
