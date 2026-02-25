@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import {
   getQuote, updateQuoteDiscount, updateQuoteCustomer, addQuoteItem,
   removeQuoteItem, updateQuoteItem, searchParts, searchLabor, finalizeQuote,
-  applyCrmDiscount,
+  applyCrmDiscount, applyCustomDiscount,
 } from "@/app/actions/quote"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency, toUpperTR } from "@/lib/utils"
@@ -26,6 +27,8 @@ export default function QuoteDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
+  const { data: session } = useSession()
+  const isAdmin = (session?.user as any)?.role === "ADMIN"
   const [quote, setQuote] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -56,6 +59,9 @@ export default function QuoteDetailPage() {
   const [includeCampaignInPdf, setIncludeCampaignInPdf] = useState(false)
 
   const [crmApplying, setCrmApplying] = useState(false)
+  const [customPartPct, setCustomPartPct] = useState("")
+  const [customLaborPct, setCustomLaborPct] = useState("")
+  const [customApplying, setCustomApplying] = useState(false)
 
   // Manuel işçilik ekleme formu
   const [manualLaborOpen, setManualLaborOpen] = useState(false)
@@ -195,6 +201,24 @@ export default function QuoteDetailPage() {
     }
   }
 
+  async function handleCustomDiscount() {
+    const partPct  = Math.min(100, Math.max(0, parseFloat(customPartPct)  || 0))
+    const laborPct = Math.min(100, Math.max(0, parseFloat(customLaborPct) || 0))
+    if (partPct === 0 && laborPct === 0) {
+      toast({ title: "Hata", description: "En az bir oran giriniz.", variant: "destructive" }); return
+    }
+    setCustomApplying(true)
+    try {
+      await applyCustomDiscount(quote.id, partPct, laborPct)
+      await loadQuote()
+      toast({ title: "İndirim Uygulandı", description: `YP %${partPct} · İşçilik %${laborPct}` })
+    } catch {
+      toast({ title: "Hata", description: "İndirim uygulanamadı.", variant: "destructive" })
+    } finally {
+      setCustomApplying(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -327,26 +351,46 @@ export default function QuoteDetailPage() {
         <CardHeader className="flex flex-row items-center justify-between py-3 px-5 flex-wrap gap-2">
           <CardTitle className="text-sm font-semibold">Parçalar</CardTitle>
           {isDraft && (
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
+              {/* Özel iskonto */}
+              <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5">
+                <span className="text-[11px] font-medium text-slate-500">YP</span>
+                <Input
+                  type="number" min="0" max="100" step="0.5" placeholder="0"
+                  value={customPartPct} onChange={e => setCustomPartPct(e.target.value)}
+                  className="w-12 h-6 text-xs text-center px-1"
+                />
+                <span className="text-[11px] text-slate-400">%</span>
+                <span className="text-[11px] font-medium text-slate-500 ml-1">İşç</span>
+                <Input
+                  type="number" min="0" max="100" step="0.5" placeholder="0"
+                  value={customLaborPct} onChange={e => setCustomLaborPct(e.target.value)}
+                  className="w-12 h-6 text-xs text-center px-1"
+                />
+                <span className="text-[11px] text-slate-400">%</span>
+                <Button size="sm" className="h-6 text-xs px-2 ml-1" onClick={handleCustomDiscount} disabled={customApplying}>
+                  {customApplying ? <Loader2 className="h-3 w-3 animate-spin" /> : "Uygula"}
+                </Button>
+              </div>
+              {/* CRM hızlı buton */}
               <Button
                 size="sm" variant="outline"
                 className="h-7 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
-                onClick={handleCrmDiscount}
-                disabled={crmApplying}
+                onClick={handleCrmDiscount} disabled={crmApplying}
                 title="Parça %10, İşçilik %15 indirim uygular"
               >
-                {crmApplying
-                  ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                  : <Tag className="h-3.5 w-3.5 mr-1" />}
+                {crmApplying ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Tag className="h-3.5 w-3.5 mr-1" />}
                 CRM İndirimi
               </Button>
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSearchType("PART"); setSearchOpen(true) }}>
                 <Search className="h-3.5 w-3.5 mr-1" /> Listeden Ekle
               </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-                onClick={() => setManualPartOpen(o => !o)}>
-                <PenLine className="h-3.5 w-3.5 mr-1" /> Manuel Ekle
-              </Button>
+              {isAdmin && (
+                <Button size="sm" variant="outline" className="h-7 text-xs border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+                  onClick={() => setManualPartOpen(o => !o)}>
+                  <PenLine className="h-3.5 w-3.5 mr-1" /> Manuel Ekle
+                </Button>
+              )}
             </div>
           )}
         </CardHeader>
@@ -387,13 +431,13 @@ export default function QuoteDetailPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8 pl-5">#</TableHead>
-                <TableHead className="w-36">Parça No</TableHead>
+                <TableHead className="w-32">Parça No</TableHead>
                 <TableHead>Parça Adı</TableHead>
-                <TableHead className="text-right">Birim Fiyat</TableHead>
-                <TableHead className="text-center w-20">Adet</TableHead>
-                <TableHead className="text-center w-28">İskonto %</TableHead>
-                <TableHead className="text-right pr-5">Toplam</TableHead>
-                {isDraft && <TableHead className="w-12" />}
+                <TableHead className="text-right w-28">Birim Fiyat</TableHead>
+                <TableHead className="text-center w-16">Adet</TableHead>
+                <TableHead className="text-center w-24">İskonto %</TableHead>
+                <TableHead className="text-right pr-5 w-28">Toplam</TableHead>
+                {isDraft && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -478,10 +522,12 @@ export default function QuoteDetailPage() {
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSearchType("LABOR"); setSearchOpen(true) }}>
                 <Search className="h-3.5 w-3.5 mr-1" /> Listeden Ekle
               </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
-                onClick={() => setManualLaborOpen(o => !o)}>
-                <PenLine className="h-3.5 w-3.5 mr-1" /> Manuel Ekle
-              </Button>
+              {isAdmin && (
+                <Button size="sm" variant="outline" className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+                  onClick={() => setManualLaborOpen(o => !o)}>
+                  <PenLine className="h-3.5 w-3.5 mr-1" /> Manuel Ekle
+                </Button>
+              )}
             </div>
           )}
         </CardHeader>
@@ -527,13 +573,13 @@ export default function QuoteDetailPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8 pl-5">#</TableHead>
-                <TableHead className="w-36">Operasyon Kodu</TableHead>
+                <TableHead className="w-32">Operasyon Kodu</TableHead>
                 <TableHead>Operasyon Adı</TableHead>
-                <TableHead className="text-right">Süre (saat)</TableHead>
-                <TableHead className="text-right">Saat Ücreti</TableHead>
-                <TableHead className="text-center w-28">İskonto %</TableHead>
-                <TableHead className="text-right pr-5">Toplam</TableHead>
-                {isDraft && <TableHead className="w-12" />}
+                <TableHead className="text-right w-20">Süre (saat)</TableHead>
+                <TableHead className="text-right w-28">Saat Ücreti</TableHead>
+                <TableHead className="text-center w-24">İskonto %</TableHead>
+                <TableHead className="text-right pr-5 w-28">Toplam</TableHead>
+                {isDraft && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>

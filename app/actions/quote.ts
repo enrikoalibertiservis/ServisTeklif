@@ -266,6 +266,11 @@ export async function finalizeQuote(quoteId: string) {
 
 /** CRM İndirimi: Parça kalemleri %10, İşçilik kalemleri %15 indirim uygular */
 export async function applyCrmDiscount(quoteId: string) {
+  return applyCustomDiscount(quoteId, 10, 15)
+}
+
+/** Özel indirim: verilen yüzdelerle tüm satırlara indirim uygular */
+export async function applyCustomDiscount(quoteId: string, partsPct: number, laborPct: number) {
   const session = await getServerSession(authOptions)
   if (!session) throw new Error("Yetkisiz erişim")
 
@@ -273,7 +278,7 @@ export async function applyCrmDiscount(quoteId: string) {
 
   await prisma.$transaction(
     items.map(item => {
-      const discountPct = item.itemType === "PART" ? 10 : 15
+      const discountPct = item.itemType === "PART" ? partsPct : laborPct
       const basePrice =
         item.itemType === "LABOR" && item.durationHours
           ? item.durationHours * (item.hourlyRate ?? 0)
