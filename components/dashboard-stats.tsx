@@ -122,7 +122,7 @@ export function DashboardStats({ advisorStats, modelRecipes, isAdmin }: Props) {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-800">Reçete Tanımlı Modeller</h3>
-              <p className="text-[11px] text-muted-foreground">Alt model bazında reçete doluluk oranı</p>
+              <p className="text-[11px] text-muted-foreground">Onaylı şablonlara göre alt model doluluk oranı</p>
             </div>
           </div>
           <div className="flex-1 space-y-3">

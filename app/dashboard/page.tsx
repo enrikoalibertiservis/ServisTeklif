@@ -46,11 +46,11 @@ export default async function DashboardPage() {
       })
     : []
 
-  // Alt model (SubModel) bazında reçete doluluk oranı — brand bazlı
+  // Alt model (SubModel) bazında reçete doluluk oranı — brand bazlı (sadece onaylı şablonlar)
   const modelRecipes = await (async () => {
-    // Reçeteli (itemli) benzersiz brand+subModel çiftleri
+    // Onaylı ve itemli benzersiz brand+subModel çiftleri
     const withRecipe = await prisma.maintenanceTemplate.findMany({
-      where: { items: { some: {} }, subModelId: { not: null } },
+      where: { items: { some: {} }, subModelId: { not: null }, isApproved: true },
       select: { brandId: true, subModelId: true },
       distinct: ["brandId", "subModelId"],
     })
