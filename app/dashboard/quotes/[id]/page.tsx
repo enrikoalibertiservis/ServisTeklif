@@ -387,7 +387,7 @@ export default function QuoteDetailPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8 pl-5">#</TableHead>
-                <TableHead>Parça No</TableHead>
+                <TableHead className="w-36">Parça No</TableHead>
                 <TableHead>Parça Adı</TableHead>
                 <TableHead className="text-right">Birim Fiyat</TableHead>
                 <TableHead className="text-center w-20">Adet</TableHead>
@@ -406,7 +406,7 @@ export default function QuoteDetailPage() {
               ) : partItems.map((item: any, idx: number) => (
                 <TableRow key={item.id}>
                   <TableCell className="text-muted-foreground pl-5">{idx + 1}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.referenceCode}</TableCell>
+                  <TableCell className="text-muted-foreground w-36 max-w-[144px] truncate">{item.referenceCode}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice)}</TableCell>
                   <TableCell className="text-center">
@@ -527,7 +527,7 @@ export default function QuoteDetailPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8 pl-5">#</TableHead>
-                <TableHead>Operasyon Kodu</TableHead>
+                <TableHead className="w-36">Operasyon Kodu</TableHead>
                 <TableHead>Operasyon Adı</TableHead>
                 <TableHead className="text-right">Süre (saat)</TableHead>
                 <TableHead className="text-right">Saat Ücreti</TableHead>
@@ -546,7 +546,7 @@ export default function QuoteDetailPage() {
               ) : laborItems.map((item: any, idx: number) => (
                 <TableRow key={item.id}>
                   <TableCell className="text-muted-foreground pl-5">{idx + 1}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.referenceCode}</TableCell>
+                  <TableCell className="text-muted-foreground w-36 max-w-[144px] truncate">{item.referenceCode}</TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-right tabular-nums">{item.durationHours?.toFixed(2) || "-"}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatCurrency(item.hourlyRate || 0)}</TableCell>
