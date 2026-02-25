@@ -204,9 +204,6 @@ export default function QuoteDetailPage() {
   async function handleCustomDiscount() {
     const partPct  = Math.min(100, Math.max(0, parseFloat(customPartPct)  || 0))
     const laborPct = Math.min(100, Math.max(0, parseFloat(customLaborPct) || 0))
-    if (partPct === 0 && laborPct === 0) {
-      toast({ title: "Hata", description: "En az bir oran giriniz.", variant: "destructive" }); return
-    }
     setCustomApplying(true)
     try {
       await applyCustomDiscount(quote.id, partPct, laborPct)
