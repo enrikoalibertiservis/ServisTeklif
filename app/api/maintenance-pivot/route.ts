@@ -69,15 +69,14 @@ export async function GET(req: NextRequest) {
     return total
   }
 
-  // Benzersiz periyotları çıkar (km bazlı sıralı)
+  // Benzersiz periyotları çıkar — sadece ay bilgisi OLMAYAN (saf km) periyotlar
   const periodSet = new Map<string, { km: number | null; month: number | null; label: string }>()
   for (const t of templates) {
-    const key = `${t.periodKm ?? ""}_${t.periodMonth ?? ""}`
+    if (t.periodMonth) continue  // ay bilgisi olan periyotları gizle
+    const key = `${t.periodKm ?? ""}_`
     if (!periodSet.has(key)) {
-      const label = t.periodKm
-        ? `${t.periodKm.toLocaleString("tr-TR")} km${t.periodMonth ? ` / ${t.periodMonth} ay` : ""}`
-        : `${t.periodMonth} ay`
-      periodSet.set(key, { km: t.periodKm, month: t.periodMonth, label })
+      const label = t.periodKm ? `${t.periodKm.toLocaleString("tr-TR")} km` : "—"
+      periodSet.set(key, { km: t.periodKm, month: null, label })
     }
   }
   const periods = Array.from(periodSet.entries()).map(([key, val]) => ({ key, ...val }))
@@ -91,10 +90,11 @@ export async function GET(req: NextRequest) {
   }>()
 
   for (const t of templates) {
+    if (t.periodMonth) continue  // ay bilgisi olan şablonları dahil etme
     const smId   = t.subModelId ?? t.modelId ?? "unknown"
     const smName = t.subModel?.name ?? t.model?.name ?? "—"
     const mName  = t.model?.name ?? "—"
-    const pKey   = `${t.periodKm ?? ""}_${t.periodMonth ?? ""}`
+    const pKey   = `${t.periodKm ?? ""}_`
     const grand  = calcTotal(t)
 
     if (!rowMap.has(smId)) {
