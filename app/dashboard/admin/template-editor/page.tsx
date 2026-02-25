@@ -674,7 +674,11 @@ export default function TemplateEditorPage() {
                 </Table>
 
                 <div className="mt-4 flex justify-end">
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-1 text-sm min-w-[250px]">
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-1 text-sm min-w-[260px]">
+                    <p className="text-[11px] text-amber-600 font-medium text-right mb-2 flex items-center justify-end gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Tüm fiyatlar KDV hariçtir
+                    </p>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Parça Toplamı:</span>
                       <span className="font-medium">{formatCurrency(partsTotal)}</span>
@@ -683,8 +687,11 @@ export default function TemplateEditorPage() {
                       <span className="text-muted-foreground">İşçilik Toplamı:</span>
                       <span className="font-medium">{formatCurrency(laborTotal)}</span>
                     </div>
-                    <div className="flex justify-between border-t pt-1 mt-1">
-                      <span className="font-semibold">Genel Toplam:</span>
+                    <div className="flex justify-between items-baseline border-t pt-2 mt-1">
+                      <div>
+                        <span className="font-semibold">Genel Toplam</span>
+                        <span className="ml-1.5 text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-0.5">KDV Hariç</span>
+                      </div>
                       <span className="font-bold text-primary">{formatCurrency(partsTotal + laborTotal)}</span>
                     </div>
                   </div>
