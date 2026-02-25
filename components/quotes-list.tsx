@@ -281,7 +281,7 @@ export function QuotesList({ isAdmin }: Props) {
                   <SortHead col="araç"     label="Araç" />
                   <SortHead col="quoteNo"  label="Teklif No" />
                   <SortHead col="müşteri"  label="Müşteri / Plaka" className="hidden sm:table-cell" />
-                  {isAdmin && <SortHead col="danışman" label="Danışman" className="hidden md:table-cell" />}
+                  <SortHead col="danışman" label="Danışman" className="hidden md:table-cell" />
                   <SortHead col="durum"    label="Durum" />
                   <SortHead col="tutar"    label="Tutar" className="text-right" />
                   <SortHead col="tarih"    label="Tarih"  className="hidden lg:table-cell" />
@@ -316,11 +316,9 @@ export function QuotesList({ isAdmin }: Props) {
                       <div className="text-sm text-slate-700">{q.customerName ?? "—"}</div>
                       {q.plateNo && <div className="text-xs font-mono text-slate-400">{q.plateNo}</div>}
                     </TableCell>
-                    {isAdmin && (
-                      <TableCell className="hidden md:table-cell">
-                        <span className="text-xs text-slate-500">{q.createdBy.name ?? "—"}</span>
-                      </TableCell>
-                    )}
+                    <TableCell className="hidden md:table-cell">
+                      <span className="text-xs text-slate-500">{q.createdBy.name ?? "—"}</span>
+                    </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[q.status] ?? "bg-slate-100 text-slate-600"}`}>
                         {STATUS_LABEL[q.status] ?? q.status}

@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "20")))
   const all      = searchParams.get("all") === "true"
 
-  const where: any = isAdmin ? {} : { createdById: session.user.id }
+  // Herkes tüm teklifleri görebilir
+  const where: any = {}
 
   if (status && status !== "ALL") {
     where.status = status

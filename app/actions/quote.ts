@@ -264,6 +264,32 @@ export async function finalizeQuote(quoteId: string) {
   })
 }
 
+/** CRM İndirimi: Parça kalemleri %10, İşçilik kalemleri %15 indirim uygular */
+export async function applyCrmDiscount(quoteId: string) {
+  const session = await getServerSession(authOptions)
+  if (!session) throw new Error("Yetkisiz erişim")
+
+  const items = await prisma.quoteItem.findMany({ where: { quoteId } })
+
+  await prisma.$transaction(
+    items.map(item => {
+      const discountPct = item.itemType === "PART" ? 10 : 15
+      const basePrice =
+        item.itemType === "LABOR" && item.durationHours
+          ? item.durationHours * (item.hourlyRate ?? 0)
+          : item.quantity * item.unitPrice
+      const discountAmount = basePrice * (discountPct / 100)
+      const totalPrice = basePrice - discountAmount
+      return prisma.quoteItem.update({
+        where: { id: item.id },
+        data: { discountPct, discountAmount, totalPrice },
+      })
+    })
+  )
+
+  await recalculateQuote(quoteId)
+}
+
 async function recalculateQuote(quoteId: string) {
   const items = await prisma.quoteItem.findMany({ where: { quoteId } })
   const quote = await prisma.quote.findUnique({ where: { id: quoteId } })

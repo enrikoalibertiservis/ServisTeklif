@@ -12,7 +12,7 @@ export default async function QuotesPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <FileText className="h-6 w-6 text-blue-500" />
-          {isAdmin ? "Tüm Teklifler" : "Tekliflerim"}
+          Tüm Teklifler
         </h1>
         <p className="text-muted-foreground">Teklifleri görüntüleyin, filtreleyin ve yönetin.</p>
       </div>

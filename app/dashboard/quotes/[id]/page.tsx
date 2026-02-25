@@ -12,10 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import {
   getQuote, updateQuoteDiscount, updateQuoteCustomer, addQuoteItem,
   removeQuoteItem, updateQuoteItem, searchParts, searchLabor, finalizeQuote,
+  applyCrmDiscount,
 } from "@/app/actions/quote"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency, toUpperTR } from "@/lib/utils"
-import { Trash2, Plus, Search, FileDown, FileSpreadsheet, Save, Check, Loader2, Pencil, User, Clock, PenLine, X } from "lucide-react"
+import { Trash2, Plus, Search, FileDown, FileSpreadsheet, Save, Check, Loader2, Pencil, User, Clock, PenLine, X, Tag } from "lucide-react"
 import { PartSearchDialog } from "@/components/part-search-dialog"
 import { exportQuotePdf, exportQuoteExcel } from "@/lib/export"
 import { AIOpportunityPanel } from "@/components/ai-opportunity-panel"
@@ -53,6 +54,8 @@ export default function QuoteDetailPage() {
   // AI Fırsat Paneli
   const [campaignResult, setCampaignResult] = useState<CampaignResponse | null>(null)
   const [includeCampaignInPdf, setIncludeCampaignInPdf] = useState(false)
+
+  const [crmApplying, setCrmApplying] = useState(false)
 
   // Manuel işçilik ekleme formu
   const [manualLaborOpen, setManualLaborOpen] = useState(false)
@@ -176,6 +179,20 @@ export default function QuoteDetailPage() {
     await finalizeQuote(quote.id)
     await loadQuote()
     toast({ title: "Teklif kesinleştirildi" })
+  }
+
+  async function handleCrmDiscount() {
+    if (!confirm("CRM İndirimi uygulanacak: Parçalara %10, İşçiliğe %15 indirim. Mevcut iskontolar üzerine yazılacak. Devam edilsin mi?")) return
+    setCrmApplying(true)
+    try {
+      await applyCrmDiscount(quote.id)
+      await loadQuote()
+      toast({ title: "CRM İndirimi Uygulandı", description: "Parça %10 · İşçilik %15 indirim uygulandı." })
+    } catch {
+      toast({ title: "Hata", description: "İndirim uygulanamadı.", variant: "destructive" })
+    } finally {
+      setCrmApplying(false)
+    }
   }
 
   if (loading) {
@@ -310,7 +327,19 @@ export default function QuoteDetailPage() {
         <CardHeader className="flex flex-row items-center justify-between py-3 px-5 flex-wrap gap-2">
           <CardTitle className="text-sm font-semibold">Parçalar</CardTitle>
           {isDraft && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm" variant="outline"
+                className="h-7 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
+                onClick={handleCrmDiscount}
+                disabled={crmApplying}
+                title="Parça %10, İşçilik %15 indirim uygular"
+              >
+                {crmApplying
+                  ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  : <Tag className="h-3.5 w-3.5 mr-1" />}
+                CRM İndirimi
+              </Button>
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSearchType("PART"); setSearchOpen(true) }}>
                 <Search className="h-3.5 w-3.5 mr-1" /> Listeden Ekle
               </Button>
