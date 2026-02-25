@@ -10,12 +10,20 @@ export async function GET() {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })
   }
 
-  const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, active: true, createdAt: true, twoFactorEnabled: true },
-    orderBy: { createdAt: "desc" },
-  })
-
-  return NextResponse.json(users)
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, active: true, createdAt: true, twoFactorEnabled: true },
+      orderBy: { createdAt: "desc" },
+    })
+    return NextResponse.json(users)
+  } catch {
+    // twoFactorEnabled kolonu henüz DB'de yoksa — SQL çalıştırılmamış
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    })
+    return NextResponse.json(users.map(u => ({ ...u, twoFactorEnabled: false })))
+  }
 }
 
 export async function POST(req: NextRequest) {
