@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { getBrands, getModelsByBrand, getSubModelsByModel } from "@/app/actions/vehicle"
 import { deleteTemplate, dedupeMaintenanceTemplates } from "@/app/actions/template"
-import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, Merge, CheckSquare, Square, ShieldCheck } from "lucide-react"
+import { ClipboardList, ChevronDown, ChevronRight, Loader2, Pencil, ChevronLeft, Trash2, Merge, CheckSquare, Square, ShieldCheck, ShieldOff } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 
@@ -55,6 +55,7 @@ export default function TemplatesPage() {
   const [page, setPage] = useState(1)
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showUnapprovedOnly, setShowUnapprovedOnly] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteLabel, setDeleteLabel] = useState("")
   const [deleting, setDeleting] = useState(false)
@@ -78,6 +79,7 @@ export default function TemplatesPage() {
   }, [modelId])
 
   useEffect(() => { loadTemplates() }, [brandId, modelId, subModelId])
+  useEffect(() => { setPage(1) }, [showUnapprovedOnly])
 
   function loadTemplates() {
     if (!brandId) { setTemplates([]); setSelectedIds(new Set()); return }
@@ -173,8 +175,9 @@ export default function TemplatesPage() {
     })
   }
 
-  const totalPages = Math.ceil(templates.length / PAGE_SIZE)
-  const pagedTemplates = templates.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const filteredTemplates = showUnapprovedOnly ? templates.filter(t => !t.isApproved) : templates
+  const totalPages = Math.ceil(filteredTemplates.length / PAGE_SIZE)
+  const pagedTemplates = filteredTemplates.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // Group paged templates by serviceType — AGIR, NORMAL aynı grupta gösterilir
   const grouped = new Map<string, Template[]>()
@@ -252,10 +255,26 @@ export default function TemplatesPage() {
           {/* Toplam bilgisi */}
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>
-              Toplam <span className="font-semibold text-foreground">{templates.length}</span> şablon
+              Toplam <span className="font-semibold text-foreground">{filteredTemplates.length}</span>
+              {showUnapprovedOnly && (
+                <> / {templates.length} <span className="text-amber-600 font-medium">onaysız</span></>
+              )}
+              {" "}şablon
               &nbsp;·&nbsp; Sayfa <span className="font-semibold text-foreground">{page}</span> / {totalPages}
             </span>
             <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant={showUnapprovedOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowUnapprovedOnly(v => !v)}
+                className={showUnapprovedOnly
+                  ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-500"
+                  : "text-amber-700 border-amber-300 hover:bg-amber-50"
+                }
+              >
+                <ShieldOff className="h-3.5 w-3.5 mr-1.5" />
+                {showUnapprovedOnly ? "Onaysızlar gösteriliyor" : "Onaysızları göster"}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
