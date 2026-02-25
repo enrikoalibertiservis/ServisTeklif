@@ -1,6 +1,7 @@
 import { type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
+import { authenticator } from "otplib"
 import { prisma } from "./prisma"
 
 function getIp(req: any): string | null {
@@ -33,8 +34,9 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "E-posta", type: "email" },
-        password: { label: "Şifre", type: "password" },
+        email:    { label: "E-posta", type: "email" },
+        password: { label: "Şifre",  type: "password" },
+        totp:     { label: "Doğrulama Kodu", type: "text" },
       },
       async authorize(credentials, req) {
         const email   = credentials?.email ?? ""
@@ -58,10 +60,19 @@ export const authOptions: NextAuthOptions = {
         }
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash)
-
         if (!valid) {
           await prisma.loginLog.create({ data: { userId: user.id, email, success: false, ip, city, country, userAgent: ua } }).catch(() => {})
           return null
+        }
+
+        // 2FA kontrolü
+        if (user.twoFactorEnabled && user.twoFactorSecret) {
+          const totp = credentials.totp ?? ""
+          const totpValid = authenticator.verify({ token: totp, secret: user.twoFactorSecret })
+          if (!totpValid) {
+            await prisma.loginLog.create({ data: { userId: user.id, email, success: false, ip, city, country, userAgent: ua } }).catch(() => {})
+            return null
+          }
         }
 
         await prisma.loginLog.create({ data: { userId: user.id, email, success: true, ip, city, country, userAgent: ua } }).catch(() => {})

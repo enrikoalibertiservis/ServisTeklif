@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Users, Plus, UserCheck, UserX, Eye, EyeOff, KeyRound } from "lucide-react"
+import { Users, Plus, UserCheck, UserX, Eye, EyeOff, KeyRound, ShieldCheck, ShieldOff, ScanLine } from "lucide-react"
+import Image from "next/image"
 
 // Şifre kural kontrolü
 function checkPassword(pwd: string) {
@@ -83,6 +84,15 @@ export default function UsersPage() {
   const [showNewPwd, setShowNewPwd] = useState(false)
   const [pwdSaving, setPwdSaving] = useState(false)
 
+  // 2FA kurulum dialog
+  const [tfaDialogUser, setTfaDialogUser] = useState<{ id: string; name: string; twoFactorEnabled: boolean } | null>(null)
+  const [tfaStep, setTfaStep] = useState<"qr" | "verify">("qr")
+  const [tfaSecret, setTfaSecret] = useState("")
+  const [tfaQr, setTfaQr] = useState("")
+  const [tfaToken, setTfaToken] = useState("")
+  const [tfaLoading, setTfaLoading] = useState(false)
+  const [tfaSaving, setTfaSaving] = useState(false)
+
   async function loadUsers() {
     const res = await fetch("/api/users")
     setUsers(await res.json())
@@ -149,6 +159,57 @@ export default function UsersPage() {
     setNewPassword(""); setNewPassword2(""); setShowNewPwd(false)
   }
 
+  async function openTfaSetup(user: { id: string; name: string; twoFactorEnabled: boolean }) {
+    setTfaDialogUser(user)
+    setTfaStep("qr")
+    setTfaToken("")
+    if (!user.twoFactorEnabled) {
+      setTfaLoading(true)
+      const res = await fetch("/api/auth/2fa-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const data = await res.json()
+      setTfaSecret(data.secret)
+      setTfaQr(data.qrDataUrl)
+      setTfaLoading(false)
+    }
+  }
+
+  async function handleTfaVerify() {
+    if (!tfaDialogUser || tfaToken.length !== 6) return
+    setTfaSaving(true)
+    const res = await fetch("/api/auth/2fa-setup", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: tfaDialogUser.id, secret: tfaSecret, token: tfaToken }),
+    })
+    setTfaSaving(false)
+    if (!res.ok) {
+      const err = await res.json()
+      toast({ title: "Hata", description: err.error, variant: "destructive" }); return
+    }
+    toast({ title: "2FA Etkinleştirildi", description: `${tfaDialogUser.name} artık iki faktörlü doğrulama kullanıyor.` })
+    setTfaDialogUser(null)
+    loadUsers()
+  }
+
+  async function handleTfaDisable() {
+    if (!tfaDialogUser) return
+    if (!confirm(`${tfaDialogUser.name} kullanıcısının 2FA koruması kaldırılacak. Emin misiniz?`)) return
+    setTfaSaving(true)
+    await fetch("/api/auth/2fa-setup", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: tfaDialogUser.id }),
+    })
+    setTfaSaving(false)
+    toast({ title: "2FA Devre Dışı", description: `${tfaDialogUser.name} kullanıcısının 2FA koruması kaldırıldı.` })
+    setTfaDialogUser(null)
+    loadUsers()
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -181,7 +242,8 @@ export default function UsersPage() {
                 <TableHead>Rol</TableHead>
                 <TableHead>Durum</TableHead>
                 <TableHead>Kayıt Tarihi</TableHead>
-                <TableHead className="w-28">İşlem</TableHead>
+                <TableHead>2FA</TableHead>
+                <TableHead className="w-32">İşlem</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -203,22 +265,33 @@ export default function UsersPage() {
                     {new Date(u.createdAt).toLocaleDateString("tr-TR")}
                   </TableCell>
                   <TableCell>
+                    {u.twoFactorEnabled
+                      ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200"><ShieldCheck className="h-3 w-3" />Aktif</span>
+                      : <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 ring-1 ring-slate-200">Kapalı</span>
+                    }
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-1">
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        variant="ghost" size="sm"
                         title={u.active ? "Devre dışı bırak" : "Aktifleştir"}
                         onClick={() => toggleActive(u.id, u.active)}
                       >
                         {u.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        variant="ghost" size="sm"
                         title="Şifre güncelle"
                         onClick={() => { setPwdDialogUser({ id: u.id, name: u.name }); setNewPassword(""); setNewPassword2(""); setShowNewPwd(false) }}
                       >
                         <KeyRound className="h-4 w-4 text-amber-500" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm"
+                        title={u.twoFactorEnabled ? "2FA Yönet" : "2FA Kur"}
+                        onClick={() => openTfaSetup({ id: u.id, name: u.name, twoFactorEnabled: u.twoFactorEnabled })}
+                      >
+                        <ShieldCheck className={`h-4 w-4 ${u.twoFactorEnabled ? "text-emerald-500" : "text-slate-400"}`} />
                       </Button>
                     </div>
                   </TableCell>
@@ -228,6 +301,93 @@ export default function UsersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* 2FA Kurulum / Yönetim Dialog */}
+      <Dialog open={!!tfaDialogUser} onOpenChange={open => { if (!open) setTfaDialogUser(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-emerald-500" />
+              {tfaDialogUser?.twoFactorEnabled ? "2FA Yönetimi" : "İki Faktörlü Doğrulama Kurulumu"}
+              {tfaDialogUser && <span className="text-sm font-normal text-muted-foreground">— {tfaDialogUser.name}</span>}
+            </DialogTitle>
+          </DialogHeader>
+
+          {tfaDialogUser?.twoFactorEnabled ? (
+            // Zaten aktif — devre dışı bırakma seçeneği
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3">
+                <ShieldCheck className="h-8 w-8 text-emerald-500 shrink-0" />
+                <div>
+                  <p className="font-semibold text-emerald-700 text-sm">2FA Aktif</p>
+                  <p className="text-xs text-emerald-600">Bu kullanıcı Google Authenticator ile korunuyor.</p>
+                </div>
+              </div>
+              <DialogFooter className="flex-col gap-2 sm:flex-row">
+                <Button variant="outline" onClick={() => setTfaDialogUser(null)} className="flex-1">Kapat</Button>
+                <Button variant="destructive" onClick={handleTfaDisable} disabled={tfaSaving} className="flex-1">
+                  <ShieldOff className="h-4 w-4 mr-1.5" />
+                  {tfaSaving ? "Kaldırılıyor..." : "2FA'yı Kaldır"}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : tfaLoading ? (
+            <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+              <ScanLine className="h-5 w-5 animate-pulse" /> QR kod oluşturuluyor...
+            </div>
+          ) : (
+            // Kurulum adımları
+            <div className="space-y-4">
+              {tfaStep === "qr" ? (
+                <>
+                  <ol className="text-sm space-y-1 text-muted-foreground list-decimal list-inside">
+                    <li>Telefona <strong className="text-foreground">Google Authenticator</strong> uygulamasını yükle</li>
+                    <li>Uygulamada <strong className="text-foreground">+</strong> → <strong className="text-foreground">QR kodu tara</strong> seç</li>
+                    <li>Aşağıdaki kodu tara</li>
+                  </ol>
+                  {tfaQr && (
+                    <div className="flex flex-col items-center gap-2">
+                      <img src={tfaQr} alt="2FA QR" className="w-48 h-48 rounded-lg border" />
+                      <p className="text-[11px] text-muted-foreground text-center">
+                        Elle giriş için anahtar:<br />
+                        <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded break-all">{tfaSecret}</code>
+                      </p>
+                    </div>
+                  )}
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setTfaDialogUser(null)}>İptal</Button>
+                    <Button onClick={() => setTfaStep("verify")}>Tarattım, Devam Et</Button>
+                  </DialogFooter>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Google Authenticator'da görünen <strong>6 haneli kodu</strong> girerek kurulumu tamamlayın.
+                  </p>
+                  <Input
+                    type="text" inputMode="numeric" maxLength={6}
+                    placeholder="000000"
+                    value={tfaToken}
+                    onChange={e => setTfaToken(e.target.value.replace(/\D/g, ""))}
+                    className="text-center text-2xl tracking-[0.5em] font-mono"
+                    autoFocus
+                  />
+                  <DialogFooter className="flex-col gap-2 sm:flex-row">
+                    <Button variant="outline" onClick={() => setTfaStep("qr")} className="flex-1">Geri</Button>
+                    <Button
+                      onClick={handleTfaVerify}
+                      disabled={tfaSaving || tfaToken.length !== 6}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {tfaSaving ? "Doğrulanıyor..." : "Etkinleştir"}
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Şifre Güncelleme Dialog */}
       <Dialog open={!!pwdDialogUser} onOpenChange={open => { if (!open) { setPwdDialogUser(null); setNewPassword(""); setNewPassword2("") } }}>
