@@ -11,40 +11,35 @@ export default async function DashboardPage() {
   const isAdmin = session?.user.role === "ADMIN"
 
   const [quoteCount, partCount, laborCount, brandCount] = await Promise.all([
-    isAdmin
-      ? prisma.quote.count()
-      : prisma.quote.count({ where: { createdById: session!.user.id } }),
+    prisma.quote.count(),
     prisma.part.count(),
     prisma.laborOperation.count(),
     prisma.brand.count(),
   ])
 
   const recentQuotes = await prisma.quote.findMany({
-    where: isAdmin ? {} : { createdById: session!.user.id },
     orderBy: { createdAt: "desc" },
     take: 5,
     include: { createdBy: { select: { name: true } } },
   })
 
-  // Danışman bazlı teklif sayıları (admin görür)
-  const advisorStats = isAdmin
-    ? await prisma.quote.groupBy({
-        by: ["createdById"],
-        _count: { id: true },
-        orderBy: { _count: { id: "desc" } },
-        take: 8,
-      }).then(async (rows) => {
-        const userIds = rows.map(r => r.createdById).filter(Boolean) as string[]
-        const users = await prisma.user.findMany({
-          where: { id: { in: userIds } },
-          select: { id: true, name: true },
-        })
-        return rows.map(r => ({
-          name: users.find(u => u.id === r.createdById)?.name ?? "Bilinmiyor",
-          count: r._count.id,
-        }))
-      })
-    : []
+  // Danışman bazlı teklif sayıları — herkes görebilir
+  const advisorStats = await prisma.quote.groupBy({
+    by: ["createdById"],
+    _count: { id: true },
+    orderBy: { _count: { id: "desc" } },
+    take: 8,
+  }).then(async (rows) => {
+    const userIds = rows.map(r => r.createdById).filter(Boolean) as string[]
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+    })
+    return rows.map(r => ({
+      name: users.find(u => u.id === r.createdById)?.name ?? "Bilinmiyor",
+      count: r._count.id,
+    }))
+  })
 
   // Alt model (SubModel) bazında reçete doluluk oranı — brand bazlı (sadece onaylı şablonlar)
   const modelRecipes = await (async () => {

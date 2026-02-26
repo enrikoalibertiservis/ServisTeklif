@@ -67,7 +67,7 @@ function HorizontalBar({
 
 export function DashboardStats({ advisorStats, modelRecipes, isAdmin }: Props) {
   const maxAdvisor = Math.max(...advisorStats.map(a => a.count), 1)
-  const hasAdvisor = isAdmin && advisorStats.length > 0
+  const hasAdvisor = advisorStats.length > 0
   const hasRecipes = modelRecipes.length > 0
 
   if (!hasAdvisor && !hasRecipes) return null
