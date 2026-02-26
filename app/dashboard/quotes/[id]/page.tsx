@@ -126,6 +126,12 @@ export default function QuoteDetailPage() {
     await loadQuote()
   }
 
+  async function handleDurationChange(itemId: string, newHours: number) {
+    if (newHours <= 0) return
+    await updateQuoteItem(itemId, quote.id, { durationHours: newHours })
+    await loadQuote()
+  }
+
   async function handleAddItem(item: any) {
     await addQuoteItem(quote.id, item)
     await loadQuote()
@@ -611,7 +617,40 @@ export default function QuoteDetailPage() {
                   <TableCell className="text-muted-foreground pl-5">{idx + 1}</TableCell>
                   <TableCell className="text-muted-foreground truncate">{item.referenceCode}</TableCell>
                   <TableCell className="font-medium truncate" title={item.name}>{item.name}</TableCell>
-                  <TableCell className="text-right tabular-nums">{item.durationHours?.toFixed(2) || "-"}</TableCell>
+                  <TableCell className="text-center">
+                    {isDraft ? (
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button
+                          className="h-6 w-6 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 text-sm font-bold leading-none"
+                          onClick={() => {
+                            const cur = item.durationHours ?? 0
+                            const next = Math.max(0.01, parseFloat((cur - 0.5).toFixed(2)))
+                            if (next !== cur) handleDurationChange(item.id, next)
+                          }}
+                        >−</button>
+                        <Input
+                          key={`labor-dur-${item.id}-${item.durationHours}`}
+                          type="number" min="0.01" step="0.5"
+                          className="w-16 text-center h-7 text-sm mx-0.5"
+                          defaultValue={item.durationHours ?? 0}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value)
+                            if (!isNaN(val) && val > 0 && val !== item.durationHours)
+                              handleDurationChange(item.id, val)
+                          }}
+                        />
+                        <button
+                          className="h-6 w-6 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 text-sm font-bold leading-none"
+                          onClick={() => {
+                            const cur = item.durationHours ?? 0
+                            handleDurationChange(item.id, parseFloat((cur + 0.5).toFixed(2)))
+                          }}
+                        >+</button>
+                      </div>
+                    ) : (
+                      <span className="tabular-nums">{item.durationHours?.toFixed(2) || "-"}</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{formatCurrency(item.hourlyRate || 0)}</TableCell>
                   <TableCell className="text-center">
                     {isDraft ? (

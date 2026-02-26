@@ -200,18 +200,19 @@ export async function removeQuoteItem(itemId: string, quoteId: string) {
 export async function updateQuoteItem(
   itemId: string,
   quoteId: string,
-  data: { quantity?: number; unitPrice?: number; discountPct?: number }
+  data: { quantity?: number; unitPrice?: number; discountPct?: number; durationHours?: number }
 ) {
   const item = await prisma.quoteItem.findUnique({ where: { id: itemId } })
   if (!item) return
 
-  const quantity   = data.quantity   ?? item.quantity
-  const unitPrice  = data.unitPrice  ?? item.unitPrice
-  const discountPct = data.discountPct !== undefined ? data.discountPct : (item.discountPct ?? 0)
+  const quantity      = data.quantity      ?? item.quantity
+  const unitPrice     = data.unitPrice     ?? item.unitPrice
+  const discountPct   = data.discountPct   !== undefined ? data.discountPct   : (item.discountPct   ?? 0)
+  const durationHours = data.durationHours !== undefined ? data.durationHours : item.durationHours
 
-  // Brüt fiyat (iskonto öncesi)
-  const basePrice = item.itemType === "LABOR" && item.durationHours
-    ? item.durationHours * (data.unitPrice ?? item.hourlyRate ?? 0)
+  // Brüt fiyat: işçilikte süre × saat ücreti, parçada adet × birim fiyat
+  const basePrice = item.itemType === "LABOR" && durationHours
+    ? durationHours * (item.hourlyRate ?? unitPrice ?? 0)
     : quantity * unitPrice
 
   const discountAmount = basePrice * (discountPct / 100)
@@ -219,7 +220,7 @@ export async function updateQuoteItem(
 
   await prisma.quoteItem.update({
     where: { id: itemId },
-    data: { quantity, unitPrice, discountPct, discountAmount, totalPrice },
+    data: { quantity, unitPrice, discountPct, discountAmount, totalPrice, durationHours },
   })
 
   await recalculateQuote(quoteId)
