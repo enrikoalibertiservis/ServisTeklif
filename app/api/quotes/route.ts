@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const q        = searchParams.get("q") || ""
   const status   = searchParams.get("status") || "ALL"
+  const dateFrom = searchParams.get("dateFrom") || ""
+  const dateTo   = searchParams.get("dateTo")   || ""
   const page     = Math.max(1, parseInt(searchParams.get("page") || "1"))
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "20")))
   const all      = searchParams.get("all") === "true"
@@ -20,6 +22,12 @@ export async function GET(req: NextRequest) {
 
   if (status && status !== "ALL") {
     where.status = status
+  }
+
+  if (dateFrom || dateTo) {
+    where.createdAt = {}
+    if (dateFrom) where.createdAt.gte = new Date(dateFrom)
+    if (dateTo)   where.createdAt.lte = new Date(dateTo)
   }
 
   if (q) {
