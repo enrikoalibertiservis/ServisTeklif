@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 export const metadata: Metadata = {
   title: "Servis Teklif - Bakım Reçetesi Yönetimi",
   description: "Fiat / Alfa Romeo / Jeep yetkili servis teklif ve bakım reçetesi oluşturma sistemi",
+  icons: {
+    icon: "/icon.svg",
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
