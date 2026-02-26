@@ -618,7 +618,7 @@ export default function QuoteDetailPage() {
                   <TableCell className="text-muted-foreground truncate">{item.referenceCode}</TableCell>
                   <TableCell className="font-medium truncate" title={item.name}>{item.name}</TableCell>
                   <TableCell className="text-center">
-                    {isDraft ? (
+                    {isDraft && item.name?.toUpperCase().includes("SERBEST") ? (
                       <div className="flex items-center justify-center gap-0.5">
                         <button
                           className="h-6 w-6 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 text-sm font-bold leading-none"
