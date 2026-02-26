@@ -619,9 +619,9 @@ export default function QuoteDetailPage() {
                   <TableCell className="font-medium truncate" title={item.name}>{item.name}</TableCell>
                   <TableCell className="text-center">
                     {isDraft && item.name?.toUpperCase().includes("SERBEST") ? (
-                      <div className="flex items-center justify-center gap-0.5">
+                      <div className="flex items-center justify-center gap-1">
                         <button
-                          className="h-6 w-6 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 text-sm font-bold leading-none"
+                          className="h-7 w-7 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 text-base font-bold leading-none shrink-0"
                           onClick={() => {
                             const cur = item.durationHours ?? 0
                             const next = Math.max(0.01, parseFloat((cur - 0.5).toFixed(2)))
@@ -631,7 +631,7 @@ export default function QuoteDetailPage() {
                         <Input
                           key={`labor-dur-${item.id}-${item.durationHours}`}
                           type="number" min="0.01" step="0.5"
-                          className="w-16 text-center h-7 text-sm mx-0.5"
+                          className="w-20 text-center h-7 text-sm font-medium"
                           defaultValue={item.durationHours ?? 0}
                           onBlur={(e) => {
                             const val = parseFloat(e.target.value)
@@ -640,7 +640,7 @@ export default function QuoteDetailPage() {
                           }}
                         />
                         <button
-                          className="h-6 w-6 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 text-sm font-bold leading-none"
+                          className="h-7 w-7 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 text-base font-bold leading-none shrink-0"
                           onClick={() => {
                             const cur = item.durationHours ?? 0
                             handleDurationChange(item.id, parseFloat((cur + 0.5).toFixed(2)))
