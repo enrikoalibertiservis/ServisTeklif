@@ -17,7 +17,7 @@ import {
 } from "@/app/actions/quote"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency, toUpperTR } from "@/lib/utils"
-import { Trash2, Plus, Search, FileDown, FileSpreadsheet, Save, Check, Loader2, Pencil, User, Clock, PenLine, X, Tag } from "lucide-react"
+import { Trash2, Plus, Search, FileDown, FileSpreadsheet, Save, Check, Loader2, Pencil, User, Clock, PenLine, X, Tag, ShieldOff } from "lucide-react"
 import { PartSearchDialog } from "@/components/part-search-dialog"
 import { exportQuotePdf, exportQuoteExcel } from "@/lib/export"
 import { AIOpportunityPanel } from "@/components/ai-opportunity-panel"
@@ -58,11 +58,13 @@ export default function QuoteDetailPage() {
   const [campaignResult, setCampaignResult] = useState<CampaignResponse | null>(null)
   const [includeCampaignInPdf, setIncludeCampaignInPdf] = useState(false)
 
-  const [crmApplying, setCrmApplying] = useState(false)
-  const [customPartPct, setCustomPartPct] = useState("")
-  const [customLaborPct, setCustomLaborPct] = useState("")
-  const [customApplying, setCustomApplying] = useState(false)
-  const [crmSettings, setCrmSettings] = useState({ parts: 10, labor: 15 })
+  const [crmApplying, setCrmApplying]             = useState(false)
+  const [warrantyApplying, setWarrantyApplying]   = useState(false)
+  const [customPartPct, setCustomPartPct]         = useState("")
+  const [customLaborPct, setCustomLaborPct]       = useState("")
+  const [customApplying, setCustomApplying]       = useState(false)
+  const [crmSettings, setCrmSettings]             = useState({ parts: 10, labor: 15 })
+  const [warrantySettings, setWarrantySettings]   = useState({ parts: 15, labor: 20 })
 
   // Manuel işçilik ekleme formu
   const [manualLaborOpen, setManualLaborOpen] = useState(false)
@@ -77,8 +79,12 @@ export default function QuoteDetailPage() {
       const map: Record<string, string> = {}
       data.forEach(s => { map[s.key] = s.value })
       setCrmSettings({
-        parts: parseFloat(map.crmDiscountParts ?? "10") || 10,
-        labor: parseFloat(map.crmDiscountLabor  ?? "15") || 15,
+        parts: parseFloat(map.crmDiscountParts     ?? "10") || 10,
+        labor: parseFloat(map.crmDiscountLabor     ?? "15") || 15,
+      })
+      setWarrantySettings({
+        parts: parseFloat(map.warrantyDiscountParts ?? "15") || 15,
+        labor: parseFloat(map.warrantyDiscountLabor ?? "20") || 20,
       })
     }).catch(() => {})
   }, [])
@@ -216,6 +222,20 @@ export default function QuoteDetailPage() {
       toast({ title: "Hata", description: "İndirim uygulanamadı.", variant: "destructive" })
     } finally {
       setCrmApplying(false)
+    }
+  }
+
+  async function handleWarrantyDiscount() {
+    if (!confirm(`Garantisi Biten Araç İndirimi uygulanacak: Parçalara %${warrantySettings.parts}, İşçiliğe %${warrantySettings.labor}. Mevcut satır iskontoları üzerine yazılacak. Devam edilsin mi?`)) return
+    setWarrantyApplying(true)
+    try {
+      await applyCustomDiscount(quote.id, warrantySettings.parts, warrantySettings.labor)
+      await loadQuote()
+      toast({ title: "G. Biten Araç İndirimi Uygulandı", description: `Parça %${warrantySettings.parts} · İşçilik %${warrantySettings.labor}` })
+    } catch {
+      toast({ title: "Hata", description: "İndirim uygulanamadı.", variant: "destructive" })
+    } finally {
+      setWarrantyApplying(false)
     }
   }
 
@@ -396,6 +416,16 @@ export default function QuoteDetailPage() {
               >
                 {crmApplying ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Tag className="h-3.5 w-3.5 mr-1" />}
                 CRM İndirimi
+              </Button>
+              {/* Garantisi Biten Araç butonu */}
+              <Button
+                size="sm" variant="outline"
+                className="h-7 text-xs border-rose-300 text-rose-700 hover:bg-rose-50"
+                onClick={handleWarrantyDiscount} disabled={warrantyApplying}
+                title={`Parça %${warrantySettings.parts}, İşçilik %${warrantySettings.labor} indirim uygular`}
+              >
+                {warrantyApplying ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <ShieldOff className="h-3.5 w-3.5 mr-1" />}
+                G. Biten Araç
               </Button>
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSearchType("PART"); setSearchOpen(true) }}>
                 <Search className="h-3.5 w-3.5 mr-1" /> Listeden Ekle
@@ -718,18 +748,34 @@ export default function QuoteDetailPage() {
       <Card>
         <CardContent className="px-5 py-4">
           <div className="max-w-sm ml-auto space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Parça Toplamı</span>
-              <span className="tabular-nums">{formatCurrency(quote.partsSubtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">İşçilik Toplamı</span>
-              <span className="tabular-nums">{formatCurrency(quote.laborSubtotal)}</span>
-            </div>
-            <div className="flex justify-between font-medium border-t pt-2">
-              <span>Ara Toplam</span>
-              <span className="tabular-nums">{formatCurrency(quote.subtotal)}</span>
-            </div>
+            {/* Toplam satır iskontosu hesapla */}
+            {(() => {
+              const totalRowDiscount = quote.items.reduce((s: number, i: any) => s + (i.discountAmount || 0), 0)
+              const partsGross = quote.items.filter((i: any) => i.itemType === "PART").reduce((s: number, i: any) => s + (i.unitPrice * i.quantity), 0)
+              const laborGross = quote.items.filter((i: any) => i.itemType === "LABOR").reduce((s: number, i: any) => s + ((i.hourlyRate || 0) * (i.durationHours || 1)), 0)
+              return (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Parça Toplamı</span>
+                    <span className="tabular-nums">{formatCurrency(partsGross)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">İşçilik Toplamı</span>
+                    <span className="tabular-nums">{formatCurrency(laborGross)}</span>
+                  </div>
+                  {totalRowDiscount > 0 && (
+                    <div className="flex justify-between text-emerald-700">
+                      <span>Satır İskontosu</span>
+                      <span className="tabular-nums">-{formatCurrency(totalRowDiscount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-medium border-t pt-2">
+                    <span>Ara Toplam</span>
+                    <span className="tabular-nums">{formatCurrency(quote.subtotal)}</span>
+                  </div>
+                </>
+              )
+            })()}
 
             {isDraft && (
               <div className="flex items-end gap-2 border rounded-lg p-3 bg-muted/30 mt-1">
