@@ -747,7 +747,7 @@ export default function QuoteDetailPage() {
       {/* ── Toplamlar ────────────────────────────────────────── */}
       <Card>
         <CardContent className="px-5 py-4">
-          <div className="w-80 ml-auto text-sm">
+          <div className="w-80 ml-auto mr-[calc(5%+1.25rem)] text-sm">
             {/* Toplam satır iskontosu hesapla */}
             {(() => {
               const totalRowDiscount = quote.items.reduce((s: number, i: any) => s + (i.discountAmount || 0), 0)
