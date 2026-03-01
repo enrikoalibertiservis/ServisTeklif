@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Settings, Save, Bot, Eye, EyeOff, RefreshCw, CheckCircle2, AlertTriangle, Info } from "lucide-react"
+import { Settings, Save, Bot, Eye, EyeOff, RefreshCw, CheckCircle2, AlertTriangle, Info, BadgePercent } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -529,6 +529,76 @@ export default function SettingsPage() {
             </div>
           )}
 
+        </CardContent>
+      </Card>
+
+      {/* İndirim Parametreleri */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <BadgePercent className="h-5 w-5 text-emerald-600" />
+            İndirim Parametreleri
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Hızlı Fiyat Sorgula ve Teklif sayfasındaki indirim butonlarının oranlarını buradan belirleyin.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6 max-w-lg">
+          {/* CRM İndirimi */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-violet-700 flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-violet-500" />
+              CRM İndirimi
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Yedek Parça İndirimi (%)</Label>
+                <Input
+                  type="number" min="0" max="100" step="0.5"
+                  value={settings.crmDiscountParts ?? "10"}
+                  onChange={e => set("crmDiscountParts", e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">İşçilik İndirimi (%)</Label>
+                <Input
+                  type="number" min="0" max="100" step="0.5"
+                  value={settings.crmDiscountLabor ?? "15"}
+                  onChange={e => set("crmDiscountLabor", e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Garantisi Biten Araç İndirimi */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-rose-700 flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-rose-500" />
+              Garantisi Biten Araç İndirimi
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Yedek Parça İndirimi (%)</Label>
+                <Input
+                  type="number" min="0" max="100" step="0.5"
+                  value={settings.warrantyDiscountParts ?? "15"}
+                  onChange={e => set("warrantyDiscountParts", e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">İşçilik İndirimi (%)</Label>
+                <Input
+                  type="number" min="0" max="100" step="0.5"
+                  value={settings.warrantyDiscountLabor ?? "20"}
+                  onChange={e => set("warrantyDiscountLabor", e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

@@ -12,7 +12,7 @@ import {
 import { previewTemplatePrice } from "@/app/actions/quote"
 import {
   Zap, Shield, Gauge, Wrench, Car, ChevronRight, ChevronDown,
-  Loader2, RotateCcw, PlusCircle, Package, ShieldCheck,
+  Loader2, RotateCcw, PlusCircle, Package, ShieldCheck, ShieldOff,
 } from "lucide-react"
 
 const fmt = (n: number) =>
@@ -53,6 +53,24 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
 
   const [partsOpen, setPartsOpen]   = useState(false)
   const [laborOpen, setLaborOpen]   = useState(false)
+
+  // İndirim durumu
+  const [warrantyDiscount, setWarrantyDiscount] = useState(false)
+  const [discountSettings, setDiscountSettings] = useState({
+    warrantyParts: 15, warrantyLabor: 20,
+  })
+
+  // İndirim ayarlarını çek
+  useEffect(() => {
+    fetch("/api/settings").then(r => r.json()).then((data: { key: string; value: string }[]) => {
+      const map: Record<string, string> = {}
+      data.forEach(s => { map[s.key] = s.value })
+      setDiscountSettings({
+        warrantyParts: parseFloat(map.warrantyDiscountParts ?? "15") || 15,
+        warrantyLabor: parseFloat(map.warrantyDiscountLabor ?? "20") || 20,
+      })
+    }).catch(() => {})
+  }, [])
 
   // Dışarıya aktif/pasif durumu bildir
   useEffect(() => {
@@ -293,21 +311,46 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
         {result && !loading && (() => {
           const partItems = result.items.filter(i => i.itemType === "PART")
           const laborItems = result.items.filter(i => i.itemType === "LABOR")
+
+          // İndirim hesapla
+          const wPartsPct  = discountSettings.warrantyParts / 100
+          const wLaborPct  = discountSettings.warrantyLabor / 100
+          const dPartsSubtotal = warrantyDiscount ? result.partsSubtotal * (1 - wPartsPct) : result.partsSubtotal
+          const dLaborSubtotal = warrantyDiscount ? result.laborSubtotal * (1 - wLaborPct) : result.laborSubtotal
+          const dSubtotal      = dPartsSubtotal + dLaborSubtotal
+          const dTaxAmount     = dSubtotal * (result.taxRate / 100)
+          const dGrandTotal    = dSubtotal + dTaxAmount
+
           return (
             <div className="space-y-3">
-              {/* Onay rozeti */}
-              <div>
-                {isApprovedTemplate ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Onaylı
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Onaylanmamış
-                  </span>
-                )}
+              {/* Onay rozeti + Garantisi Biten butonu */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  {isApprovedTemplate ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Onaylı
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Onaylanmamış
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWarrantyDiscount(v => !v)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors border ${
+                    warrantyDiscount
+                      ? "bg-rose-600 text-white border-rose-600 shadow-sm"
+                      : "bg-white text-rose-700 border-rose-300 hover:bg-rose-50"
+                  }`}
+                >
+                  <ShieldOff className="h-3.5 w-3.5" />
+                  Garanti Sonu
+                  <span className="opacity-75 text-[10px]">YP-%{discountSettings.warrantyParts} / İşç-%{discountSettings.warrantyLabor}</span>
+                </button>
               </div>
 
               {/* Parçalar — indigo/mavi tema */}
@@ -396,17 +439,35 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
 
               {/* Özet */}
               <div className="rounded-lg border overflow-hidden">
+                {warrantyDiscount && (
+                  <div className="flex items-center gap-1.5 px-4 py-2 bg-rose-50 border-b border-rose-200 text-xs text-rose-700 font-medium">
+                    <ShieldOff className="h-3.5 w-3.5" />
+                    Garanti Sonu İndirimi: YP -%{discountSettings.warrantyParts} · İşçilik -%{discountSettings.warrantyLabor}
+                  </div>
+                )}
                 <div className="flex justify-between items-center px-4 py-2.5 text-sm border-b bg-slate-50">
                   <span className="text-slate-500">Ara Toplam</span>
-                  <span className="font-medium text-slate-700 tabular-nums">{fmt(result.subtotal)}</span>
+                  <div className="text-right">
+                    {warrantyDiscount && (
+                      <span className="text-xs text-slate-400 line-through tabular-nums mr-2">{fmt(result.subtotal)}</span>
+                    )}
+                    <span className="font-medium text-slate-700 tabular-nums">{fmt(dSubtotal)}</span>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center px-4 py-2 text-sm border-b bg-white">
                   <span className="text-slate-400 text-xs">KDV (%{result.taxRate})</span>
-                  <span className="text-slate-500 text-xs tabular-nums">{fmt(result.taxAmount)}</span>
+                  <span className="text-slate-500 text-xs tabular-nums">{fmt(dTaxAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center px-4 py-4 border-t border-slate-200">
                   <span className="font-semibold text-slate-700 text-base">Genel Toplam</span>
-                  <span className="font-extrabold text-slate-900 text-2xl tabular-nums">{fmt(result.grandTotal)}</span>
+                  <div className="text-right">
+                    {warrantyDiscount && (
+                      <span className="text-sm text-slate-400 line-through tabular-nums block">{fmt(result.grandTotal)}</span>
+                    )}
+                    <span className={`font-extrabold text-2xl tabular-nums ${warrantyDiscount ? "text-rose-600" : "text-slate-900"}`}>
+                      {fmt(dGrandTotal)}
+                    </span>
+                  </div>
                 </div>
               </div>
 

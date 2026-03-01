@@ -62,6 +62,7 @@ export default function QuoteDetailPage() {
   const [customPartPct, setCustomPartPct] = useState("")
   const [customLaborPct, setCustomLaborPct] = useState("")
   const [customApplying, setCustomApplying] = useState(false)
+  const [crmSettings, setCrmSettings] = useState({ parts: 10, labor: 15 })
 
   // Manuel işçilik ekleme formu
   const [manualLaborOpen, setManualLaborOpen] = useState(false)
@@ -70,6 +71,17 @@ export default function QuoteDetailPage() {
   const [mLaborHours, setMLaborHours] = useState("")
   const [mLaborRate, setMLaborRate]   = useState("")
   const [mLaborSaving, setMLaborSaving] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/settings").then(r => r.json()).then((data: { key: string; value: string }[]) => {
+      const map: Record<string, string> = {}
+      data.forEach(s => { map[s.key] = s.value })
+      setCrmSettings({
+        parts: parseFloat(map.crmDiscountParts ?? "10") || 10,
+        labor: parseFloat(map.crmDiscountLabor  ?? "15") || 15,
+      })
+    }).catch(() => {})
+  }, [])
 
   const loadQuote = useCallback(async () => {
     const q = await getQuote(params.id as string)
@@ -194,12 +206,12 @@ export default function QuoteDetailPage() {
   }
 
   async function handleCrmDiscount() {
-    if (!confirm("CRM İndirimi uygulanacak: Parçalara %10, İşçiliğe %15 indirim. Mevcut iskontolar üzerine yazılacak. Devam edilsin mi?")) return
+    if (!confirm(`CRM İndirimi uygulanacak: Parçalara %${crmSettings.parts}, İşçiliğe %${crmSettings.labor} indirim. Mevcut iskontolar üzerine yazılacak. Devam edilsin mi?`)) return
     setCrmApplying(true)
     try {
-      await applyCrmDiscount(quote.id)
+      await applyCustomDiscount(quote.id, crmSettings.parts, crmSettings.labor)
       await loadQuote()
-      toast({ title: "CRM İndirimi Uygulandı", description: "Parça %10 · İşçilik %15 indirim uygulandı." })
+      toast({ title: "CRM İndirimi Uygulandı", description: `Parça %${crmSettings.parts} · İşçilik %${crmSettings.labor}` })
     } catch {
       toast({ title: "Hata", description: "İndirim uygulanamadı.", variant: "destructive" })
     } finally {
@@ -380,7 +392,7 @@ export default function QuoteDetailPage() {
                 size="sm" variant="outline"
                 className="h-7 text-xs border-violet-300 text-violet-700 hover:bg-violet-50"
                 onClick={handleCrmDiscount} disabled={crmApplying}
-                title="Parça %10, İşçilik %15 indirim uygular"
+                title={`Parça %${crmSettings.parts}, İşçilik %${crmSettings.labor} indirim uygular`}
               >
                 {crmApplying ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Tag className="h-3.5 w-3.5 mr-1" />}
                 CRM İndirimi
