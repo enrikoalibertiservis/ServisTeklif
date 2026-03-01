@@ -348,7 +348,7 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                   }`}
                 >
                   <ShieldOff className="h-3.5 w-3.5" />
-                  Garanti Sonu
+                  G. Biten Araç İnd.
                   <span className="opacity-75 text-[10px]">YP-%{discountSettings.warrantyParts} / İşç-%{discountSettings.warrantyLabor}</span>
                 </button>
               </div>
@@ -477,6 +477,10 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                   onClick={() => {
                     const params = new URLSearchParams({ brandId, modelId, templateId })
                     if (subModelId) params.set("subModelId", subModelId)
+                    if (warrantyDiscount) {
+                      params.set("warrantyPartsPct",  String(discountSettings.warrantyParts))
+                      params.set("warrantyLaborPct",  String(discountSettings.warrantyLabor))
+                    }
                     router.push(`/dashboard/quotes/new?${params}`)
                   }}
                   className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-sm py-3.5 px-5 transition-all shadow-sm shadow-orange-200"

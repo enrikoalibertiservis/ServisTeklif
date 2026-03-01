@@ -13,7 +13,7 @@ import {
   getBrands, getModelsByBrand, getSubModelsByModel,
   getMaintenancePeriods, getServiceTypesByTemplate, getTemplatePeriod,
 } from "@/app/actions/vehicle"
-import { createQuoteFromTemplate } from "@/app/actions/quote"
+import { createQuoteFromTemplate, applyCustomDiscount } from "@/app/actions/quote"
 import { useToast } from "@/hooks/use-toast"
 import { Car, Wrench, User, ArrowRight, Loader2, Zap, Gauge, PlusCircle, Shield } from "lucide-react"
 
@@ -169,7 +169,17 @@ export default function NewQuotePage() {
         customerEmail: customerEmail || undefined,
         plateNo:       plateNo       || undefined,
       })
-      toast({ title: "Teklif Oluşturuldu", description: `Teklif No: ${quote.quoteNo}` })
+
+      // Garanti sonu indirimi URL'den geldiyse otomatik uygula
+      const wPartsPct = parseFloat(searchParams.get("warrantyPartsPct") ?? "") || 0
+      const wLaborPct = parseFloat(searchParams.get("warrantyLaborPct") ?? "") || 0
+      if (wPartsPct > 0 || wLaborPct > 0) {
+        await applyCustomDiscount(quote.id, wPartsPct, wLaborPct)
+        toast({ title: "Teklif Oluşturuldu", description: `Teklif No: ${quote.quoteNo} · G.Biten İnd. uygulandı (YP-%${wPartsPct} / İşç-%${wLaborPct})` })
+      } else {
+        toast({ title: "Teklif Oluşturuldu", description: `Teklif No: ${quote.quoteNo}` })
+      }
+
       router.push(`/dashboard/quotes/${quote.id}`)
     } catch (err: any) {
       toast({ title: "Hata", description: err.message, variant: "destructive" })
