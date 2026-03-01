@@ -746,39 +746,40 @@ export default function QuoteDetailPage() {
 
       {/* ── Toplamlar ────────────────────────────────────────── */}
       <Card>
-        <CardContent className="px-5 py-4">
-          <div className="w-80 ml-auto mr-[calc(5%+1.25rem)] text-sm">
-            {/* Toplam satır iskontosu hesapla */}
-            {(() => {
-              const totalRowDiscount = quote.items.reduce((s: number, i: any) => s + (i.discountAmount || 0), 0)
-              const partsGross = quote.items.filter((i: any) => i.itemType === "PART").reduce((s: number, i: any) => s + (i.unitPrice * i.quantity), 0)
-              const laborGross = quote.items.filter((i: any) => i.itemType === "LABOR").reduce((s: number, i: any) => s + ((i.hourlyRate || 0) * (i.durationHours || 1)), 0)
-              return (
-                <div className="space-y-1.5">
-                  <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center">
-                    <span className="text-muted-foreground">Parça Toplamı</span>
-                    <span className="tabular-nums text-right">{formatCurrency(partsGross)}</span>
-                  </div>
-                  <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center">
-                    <span className="text-muted-foreground">İşçilik Toplamı</span>
-                    <span className="tabular-nums text-right">{formatCurrency(laborGross)}</span>
-                  </div>
-                  {totalRowDiscount > 0 && (
-                    <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center text-emerald-700">
-                      <span>Satır İskontosu</span>
-                      <span className="tabular-nums text-right">-{formatCurrency(totalRowDiscount)}</span>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center font-medium border-t pt-2 mt-1">
-                    <span>Ara Toplam</span>
-                    <span className="tabular-nums text-right">{formatCurrency(quote.subtotal)}</span>
-                  </div>
+        {/* p-0: tablo kartlarıyla aynı yatay hizayı sağlar */}
+        <CardContent className="p-0 py-4">
+          {(() => {
+            const totalRowDiscount = quote.items.reduce((s: number, i: any) => s + (i.discountAmount || 0), 0)
+            const partsGross = quote.items.filter((i: any) => i.itemType === "PART").reduce((s: number, i: any) => s + (i.unitPrice * i.quantity), 0)
+            const laborGross = quote.items.filter((i: any) => i.itemType === "LABOR").reduce((s: number, i: any) => s + ((i.hourlyRate || 0) * (i.durationHours || 1)), 0)
+            /* grid-cols-[1fr_14%_5%] — tablonun TOPLAM(%14) + silme(%5) sütunlarıyla birebir hizalı */
+            const cols = isDraft ? "grid-cols-[1fr_14%_5%]" : "grid-cols-[1fr_14%]"
+            const Row = ({ label, value, cls = "", bold = false }: { label: string; value: string; cls?: string; bold?: boolean }) => (
+              <div className={`grid ${cols} items-center py-[3px] text-sm`}>
+                <span className={`pl-5 ${cls} ${bold ? "font-semibold" : "text-muted-foreground"}`}>{label}</span>
+                <span className={`text-right pr-5 tabular-nums ${cls} ${bold ? "font-semibold" : ""}`}>{value}</span>
+                {isDraft && <span />}
+              </div>
+            )
+            return (
+              <div>
+                <Row label="Parça Toplamı"   value={formatCurrency(partsGross)} />
+                <Row label="İşçilik Toplamı" value={formatCurrency(laborGross)} />
+                {totalRowDiscount > 0 && (
+                  <Row label="Satır İskontosu" value={`-${formatCurrency(totalRowDiscount)}`} cls="text-emerald-700" bold />
+                )}
+                <div className={`grid ${cols} items-center border-t mt-1 pt-2 pb-1 text-sm`}>
+                  <span className="pl-5 font-semibold">Ara Toplam</span>
+                  <span className="text-right pr-5 tabular-nums font-semibold">{formatCurrency(quote.subtotal)}</span>
+                  {isDraft && <span />}
                 </div>
-              )
-            })()}
+              </div>
+            )
+          })()}
 
-            {isDraft && (
-              <div className="flex items-end gap-2 border rounded-lg p-3 bg-muted/30 mt-3">
+          {isDraft && (
+            <div className="px-5 mt-2 mb-1">
+              <div className="flex items-end gap-2 border rounded-lg p-3 bg-muted/30">
                 <div className="flex-1 space-y-1">
                   <Label className="text-xs">İskonto Tipi</Label>
                   <Select value={discountType} onValueChange={setDiscountType}>
@@ -809,27 +810,33 @@ export default function QuoteDetailPage() {
                   Uygula
                 </Button>
               </div>
-            )}
-
-            <div className="space-y-1.5 mt-2">
-              {quote.discountAmount > 0 && (
-                <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center text-destructive">
-                  <span>İskonto{quote.discountType === "PERCENT" ? ` (%${quote.discountValue})` : ""}</span>
-                  <span className="tabular-nums text-right">-{formatCurrency(quote.discountAmount)}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center">
-                <span className="text-muted-foreground">KDV (%{quote.taxRate})</span>
-                <span className="tabular-nums text-right">{formatCurrency(quote.taxAmount)}</span>
-              </div>
-
-              <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center font-bold text-base border-t pt-2.5 mt-1">
-                <span>Genel Toplam</span>
-                <span className="text-primary tabular-nums text-right">{formatCurrency(quote.grandTotal)}</span>
-              </div>
             </div>
-          </div>
+          )}
+
+          {(() => {
+            const cols = isDraft ? "grid-cols-[1fr_14%_5%]" : "grid-cols-[1fr_14%]"
+            return (
+              <div className="mt-1">
+                {quote.discountAmount > 0 && (
+                  <div className={`grid ${cols} items-center py-[3px] text-sm`}>
+                    <span className="pl-5 text-destructive">İskonto{quote.discountType === "PERCENT" ? ` (%${quote.discountValue})` : ""}</span>
+                    <span className="text-right pr-5 tabular-nums text-destructive">-{formatCurrency(quote.discountAmount)}</span>
+                    {isDraft && <span />}
+                  </div>
+                )}
+                <div className={`grid ${cols} items-center py-[3px] text-sm`}>
+                  <span className="pl-5 text-muted-foreground">KDV (%{quote.taxRate})</span>
+                  <span className="text-right pr-5 tabular-nums">{formatCurrency(quote.taxAmount)}</span>
+                  {isDraft && <span />}
+                </div>
+                <div className={`grid ${cols} items-center border-t mt-1 pt-2.5 pb-1`}>
+                  <span className="pl-5 font-bold text-base">Genel Toplam</span>
+                  <span className="text-right pr-5 tabular-nums font-bold text-base text-primary">{formatCurrency(quote.grandTotal)}</span>
+                  {isDraft && <span />}
+                </div>
+              </div>
+            )
+          })()}
         </CardContent>
       </Card>
 
