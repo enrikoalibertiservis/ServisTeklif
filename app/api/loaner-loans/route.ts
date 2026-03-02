@@ -3,10 +3,17 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-const LOANER_OPERATORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
+const LOANER_OPERATORS  = ["serdar güler", "handan özçetin", "özgür zavalsız"]
+const LOAN_EDITORS      = ["serdar güler", "handan özçetin", "özgür zavalsız"]
 
+function normName(n: string) {
+  return n.toLowerCase().trim().replace(/İ/g, "i").replace(/I/g, "ı")
+}
 function canOperate(name: string) {
-  return LOANER_OPERATORS.includes(name.toLowerCase())
+  return LOANER_OPERATORS.some(op => normName(op) === normName(name))
+}
+function canEdit(name: string) {
+  return LOAN_EDITORS.some(op => normName(op) === normName(name))
 }
 
 export async function GET(req: NextRequest) {
@@ -100,7 +107,10 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ loan })
   }
 
-  // Kayıt düzenleme
+  // Kayıt düzenleme — edit yetkisi kontrolü
+  if (!canEdit(session.user.name ?? ""))
+    return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
+
   const data: Record<string, unknown> = {}
   if (rest.advisorName)       data.advisorName       = rest.advisorName.trim()
   if (rest.customerPlate)     data.customerPlate     = rest.customerPlate.toUpperCase().trim()

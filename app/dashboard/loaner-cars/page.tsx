@@ -97,8 +97,16 @@ function toInputDate(dateStr?: string | null) {
 
 const OVERDUE_DAYS = 10
 
-// İkame araç işlem yapabilecek kullanıcılar (küçük harf karşılaştırma)
+// Araç ver / al / araç ekle-sil
 const LOANER_OPERATORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
+
+// Aktif ikame kaydını düzenleyebilecek kullanıcılar
+const LOAN_EDITORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
+
+function normName(n: string) {
+  return n.toLowerCase().trim()
+    .replace(/İ/g, "i").replace(/I/g, "ı")  // Türkçe büyük harf sorunu
+}
 
 // ─── Empty forms ─────────────────────────────────────────────
 
@@ -123,7 +131,9 @@ export default function LoanerCarsPage() {
   const { data: session } = useSession()
   const { toast } = useToast()
   const isAdmin = session?.user?.role === "ADMIN"
-  const canOperate = LOANER_OPERATORS.includes((session?.user?.name ?? "").toLowerCase())
+  const myName = normName(session?.user?.name ?? "")
+  const canOperate  = LOANER_OPERATORS.some(n => normName(n) === myName)
+  const canEditLoan = LOAN_EDITORS.some(n => normName(n) === myName)
 
   const [tab, setTab] = useState<"active" | "history" | "fleet">("active")
   const [cars, setCars] = useState<LoanerCar[]>([])
@@ -610,8 +620,8 @@ export default function LoanerCarsPage() {
                         <Button
                           size="sm" variant="ghost" className="h-7 w-7 p-0"
                           onClick={() => openEditLoan(loan)}
-                          disabled={!canOperate}
-                          title={!canOperate ? "Bu işlem için yetkiniz yok" : "Düzenle"}
+                          disabled={!canEditLoan}
+                          title={!canEditLoan ? "Bu işlem için yetkiniz yok" : "Düzenle"}
                         >
                           <Pencil className="h-3.5 w-3.5 text-slate-500" />
                         </Button>

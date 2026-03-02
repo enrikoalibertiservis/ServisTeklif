@@ -5,8 +5,11 @@ import { prisma } from "@/lib/prisma"
 
 const LOANER_OPERATORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
 
+function normName(n: string) {
+  return n.toLowerCase().trim().replace(/İ/g, "i").replace(/I/g, "ı")
+}
 function canOperate(name: string) {
-  return LOANER_OPERATORS.includes(name.toLowerCase())
+  return LOANER_OPERATORS.some(op => normName(op) === normName(name))
 }
 
 export async function GET() {
