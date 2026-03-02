@@ -169,6 +169,10 @@ export default function LoanerCarsPage() {
   const [fleetSort, setFleetSort] = useState<{ field: string; dir: SortDir }>({ field: "plate", dir: "asc" })
   const [fleetFilter, setFleetFilter] = useState<"all" | "available" | "out">("all")
 
+  // Pagination — Tüm Kayıtlar
+  const HISTORY_PAGE_SIZE = 20
+  const [historyPage, setHistoryPage] = useState(1)
+
   // ── Load data ──────────────────────────────────────────────
 
   const loadCars = useCallback(async () => {
@@ -436,6 +440,11 @@ export default function LoanerCarsPage() {
     l.customerPlate.includes(search.toUpperCase()) ||
     l.advisorName.toLowerCase().includes(search.toLowerCase())
   )
+  const historyTotalPages = Math.max(1, Math.ceil(filteredHistory.length / HISTORY_PAGE_SIZE))
+  const pagedHistory = filteredHistory.slice(
+    (historyPage - 1) * HISTORY_PAGE_SIZE,
+    historyPage * HISTORY_PAGE_SIZE
+  )
 
   const filteredCars = sortBy(
     cars.filter(c => {
@@ -547,7 +556,7 @@ export default function LoanerCarsPage() {
         <Input
           placeholder="Ara..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setHistoryPage(1) }}
           className="pl-9 h-8 text-sm"
         />
         {search && (
@@ -647,64 +656,103 @@ export default function LoanerCarsPage() {
 
       {/* ── Tab: Tüm Kayıtlar ─────────────────────────────── */}
       {tab === "history" && (
-        <div className="rounded-lg border overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead className="w-28">İkame Plaka</TableHead>
-                <TableHead>Araç</TableHead>
-                <TableHead className="w-28">Müşteri Plaka</TableHead>
-                <TableHead>Danışman</TableHead>
-                <TableHead>İKK No</TableHead>
-                <TableHead className="w-28">Veriliş</TableHead>
-                <TableHead className="w-28">Dönüş</TableHead>
-                <TableHead className="w-16">Gün</TableHead>
-                <TableHead>Kullanıcı</TableHead>
-                <TableHead className="w-28">Durum</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
-              ) : filteredHistory.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Kayıt bulunamadı</TableCell></TableRow>
-              ) : filteredHistory.map(loan => {
-                const days = loan.isReturned
-                  ? Math.floor((new Date(loan.returnDate!).getTime() - new Date(loan.deliveryDate).getTime()) / (1000 * 60 * 60 * 24))
-                  : daysSince(loan.deliveryDate)
-                return (
-                  <TableRow key={loan.id}>
-                    <TableCell className="font-mono font-semibold text-sm">{loan.loanerCar.plate}</TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {loan.loanerCar.brand} {loan.loanerCar.modelYear}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">{loan.customerPlate}</TableCell>
-                    <TableCell className="text-sm">{loan.advisorName}</TableCell>
-                    <TableCell className="text-sm font-mono">{loan.jobCardNo}</TableCell>
-                    <TableCell className="text-sm">{fmtDate(loan.deliveryDate)}</TableCell>
-                    <TableCell className="text-sm">{fmtDate(loan.returnDate)}</TableCell>
-                    <TableCell className="text-sm font-semibold">{days}</TableCell>
-                    <TableCell className="text-sm">{loan.userName}</TableCell>
-                    <TableCell>
-                      {loan.isReturned ? (
-                        <Badge className="text-[10px] whitespace-nowrap bg-slate-100 text-slate-600 border-slate-200">
-                          <CheckCircle2 className="h-3 w-3 mr-1 shrink-0" />
-                          TAMAMLANDI
-                        </Badge>
-                      ) : days > OVERDUE_DAYS ? (
-                        <Badge variant="destructive" className="text-[10px] whitespace-nowrap">GECİKMİŞ</Badge>
-                      ) : (
-                        <Badge className="text-[10px] whitespace-nowrap bg-blue-100 text-blue-700 border-blue-200">
-                          <Clock className="h-3 w-3 mr-1 shrink-0" />
-                          DEVAM
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+        <div className="space-y-3">
+          <div className="rounded-lg border overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead className="w-28">İkame Plaka</TableHead>
+                  <TableHead>Araç</TableHead>
+                  <TableHead className="w-28">Müşteri Plaka</TableHead>
+                  <TableHead>Danışman</TableHead>
+                  <TableHead>İKK No</TableHead>
+                  <TableHead className="w-28">Veriliş</TableHead>
+                  <TableHead className="w-28">Dönüş</TableHead>
+                  <TableHead className="w-16">Gün</TableHead>
+                  <TableHead>Kullanıcı</TableHead>
+                  <TableHead className="w-28">Durum</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
+                ) : pagedHistory.length === 0 ? (
+                  <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Kayıt bulunamadı</TableCell></TableRow>
+                ) : pagedHistory.map(loan => {
+                  const days = loan.isReturned
+                    ? Math.floor((new Date(loan.returnDate!).getTime() - new Date(loan.deliveryDate).getTime()) / (1000 * 60 * 60 * 24))
+                    : daysSince(loan.deliveryDate)
+                  return (
+                    <TableRow key={loan.id}>
+                      <TableCell className="font-mono font-semibold text-sm">{loan.loanerCar.plate}</TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {loan.loanerCar.brand} {loan.loanerCar.modelYear}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{loan.customerPlate}</TableCell>
+                      <TableCell className="text-sm">{loan.advisorName}</TableCell>
+                      <TableCell className="text-sm font-mono">{loan.jobCardNo}</TableCell>
+                      <TableCell className="text-sm">{fmtDate(loan.deliveryDate)}</TableCell>
+                      <TableCell className="text-sm">{fmtDate(loan.returnDate)}</TableCell>
+                      <TableCell className="text-sm font-semibold">{days}</TableCell>
+                      <TableCell className="text-sm">{loan.userName}</TableCell>
+                      <TableCell>
+                        {loan.isReturned ? (
+                          <Badge className="text-[10px] whitespace-nowrap bg-slate-100 text-slate-600 border-slate-200">
+                            <CheckCircle2 className="h-3 w-3 mr-1 shrink-0" />
+                            TAMAMLANDI
+                          </Badge>
+                        ) : days > OVERDUE_DAYS ? (
+                          <Badge variant="destructive" className="text-[10px] whitespace-nowrap">GECİKMİŞ</Badge>
+                        ) : (
+                          <Badge className="text-[10px] whitespace-nowrap bg-blue-100 text-blue-700 border-blue-200">
+                            <Clock className="h-3 w-3 mr-1 shrink-0" />
+                            DEVAM
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          {historyTotalPages > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs text-slate-500">
+                Toplam <strong>{filteredHistory.length}</strong> kayıt — Sayfa {historyPage} / {historyTotalPages}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs"
+                  onClick={() => setHistoryPage(1)} disabled={historyPage === 1}>«</Button>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs"
+                  onClick={() => setHistoryPage(p => Math.max(1, p - 1))} disabled={historyPage === 1}>‹</Button>
+                {Array.from({ length: historyTotalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === historyTotalPages || Math.abs(p - historyPage) <= 2)
+                  .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...")
+                    acc.push(p)
+                    return acc
+                  }, [])
+                  .map((p, i) =>
+                    p === "..." ? (
+                      <span key={`dots-${i}`} className="px-1 text-slate-400 text-xs">…</span>
+                    ) : (
+                      <Button key={p} variant={historyPage === p ? "default" : "outline"}
+                        size="sm" className="h-7 w-7 p-0 text-xs"
+                        onClick={() => setHistoryPage(p as number)}>
+                        {p}
+                      </Button>
+                    )
+                  )}
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs"
+                  onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))} disabled={historyPage === historyTotalPages}>›</Button>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs"
+                  onClick={() => setHistoryPage(historyTotalPages)} disabled={historyPage === historyTotalPages}>»</Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
