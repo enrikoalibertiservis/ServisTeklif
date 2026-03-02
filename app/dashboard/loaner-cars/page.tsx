@@ -106,7 +106,7 @@ const emptyCarForm = {
 }
 
 const emptyLoanForm = {
-  loanerCarId: "", advisorName: "", customerPlate: "", jobCardNo: "",
+  loanerCarId: "", customerPlate: "", jobCardNo: "",
   jobCardDate: "", deliveryDate: new Date().toISOString().split("T")[0],
   deliveryKm: "", deliveryNotes: "", userName: "", registrationOwner: "",
 }
@@ -250,7 +250,7 @@ export default function LoanerCarsPage() {
 
   async function saveLoan() {
     const required = [
-      loanForm.loanerCarId, loanForm.advisorName, loanForm.customerPlate,
+      loanForm.loanerCarId, loanForm.customerPlate,
       loanForm.jobCardNo, loanForm.jobCardDate, loanForm.deliveryDate,
       loanForm.deliveryKm, loanForm.deliveryNotes, loanForm.userName, loanForm.registrationOwner,
     ]
@@ -263,7 +263,7 @@ export default function LoanerCarsPage() {
     const r = await fetch("/api/loaner-loans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(loanForm),
+      body: JSON.stringify({ ...loanForm, advisorName: session?.user?.name ?? "" }),
     })
     setLoanSaving(false)
 
@@ -716,7 +716,13 @@ export default function LoanerCarsPage() {
                 ))}
               </select>
             </div>
-            <Field label="Danışman *" value={loanForm.advisorName} onChange={v => setLoanForm(f => ({ ...f, advisorName: v }))} />
+            {/* Danışman otomatik — session'dan */}
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Danışman</Label>
+              <div className="h-9 flex items-center px-3 rounded-md border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700">
+                {session?.user?.name ?? "-"}
+              </div>
+            </div>
             <Field label="Müşteri Plaka *" value={loanForm.customerPlate} onChange={v => setLoanForm(f => ({ ...f, customerPlate: v }))} upper />
             <Field label="İKK No *" value={loanForm.jobCardNo} onChange={v => setLoanForm(f => ({ ...f, jobCardNo: v }))} />
             <Field label="İKK Açılış Tarihi *" type="date" value={loanForm.jobCardDate} onChange={v => setLoanForm(f => ({ ...f, jobCardDate: v }))} />
