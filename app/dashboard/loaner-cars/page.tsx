@@ -608,11 +608,11 @@ export default function LoanerCarsPage() {
                     <TableCell className="text-sm">{loan.registrationOwner}</TableCell>
                     <TableCell>
                       {isOverdue ? (
-                        <Badge variant="destructive" className="text-[10px]">GECİKMİŞ</Badge>
+                        <Badge variant="destructive" className="text-[10px] whitespace-nowrap">GECİKMİŞ</Badge>
                       ) : isWarning ? (
-                        <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200">UYARI</Badge>
+                        <Badge className="text-[10px] whitespace-nowrap bg-amber-100 text-amber-700 border-amber-200">UYARI</Badge>
                       ) : (
-                        <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200">AKTİF</Badge>
+                        <Badge className="text-[10px] whitespace-nowrap bg-emerald-100 text-emerald-700 border-emerald-200">AKTİF</Badge>
                       )}
                     </TableCell>
                     <TableCell>
@@ -687,16 +687,16 @@ export default function LoanerCarsPage() {
                     <TableCell className="text-sm">{loan.userName}</TableCell>
                     <TableCell>
                       {loan.isReturned ? (
-                        <Badge className="text-[10px] bg-slate-100 text-slate-600 border-slate-200">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <Badge className="text-[10px] whitespace-nowrap bg-slate-100 text-slate-600 border-slate-200">
+                          <CheckCircle2 className="h-3 w-3 mr-1 shrink-0" />
                           TAMAMLANDI
                         </Badge>
                       ) : days > OVERDUE_DAYS ? (
-                        <Badge variant="destructive" className="text-[10px]">GECİKMİŞ</Badge>
+                        <Badge variant="destructive" className="text-[10px] whitespace-nowrap">GECİKMİŞ</Badge>
                       ) : (
-                        <Badge className="text-[10px] bg-blue-100 text-blue-700 border-blue-200">
-                          <Clock className="h-3 w-3 mr-1" />
-                          DEVAM EDİYOR
+                        <Badge className="text-[10px] whitespace-nowrap bg-blue-100 text-blue-700 border-blue-200">
+                          <Clock className="h-3 w-3 mr-1 shrink-0" />
+                          DEVAM
                         </Badge>
                       )}
                     </TableCell>
@@ -769,10 +769,10 @@ export default function LoanerCarsPage() {
                     <TableCell className="text-sm font-mono">{car.registrationNo}</TableCell>
                     <TableCell>
                       {isOut ? (
-                        <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200">MÜŞTERİDE</Badge>
+                        <Badge className="text-[10px] whitespace-nowrap bg-amber-100 text-amber-700 border-amber-200">MÜŞTERİDE</Badge>
                       ) : (
-                        <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200">
-                          <Wrench className="h-3 w-3 mr-1" />
+                        <Badge className="text-[10px] whitespace-nowrap bg-emerald-100 text-emerald-700 border-emerald-200">
+                          <Wrench className="h-3 w-3 mr-1 shrink-0" />
                           MÜSAİT
                         </Badge>
                       )}
