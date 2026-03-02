@@ -572,17 +572,17 @@ export default function LoanerCarsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
-                <SortHead label="İkame Plaka" field="plate" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
-                <TableHead>Araç</TableHead>
-                <SortHead label="Müşteri Plaka" field="customerPlate" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
-                <SortHead label="Danışman" field="advisorName" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
-                <SortHead label="İKK No" field="jobCardNo" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
-                <SortHead label="Veriliş Tarihi" field="deliveryDate" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
-                <SortHead label="Gün" field="deliveryDate" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-16" />
-                <SortHead label="Kullanıcı" field="userName" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
-                <SortHead label="Ruhsat Sahibi" field="registrationOwner" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
-                <TableHead className="w-24">Durum</TableHead>
-                <TableHead className="w-28">İşlem</TableHead>
+                <SortHead label="İkame Plaka"    field="plate"              sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
+                <TableHead className={TH_BASE}>Araç</TableHead>
+                <SortHead label="Müşteri Plaka"  field="customerPlate"      sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
+                <SortHead label="Danışman"        field="advisorName"        sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
+                <SortHead label="İKK No"          field="jobCardNo"          sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
+                <SortHead label="Veriliş Tarihi"  field="deliveryDate"       sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
+                <SortHead label="Gün"             field="deliveryDate"       sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-16" />
+                <SortHead label="Kullanıcı"       field="userName"           sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
+                <SortHead label="Ruhsat Sahibi"   field="registrationOwner"  sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
+                <TableHead className={cn(TH_BASE, "w-24")}>Durum</TableHead>
+                <TableHead className={cn(TH_BASE, "w-28")}>İşlem</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -596,25 +596,25 @@ export default function LoanerCarsPage() {
                 const isWarning = days >= 7 && days <= OVERDUE_DAYS
                 return (
                   <TableRow key={loan.id} className={cn(isOverdue && "bg-red-50/60")}>
-                    <TableCell className="font-mono font-semibold text-sm">{loan.loanerCar.plate}</TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {loan.loanerCar.brand} {loan.loanerCar.modelYear}<br />
-                      <span className="text-slate-400">{loan.loanerCar.specs}</span>
+                    <TableCell className="font-mono text-sm font-semibold text-slate-900">{loan.loanerCar.plate}</TableCell>
+                    <TableCell>
+                      <span className="text-sm text-slate-700">{loan.loanerCar.brand} {loan.loanerCar.modelYear}</span>
+                      {loan.loanerCar.specs && <span className="block text-xs text-slate-400">{loan.loanerCar.specs}</span>}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{loan.customerPlate}</TableCell>
-                    <TableCell className="text-sm">{loan.advisorName}</TableCell>
-                    <TableCell className="text-sm font-mono">{loan.jobCardNo}</TableCell>
-                    <TableCell className="text-sm">{fmtDate(loan.deliveryDate)}</TableCell>
+                    <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{loan.advisorName}</TableCell>
+                    <TableCell className="font-mono text-sm text-slate-700">{loan.jobCardNo}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{fmtDate(loan.deliveryDate)}</TableCell>
                     <TableCell>
                       <span className={cn(
-                        "text-sm font-bold",
-                        isOverdue ? "text-red-600" : isWarning ? "text-amber-600" : "text-emerald-600"
+                        "text-sm font-semibold tabular-nums",
+                        isOverdue ? "text-red-600" : isWarning ? "text-amber-600" : "text-slate-700"
                       )}>
                         {days}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm">{loan.userName}</TableCell>
-                    <TableCell className="text-sm">{loan.registrationOwner}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{loan.userName}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{loan.registrationOwner}</TableCell>
                     <TableCell>
                       {isOverdue ? (
                         <Badge className="text-[10px] whitespace-nowrap bg-red-100 text-red-700 border-red-200">GECİKMİŞ</Badge>
@@ -661,16 +661,16 @@ export default function LoanerCarsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead className="w-28">İkame Plaka</TableHead>
-                  <TableHead>Araç</TableHead>
-                  <TableHead className="w-28">Müşteri Plaka</TableHead>
-                  <TableHead>Danışman</TableHead>
-                  <TableHead>İKK No</TableHead>
-                  <TableHead className="w-28">Veriliş</TableHead>
-                  <TableHead className="w-28">Dönüş</TableHead>
-                  <TableHead className="w-16">Gün</TableHead>
-                  <TableHead>Kullanıcı</TableHead>
-                  <TableHead className="w-28">Durum</TableHead>
+                  <TableHead className={cn(TH_BASE, "w-28")}>İkame Plaka</TableHead>
+                  <TableHead className={TH_BASE}>Araç</TableHead>
+                  <TableHead className={cn(TH_BASE, "w-28")}>Müşteri Plaka</TableHead>
+                  <TableHead className={TH_BASE}>Danışman</TableHead>
+                  <TableHead className={TH_BASE}>İKK No</TableHead>
+                  <TableHead className={cn(TH_BASE, "w-28")}>Veriliş</TableHead>
+                  <TableHead className={cn(TH_BASE, "w-28")}>Dönüş</TableHead>
+                  <TableHead className={cn(TH_BASE, "w-16")}>Gün</TableHead>
+                  <TableHead className={TH_BASE}>Kullanıcı</TableHead>
+                  <TableHead className={cn(TH_BASE, "w-28")}>Durum</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -684,17 +684,15 @@ export default function LoanerCarsPage() {
                     : daysSince(loan.deliveryDate)
                   return (
                     <TableRow key={loan.id}>
-                      <TableCell className="font-mono font-semibold text-sm">{loan.loanerCar.plate}</TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {loan.loanerCar.brand} {loan.loanerCar.modelYear}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{loan.customerPlate}</TableCell>
-                      <TableCell className="text-sm">{loan.advisorName}</TableCell>
-                      <TableCell className="text-sm font-mono">{loan.jobCardNo}</TableCell>
-                      <TableCell className="text-sm">{fmtDate(loan.deliveryDate)}</TableCell>
-                      <TableCell className="text-sm">{fmtDate(loan.returnDate)}</TableCell>
-                      <TableCell className="text-sm font-semibold">{days}</TableCell>
-                      <TableCell className="text-sm">{loan.userName}</TableCell>
+                      <TableCell className="font-mono text-sm font-semibold text-slate-900">{loan.loanerCar.plate}</TableCell>
+                      <TableCell className="text-sm text-slate-700">{loan.loanerCar.brand} {loan.loanerCar.modelYear}</TableCell>
+                      <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
+                      <TableCell className="text-sm text-slate-700">{loan.advisorName}</TableCell>
+                      <TableCell className="font-mono text-sm text-slate-700">{loan.jobCardNo}</TableCell>
+                      <TableCell className="text-sm text-slate-700">{fmtDate(loan.deliveryDate)}</TableCell>
+                      <TableCell className="text-sm text-slate-700">{fmtDate(loan.returnDate)}</TableCell>
+                      <TableCell className="text-sm font-semibold tabular-nums text-slate-700">{days}</TableCell>
+                      <TableCell className="text-sm text-slate-700">{loan.userName}</TableCell>
                       <TableCell>
                         {loan.isReturned ? (
                           <Badge className="text-[10px] whitespace-nowrap bg-emerald-100 text-emerald-700 border-emerald-200">
@@ -781,17 +779,17 @@ export default function LoanerCarsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
-                <SortHead label="Plaka" field="plate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
-                <SortHead label="Marka / Araç" field="brand" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} />
-                <SortHead label="Model Yılı" field="modelYear" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-20" />
-                <TableHead>Kullanım Amacı</TableHead>
-                <TableHead>Vergi No</TableHead>
-                <SortHead label="VİZE" field="inspectionDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
-                <SortHead label="TRAFİK" field="trafficInsDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
-                <SortHead label="KASKO" field="kaskoDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
-                <TableHead>Ruhsat No</TableHead>
-                <TableHead className="w-28">Durum</TableHead>
-                <TableHead className="w-24">İşlem</TableHead>
+                <SortHead label="Plaka"        field="plate"          sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
+                <SortHead label="Marka / Araç" field="brand"          sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} />
+                <SortHead label="Model Yılı"   field="modelYear"      sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-20" />
+                <TableHead className={TH_BASE}>Kullanım Amacı</TableHead>
+                <TableHead className={TH_BASE}>Vergi No</TableHead>
+                <SortHead label="Vize"         field="inspectionDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
+                <SortHead label="Trafik"       field="trafficInsDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
+                <SortHead label="Kasko"        field="kaskoDate"      sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
+                <TableHead className={TH_BASE}>Ruhsat No</TableHead>
+                <TableHead className={cn(TH_BASE, "w-28")}>Durum</TableHead>
+                <TableHead className={cn(TH_BASE, "w-24")}>İşlem</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -803,18 +801,18 @@ export default function LoanerCarsPage() {
                 const isOut = car.loans.length > 0
                 return (
                   <TableRow key={car.id}>
-                    <TableCell className="font-mono font-semibold text-sm">{car.plate}</TableCell>
+                    <TableCell className="font-mono text-sm font-semibold text-slate-900">{car.plate}</TableCell>
                     <TableCell>
-                      <span className="font-medium text-sm">{car.brand}</span>
-                      {car.specs && <span className="block text-xs text-slate-500">{car.specs}</span>}
+                      <span className="text-sm text-slate-700 font-medium">{car.brand}</span>
+                      {car.specs && <span className="block text-xs text-slate-400">{car.specs}</span>}
                     </TableCell>
-                    <TableCell className="text-sm text-center">{car.modelYear}</TableCell>
-                    <TableCell className="text-xs text-slate-600">{car.usagePurpose}</TableCell>
-                    <TableCell className="text-sm font-mono">{car.taxNo}</TableCell>
-                    <TableCell className="text-sm">{fmtDate(car.inspectionDate)}</TableCell>
-                    <TableCell className="text-sm">{fmtDate(car.trafficInsDate)}</TableCell>
-                    <TableCell className="text-sm">{fmtDate(car.kaskoDate)}</TableCell>
-                    <TableCell className="text-sm font-mono">{car.registrationNo}</TableCell>
+                    <TableCell className="text-sm text-slate-700 text-center">{car.modelYear}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{car.usagePurpose}</TableCell>
+                    <TableCell className="font-mono text-sm text-slate-700">{car.taxNo}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{fmtDate(car.inspectionDate)}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{fmtDate(car.trafficInsDate)}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{fmtDate(car.kaskoDate)}</TableCell>
+                    <TableCell className="font-mono text-sm text-slate-700">{car.registrationNo}</TableCell>
                     <TableCell>
                       {isOut ? (
                         <Badge className="text-[10px] whitespace-nowrap bg-amber-100 text-amber-700 border-amber-200">MÜŞTERİDE</Badge>
@@ -1063,6 +1061,8 @@ function Field({
 
 // ─── Sort Head ────────────────────────────────────────────────
 
+const TH_BASE = "text-xs font-semibold uppercase tracking-wide text-slate-500"
+
 function SortHead({
   label, field, sort, onSort, className,
 }: {
@@ -1074,13 +1074,13 @@ function SortHead({
 }) {
   const active = sort.field === field
   return (
-    <TableHead className={cn("cursor-pointer select-none", className)} onClick={() => onSort(field)}>
+    <TableHead className={cn(TH_BASE, "cursor-pointer select-none hover:text-slate-800 transition-colors", className)} onClick={() => onSort(field)}>
       <span className="flex items-center gap-1">
         {label}
         {active ? (
           sort.dir === "asc"
-            ? <ChevronUp className="h-3.5 w-3.5 text-blue-500" />
-            : <ChevronDown className="h-3.5 w-3.5 text-blue-500" />
+            ? <ChevronUp className="h-3 w-3 text-blue-500" />
+            : <ChevronDown className="h-3 w-3 text-blue-500" />
         ) : (
           <ChevronsUpDown className="h-3 w-3 text-slate-300" />
         )}
