@@ -106,7 +106,7 @@ const emptyCarForm = {
 }
 
 const emptyLoanForm = {
-  loanerCarId: "", customerPlate: "", jobCardNo: "",
+  loanerCarId: "", advisorName: "", customerPlate: "", jobCardNo: "",
   jobCardDate: "", deliveryDate: new Date().toISOString().split("T")[0],
   deliveryKm: "", deliveryNotes: "", userName: "", registrationOwner: "",
 }
@@ -123,6 +123,7 @@ export default function LoanerCarsPage() {
   const [tab, setTab] = useState<"active" | "history" | "fleet">("active")
   const [cars, setCars] = useState<LoanerCar[]>([])
   const [loans, setLoans] = useState<LoanRecord[]>([])
+  const [advisors, setAdvisors] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
 
@@ -159,11 +160,20 @@ export default function LoanerCarsPage() {
     }
   }, [])
 
+  const loadAdvisors = useCallback(async () => {
+    const r = await fetch("/api/users")
+    if (r.ok) {
+      const d = await r.json()
+      // hem ADVISOR hem ADMIN kullanıcılar listelensin
+      setAdvisors((d.users ?? d).map((u: { id: string; name: string }) => ({ id: u.id, name: u.name })))
+    }
+  }, [])
+
   const reload = useCallback(async () => {
     setLoading(true)
-    await Promise.all([loadCars(), loadLoans()])
+    await Promise.all([loadCars(), loadLoans(), loadAdvisors()])
     setLoading(false)
-  }, [loadCars, loadLoans])
+  }, [loadCars, loadLoans, loadAdvisors])
 
   useEffect(() => { reload() }, [reload])
 
@@ -250,7 +260,7 @@ export default function LoanerCarsPage() {
 
   async function saveLoan() {
     const required = [
-      loanForm.loanerCarId, loanForm.customerPlate,
+      loanForm.loanerCarId, loanForm.advisorName, loanForm.customerPlate,
       loanForm.jobCardNo, loanForm.jobCardDate, loanForm.deliveryDate,
       loanForm.deliveryKm, loanForm.deliveryNotes, loanForm.userName, loanForm.registrationOwner,
     ]
@@ -263,7 +273,7 @@ export default function LoanerCarsPage() {
     const r = await fetch("/api/loaner-loans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...loanForm, advisorName: session?.user?.name ?? "" }),
+      body: JSON.stringify(loanForm),
     })
     setLoanSaving(false)
 
@@ -716,12 +726,19 @@ export default function LoanerCarsPage() {
                 ))}
               </select>
             </div>
-            {/* Danışman otomatik — session'dan */}
+            {/* Danışman dropdown */}
             <div>
-              <Label className="text-xs text-slate-600 mb-1 block">Danışman</Label>
-              <div className="h-9 flex items-center px-3 rounded-md border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700">
-                {session?.user?.name ?? "-"}
-              </div>
+              <Label className="text-xs text-slate-600 mb-1 block">Danışman *</Label>
+              <select
+                className="w-full border border-slate-200 rounded-md h-9 px-3 text-sm bg-white"
+                value={loanForm.advisorName}
+                onChange={e => setLoanForm(f => ({ ...f, advisorName: e.target.value }))}
+              >
+                <option value="">Danışman seçiniz...</option>
+                {advisors.map(a => (
+                  <option key={a.id} value={a.name}>{a.name}</option>
+                ))}
+              </select>
             </div>
             <Field label="Müşteri Plaka *" value={loanForm.customerPlate} onChange={v => setLoanForm(f => ({ ...f, customerPlate: v }))} upper />
             <Field label="İKK No *" value={loanForm.jobCardNo} onChange={v => setLoanForm(f => ({ ...f, jobCardNo: v }))} />
