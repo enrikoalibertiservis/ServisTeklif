@@ -369,18 +369,18 @@ export default function LoanerCarsPage() {
             <RefreshCw className={cn("h-4 w-4 mr-1.5", loading && "animate-spin")} />
             Yenile
           </Button>
-          {isAdmin && canOperate && (
-            <Button size="sm" onClick={openAddCar}>
+          {isAdmin && (
+            <Button size="sm" onClick={openAddCar} disabled={!canOperate} title={!canOperate ? "Bu işlem için yetkiniz yok" : undefined}>
               <Plus className="h-4 w-4 mr-1.5" />
               Araç Ekle
             </Button>
           )}
-          {canOperate && (
-            <Button size="sm" variant="default" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => openLoan()}>
-              <ArrowRightLeft className="h-4 w-4 mr-1.5" />
-              İkame Ver
-            </Button>
-          )}
+          <Button size="sm" variant="default" className="bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => openLoan()} disabled={!canOperate}
+            title={!canOperate ? "Bu işlem için yetkiniz yok" : undefined}>
+            <ArrowRightLeft className="h-4 w-4 mr-1.5" />
+            İkame Ver
+          </Button>
         </div>
       </div>
 
@@ -515,19 +515,17 @@ export default function LoanerCarsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {canOperate ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                          onClick={() => openReturn(loan)}
-                        >
-                          <ArrowLeft className="h-3 w-3 mr-1" />
-                          Al
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                        onClick={() => openReturn(loan)}
+                        disabled={!canOperate}
+                        title={!canOperate ? "Bu işlem için yetkiniz yok" : undefined}
+                      >
+                        <ArrowLeft className="h-3 w-3 mr-1" />
+                        Al
+                      </Button>
                     </TableCell>
                   </TableRow>
                 )
@@ -652,21 +650,22 @@ export default function LoanerCarsPage() {
                     </TableCell>
                     {isAdmin && (
                       <TableCell>
-                        {canOperate ? (
-                          <div className="flex gap-1">
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEditCar(car)} title="Düzenle">
-                              <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                            onClick={() => openEditCar(car)}
+                            disabled={!canOperate}
+                            title={!canOperate ? "Bu işlem için yetkiniz yok" : "Düzenle"}>
+                            <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                          </Button>
+                          {!isOut && (
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => deleteCar(car.id)}
+                              disabled={!canOperate}
+                              title={!canOperate ? "Bu işlem için yetkiniz yok" : "Pasife Al"}>
+                              <X className="h-3.5 w-3.5" />
                             </Button>
-                            {!isOut && (
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => deleteCar(car.id)} title="Pasife Al">
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
+                          )}
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
