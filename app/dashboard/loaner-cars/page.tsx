@@ -584,20 +584,30 @@ export default function LoanerCarsPage() {
 
       {/* Overdue alert */}
       {overdue.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-red-700">Araç Kiralama Talep Et!</p>
-            <p className="text-sm text-red-600 mt-0.5">
-              Aşağıdaki {overdue.length} araç {OVERDUE_DAYS} günü aştı. Harici kiralama başlatmanız önerilir.
-            </p>
-            <ul className="mt-2 space-y-0.5">
-              {overdue.map(l => (
-                <li key={l.id} className="text-sm text-red-700 font-medium">
-                  🚗 {l.loanerCar.plate} — Müşteri: {l.customerPlate} — {daysSince(l.deliveryDate)} gün
-                </li>
-              ))}
-            </ul>
+        <div className="bg-red-50/60 border border-red-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <span className="text-sm font-semibold text-red-700">
+              Araç Kiralama Talep Et!
+            </span>
+            <span className="text-xs text-red-500 hidden sm:inline">
+              — {overdue.length} araç {OVERDUE_DAYS} günü aştı
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {overdue.map(l => (
+              <span
+                key={l.id}
+                className="inline-flex items-center gap-1.5 bg-red-100/70 border border-red-200 text-red-700 text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap"
+              >
+                <Car className="h-3 w-3 shrink-0" />
+                <span className="font-mono font-semibold">{l.loanerCar.plate}</span>
+                <span className="text-red-400">·</span>
+                <span className="font-mono">{l.customerPlate}</span>
+                <span className="text-red-400">·</span>
+                <span className="font-bold tabular-nums">{daysSince(l.deliveryDate)} gün</span>
+              </span>
+            ))}
           </div>
         </div>
       )}
