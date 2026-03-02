@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import {
   Car, Plus, ArrowRightLeft, ArrowLeft, AlertTriangle,
   CheckCircle2, Clock, Wrench, Search, RefreshCw, Pencil, X, Loader2,
-  ChevronUp, ChevronDown, ChevronsUpDown,
+  ChevronUp, ChevronDown, ChevronsUpDown, FileText, Upload, Trash2, ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -69,6 +69,8 @@ interface LoanRecord {
   deliveryNotes: string
   userName: string
   registrationOwner: string
+  contractFileUrl: string | null
+  licenseFileUrl: string | null
   returnDate: string | null
   returnKm: number | null
   returnedAt: string | null
@@ -166,6 +168,15 @@ export default function LoanerCarsPage() {
   // Detail view (read-only)
   const [detailModal, setDetailModal] = useState(false)
   const [detailLoan, setDetailLoan] = useState<LoanRecord | null>(null)
+
+  // File uploads (İkame Ver)
+  const [loanContractFile, setLoanContractFile] = useState<File | null>(null)
+  const [loanLicenseFile,  setLoanLicenseFile]  = useState<File | null>(null)
+
+  // File uploads (Kayıt Düzenle)
+  const [editContractFile, setEditContractFile] = useState<File | null>(null)
+  const [editLicenseFile,  setEditLicenseFile]  = useState<File | null>(null)
+  const [fileUploading,    setFileUploading]    = useState(false)
 
   // Filters & sort
   type SortDir = "asc" | "desc"
@@ -294,6 +305,26 @@ export default function LoanerCarsPage() {
     setLoanModal(true)
   }
 
+  async function uploadFile(loanId: string, file: File, fileType: "contract" | "license") {
+    const fd = new FormData()
+    fd.append("file", file)
+    fd.append("loanId", loanId)
+    fd.append("fileType", fileType)
+    const r = await fetch("/api/loaner-loans/upload", { method: "POST", body: fd })
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}))
+      throw new Error(err.error ?? "Dosya yüklenemedi")
+    }
+  }
+
+  async function deleteFile(loanId: string, fileType: "contract" | "license") {
+    await fetch("/api/loaner-loans/upload", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ loanId, fileType }),
+    })
+  }
+
   async function saveLoan() {
     const required = [
       loanForm.loanerCarId, loanForm.advisorName, loanForm.customerPlate,
@@ -311,15 +342,29 @@ export default function LoanerCarsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(loanForm),
     })
-    setLoanSaving(false)
 
     if (!r.ok) {
+      setLoanSaving(false)
       const err = await r.json().catch(() => ({}))
       toast({ title: "Hata", description: err.error ?? "Kayıt oluşturulamadı.", variant: "destructive" })
       return
     }
+
+    const { loan: newLoan } = await r.json()
+
+    // Dosyaları yükle
+    try {
+      if (loanContractFile) await uploadFile(newLoan.id, loanContractFile, "contract")
+      if (loanLicenseFile)  await uploadFile(newLoan.id, loanLicenseFile,  "license")
+    } catch (e: unknown) {
+      toast({ title: "Uyarı", description: `Araç kaydedildi ancak dosya yüklenemedi: ${e instanceof Error ? e.message : String(e)}`, variant: "destructive" })
+    }
+
+    setLoanSaving(false)
     toast({ title: "İkame verildi", description: "Araç başarıyla teslim edildi olarak kaydedildi." })
     setLoanModal(false)
+    setLoanContractFile(null)
+    setLoanLicenseFile(null)
     reload()
   }
 
@@ -358,14 +403,27 @@ export default function LoanerCarsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: editLoanTarget!.id, ...editLoanForm }),
     })
-    setEditLoanSaving(false)
+
     if (!r.ok) {
+      setEditLoanSaving(false)
       const err = await r.json().catch(() => ({}))
       toast({ title: "Hata", description: err.error ?? "Güncellenemedi.", variant: "destructive" })
       return
     }
+
+    // Dosyaları yükle
+    try {
+      if (editContractFile) await uploadFile(editLoanTarget!.id, editContractFile, "contract")
+      if (editLicenseFile)  await uploadFile(editLoanTarget!.id, editLicenseFile,  "license")
+    } catch (e: unknown) {
+      toast({ title: "Uyarı", description: `Kayıt güncellendi ancak dosya yüklenemedi: ${e instanceof Error ? e.message : String(e)}`, variant: "destructive" })
+    }
+
+    setEditLoanSaving(false)
     toast({ title: "Güncellendi", description: "Kayıt başarıyla düzenlendi." })
     setEditLoanModal(false)
+    setEditContractFile(null)
+    setEditLicenseFile(null)
     reload()
   }
 
@@ -983,9 +1041,29 @@ export default function LoanerCarsPage() {
             <div className="col-span-2">
               <Field label="Veriliş Açıklaması *" value={loanForm.deliveryNotes} onChange={v => setLoanForm(f => ({ ...f, deliveryNotes: v }))} />
             </div>
+            {/* Belgeler */}
+            <div className="col-span-2 border-t pt-3 mt-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Belgeler <span className="font-normal normal-case text-slate-400">(isteğe bağlı — kayıt sonrası da eklenebilir)</span></p>
+              <div className="grid grid-cols-2 gap-3">
+                <FilePickerField
+                  label="İkame Araç Sözleşmesi"
+                  file={loanContractFile}
+                  existingUrl={null}
+                  onChange={setLoanContractFile}
+                  onDelete={null}
+                />
+                <FilePickerField
+                  label="Ehliyet Fotoğrafı"
+                  file={loanLicenseFile}
+                  existingUrl={null}
+                  onChange={setLoanLicenseFile}
+                  onDelete={null}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setLoanModal(false)}>İptal</Button>
+            <Button variant="outline" onClick={() => { setLoanModal(false); setLoanContractFile(null); setLoanLicenseFile(null) }}>İptal</Button>
             <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={saveLoan} disabled={loanSaving}>
               {loanSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Aracı Teslim Et
@@ -1066,10 +1144,36 @@ export default function LoanerCarsPage() {
             <div className="col-span-2">
               <Field label="Veriliş Açıklaması *" value={editLoanForm.deliveryNotes} onChange={v => setEditLoanForm(f => ({ ...f, deliveryNotes: v }))} />
             </div>
+            {/* Belgeler */}
+            <div className="col-span-2 border-t pt-3 mt-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Belgeler</p>
+              <div className="grid grid-cols-2 gap-3">
+                <FilePickerField
+                  label="İkame Araç Sözleşmesi"
+                  file={editContractFile}
+                  existingUrl={editLoanTarget?.contractFileUrl ?? null}
+                  onChange={setEditContractFile}
+                  onDelete={() => {
+                    deleteFile(editLoanTarget!.id, "contract")
+                    setEditLoanTarget(t => t ? { ...t, contractFileUrl: null } : t)
+                  }}
+                />
+                <FilePickerField
+                  label="Ehliyet Fotoğrafı"
+                  file={editLicenseFile}
+                  existingUrl={editLoanTarget?.licenseFileUrl ?? null}
+                  onChange={setEditLicenseFile}
+                  onDelete={() => {
+                    deleteFile(editLoanTarget!.id, "license")
+                    setEditLoanTarget(t => t ? { ...t, licenseFileUrl: null } : t)
+                  }}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditLoanModal(false)}>İptal</Button>
-            <Button onClick={saveEditLoan} disabled={editLoanSaving}>
+            <Button variant="outline" onClick={() => { setEditLoanModal(false); setEditContractFile(null); setEditLicenseFile(null) }}>İptal</Button>
+            <Button onClick={saveEditLoan} disabled={editLoanSaving || fileUploading}>
               {editLoanSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Kaydet
             </Button>
@@ -1144,6 +1248,39 @@ export default function LoanerCarsPage() {
                   <p className="text-sm text-slate-700 whitespace-pre-wrap">{detailLoan.deliveryNotes}</p>
                 </div>
               )}
+
+              {/* Belgeler */}
+              {(detailLoan.contractFileUrl || detailLoan.licenseFileUrl) && (
+                <div className="rounded-md border px-4 py-3 space-y-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Belgeler</p>
+                  <div className="flex flex-wrap gap-2">
+                    {detailLoan.contractFileUrl && (
+                      <a
+                        href={detailLoan.contractFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 hover:bg-blue-100 transition-colors"
+                      >
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        İkame Sözleşmesi
+                        <ExternalLink className="h-3 w-3 ml-0.5 opacity-60" />
+                      </a>
+                    )}
+                    {detailLoan.licenseFileUrl && (
+                      <a
+                        href={detailLoan.licenseFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 hover:bg-blue-100 transition-colors"
+                      >
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        Ehliyet Fotoğrafı
+                        <ExternalLink className="h-3 w-3 ml-0.5 opacity-60" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1211,6 +1348,72 @@ function FilterBar({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+// ── FilePickerField ───────────────────────────────────────────────────────────
+function FilePickerField({
+  label, file, existingUrl, onChange, onDelete,
+}: {
+  label: string
+  file: File | null
+  existingUrl: string | null
+  onChange: (f: File | null) => void
+  onDelete: (() => void) | null
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  const displayName = file
+    ? file.name
+    : existingUrl
+      ? existingUrl.split("/").pop()?.split("?")[0] ?? "Dosya mevcut"
+      : null
+
+  return (
+    <div>
+      <p className="text-xs text-slate-600 mb-1 font-medium">{label}</p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+        className="hidden"
+        onChange={e => onChange(e.target.files?.[0] ?? null)}
+      />
+      {displayName ? (
+        <div className="flex items-center gap-1.5 border rounded-md px-2.5 py-1.5 bg-slate-50 text-xs text-slate-700">
+          <FileText className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+          <span className="truncate flex-1 max-w-[120px]" title={displayName}>{displayName}</span>
+          <div className="flex gap-1 shrink-0">
+            {existingUrl && !file && (
+              <a href={existingUrl} target="_blank" rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-700" title="Aç">
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                onChange(null)
+                if (inputRef.current) inputRef.current.value = ""
+                if (!file && onDelete) onDelete()
+              }}
+              className="text-red-400 hover:text-red-600" title="Kaldır"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full flex items-center justify-center gap-1.5 border-2 border-dashed border-slate-200 rounded-md py-2.5 text-xs text-slate-400 hover:border-slate-300 hover:text-slate-600 transition-colors"
+        >
+          <Upload className="h-3.5 w-3.5" />
+          Dosya seç
+        </button>
+      )}
     </div>
   )
 }

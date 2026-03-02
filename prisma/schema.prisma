@@ -307,6 +307,10 @@ model LoanerCarLoan {
   userName          String    // KULLANICI (ikameyi kullanan kişi)
   registrationOwner String    // RUHSAT SAHİBİ
 
+  // Belgeler (opsiyonel)
+  contractFileUrl  String?   // İkame sözleşme dosyası
+  licenseFileUrl   String?   // Ehliyet fotoğrafı
+
   // Dönüş bilgileri (dönüşte doldurulur)
   returnDate        DateTime? // Dönüş Tarihi
   returnKm          Int?      // Dönüş Km
