@@ -100,8 +100,8 @@ const OVERDUE_DAYS = 10
 // Araç ver / al / araç ekle-sil
 const LOANER_OPERATORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
 
-// Aktif ikame kaydını düzenleyebilecek kullanıcılar
-const LOAN_EDITORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
+// Aktif ikame kaydını düzenleyebilecek kullanıcılar (sadece Serdar Güler)
+const LOAN_EDITORS = ["serdar güler"]
 
 function normName(n: string) {
   return n.toLowerCase().trim()
@@ -162,6 +162,10 @@ export default function LoanerCarsPage() {
   const [editLoanTarget, setEditLoanTarget] = useState<LoanRecord | null>(null)
   const [editLoanForm, setEditLoanForm] = useState({ ...emptyLoanForm })
   const [editLoanSaving, setEditLoanSaving] = useState(false)
+
+  // Detail view (read-only)
+  const [detailModal, setDetailModal] = useState(false)
+  const [detailLoan, setDetailLoan] = useState<LoanRecord | null>(null)
 
   // Filters & sort
   type SortDir = "asc" | "desc"
@@ -625,7 +629,14 @@ export default function LoanerCarsPage() {
                 const isOverdue = days > OVERDUE_DAYS
                 const isWarning = days >= 7 && days <= OVERDUE_DAYS
                 return (
-                  <TableRow key={loan.id} className={cn(isOverdue && "bg-red-50/60")}>
+                  <TableRow
+                    key={loan.id}
+                    className={cn(
+                      "cursor-pointer hover:bg-slate-50/80 transition-colors",
+                      isOverdue && "bg-red-50/60 hover:bg-red-50"
+                    )}
+                    onClick={() => { setDetailLoan(loan); setDetailModal(true) }}
+                  >
                     <TableCell className="font-mono text-sm font-semibold text-slate-900">{loan.loanerCar.plate}</TableCell>
                     <TableCell>
                       <span className="text-sm text-slate-700">{loan.loanerCar.brand} {loan.loanerCar.modelYear}</span>
@@ -654,16 +665,17 @@ export default function LoanerCarsPage() {
                         <Badge className="text-[10px] whitespace-nowrap bg-orange-100 text-orange-700 border-orange-200">AKTİF</Badge>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={e => e.stopPropagation()}>
                       <div className="flex gap-1">
-                        <Button
-                          size="sm" variant="ghost" className="h-7 w-7 p-0"
-                          onClick={() => openEditLoan(loan)}
-                          disabled={!canEditLoan}
-                          title={!canEditLoan ? "Bu işlem için yetkiniz yok" : "Düzenle"}
-                        >
-                          <Pencil className="h-3.5 w-3.5 text-slate-500" />
-                        </Button>
+                        {canEditLoan && (
+                          <Button
+                            size="sm" variant="ghost" className="h-7 w-7 p-0"
+                            onClick={() => openEditLoan(loan)}
+                            title="Düzenle"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                          </Button>
+                        )}
                         <Button
                           size="sm" variant="outline"
                           className="h-7 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
@@ -1065,6 +1077,102 @@ export default function LoanerCarsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ── MODAL: Aktif İkame Detayı (read-only) ──────────────────
+          ──────────────────────────────────────────────────────── */}
+      <Dialog open={detailModal} onOpenChange={setDetailModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Car className="h-5 w-5 text-sky-500" />
+              İkame Araç Detayı
+              {detailLoan && (() => {
+                const d = daysSince(detailLoan.deliveryDate)
+                const isOvd = d > OVERDUE_DAYS
+                const isWrn = d >= 7 && d <= OVERDUE_DAYS
+                return (
+                  <Badge className={cn(
+                    "ml-auto text-[10px] whitespace-nowrap",
+                    isOvd ? "bg-red-100 text-red-700 border-red-200"
+                    : isWrn ? "bg-orange-100 text-orange-700 border-orange-200"
+                    : "bg-orange-100 text-orange-700 border-orange-200"
+                  )}>
+                    {isOvd ? "GECİKMİŞ" : isWrn ? "UYARI" : "AKTİF"}
+                  </Badge>
+                )
+              })()}
+            </DialogTitle>
+          </DialogHeader>
+
+          {detailLoan && (
+            <div className="space-y-4 py-1">
+              {/* Araç bilgisi */}
+              <div className="rounded-md bg-slate-50 border px-4 py-3 flex items-center gap-3">
+                <Car className="h-8 w-8 text-slate-400 shrink-0" />
+                <div>
+                  <p className="font-mono text-base font-bold text-slate-900">{detailLoan.loanerCar.plate}</p>
+                  <p className="text-sm text-slate-600">{detailLoan.loanerCar.brand} {detailLoan.loanerCar.modelYear}{detailLoan.loanerCar.specs ? ` · ${detailLoan.loanerCar.specs}` : ""}</p>
+                </div>
+                <div className="ml-auto text-right">
+                  <p className={cn(
+                    "text-2xl font-bold tabular-nums",
+                    daysSince(detailLoan.deliveryDate) > OVERDUE_DAYS ? "text-red-600"
+                    : daysSince(detailLoan.deliveryDate) >= 7 ? "text-amber-600"
+                    : "text-slate-700"
+                  )}>
+                    {daysSince(detailLoan.deliveryDate)}
+                  </p>
+                  <p className="text-xs text-slate-400">gün</p>
+                </div>
+              </div>
+
+              {/* Detay grid */}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm">
+                <DetailRow label="Danışman"       value={detailLoan.advisorName} />
+                <DetailRow label="Müşteri Plaka"  value={detailLoan.customerPlate} mono />
+                <DetailRow label="İKK No"         value={detailLoan.jobCardNo} mono />
+                <DetailRow label="İKK Tarihi"     value={fmtDate(detailLoan.jobCardDate)} />
+                <DetailRow label="Veriliş Tarihi" value={fmtDate(detailLoan.deliveryDate)} />
+                <DetailRow label="Veriliş Km"     value={detailLoan.deliveryKm.toLocaleString("tr-TR") + " km"} />
+                <DetailRow label="Kullanıcı"      value={detailLoan.userName} />
+                <DetailRow label="Ruhsat Sahibi"  value={detailLoan.registrationOwner} />
+              </div>
+
+              {/* Açıklama */}
+              {detailLoan.deliveryNotes && (
+                <div className="rounded-md border bg-amber-50/50 px-4 py-3">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Veriliş Açıklaması</p>
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{detailLoan.deliveryNotes}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="pt-2">
+            {canEditLoan && detailLoan && (
+              <Button variant="outline" size="sm" onClick={() => {
+                setDetailModal(false)
+                openEditLoan(detailLoan)
+              }}>
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                Düzenle
+              </Button>
+            )}
+            {canOperate && detailLoan && (
+              <Button size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => {
+                  setDetailModal(false)
+                  openReturn(detailLoan)
+                }}>
+                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                Aracı Teslim Al
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setDetailModal(false)}>Kapat</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }
@@ -1103,6 +1211,16 @@ function FilterBar({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+// ── DetailRow ─────────────────────────────────────────────────────────────────
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{label}</p>
+      <p className={cn("text-sm text-slate-800", mono && "font-mono font-semibold")}>{value || "—"}</p>
     </div>
   )
 }
