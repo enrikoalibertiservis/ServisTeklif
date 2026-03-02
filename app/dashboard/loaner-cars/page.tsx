@@ -605,7 +605,7 @@ export default function LoanerCarsPage() {
                 <span className="text-red-400">·</span>
                 <span className="font-mono">{l.customerPlate}</span>
                 <span className="text-red-400">·</span>
-                <span className="font-bold tabular-nums">{daysSince(l.deliveryDate)} gün</span>
+                <span className="font-bold tabular-nums text-slate-800">{daysSince(l.deliveryDate)} gün</span>
               </span>
             ))}
           </div>
