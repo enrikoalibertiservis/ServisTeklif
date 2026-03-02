@@ -3,6 +3,12 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+const LOANER_OPERATORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
+
+function canOperate(name: string) {
+  return LOANER_OPERATORS.includes(name.toLowerCase())
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 })
@@ -24,8 +30,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== "ADMIN")
-    return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })
+  if (!session || !canOperate(session.user.name ?? ""))
+    return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
 
   const body = await req.json()
   const {
@@ -61,8 +67,8 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== "ADMIN")
-    return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })
+  if (!session || !canOperate(session.user.name ?? ""))
+    return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
 
   const body = await req.json()
   const { id, ...data } = body
@@ -90,8 +96,8 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== "ADMIN")
-    return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })
+  if (!session || !canOperate(session.user.name ?? ""))
+    return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")
