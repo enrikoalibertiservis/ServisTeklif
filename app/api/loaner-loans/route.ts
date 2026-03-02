@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 const LOANER_OPERATORS  = ["serdar güler", "handan özçetin", "özgür zavalsız"]
-const LOAN_EDITORS      = ["serdar güler"]
+const LOAN_EDITORS      = ["serdar güler", "handan özçetin", "özgür zavalsız"]
 
 function normName(n: string) {
   return n.toLowerCase().trim().replace(/İ/g, "i").replace(/I/g, "ı")

@@ -100,8 +100,8 @@ const OVERDUE_DAYS = 10
 // Araç ver / al / araç ekle-sil
 const LOANER_OPERATORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
 
-// Aktif ikame kaydını düzenleyebilecek kullanıcılar (sadece Serdar Güler)
-const LOAN_EDITORS = ["serdar güler"]
+// Aktif ikame kaydını düzenleyebilecek kullanıcılar
+const LOAN_EDITORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
 
 function normName(n: string) {
   return n.toLowerCase().trim()
