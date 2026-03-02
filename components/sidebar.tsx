@@ -20,6 +20,7 @@ import {
   FileCog,
   Shield,
   ShieldCheck,
+  ArrowRightLeft,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -60,6 +61,12 @@ const advisorGroups: NavGroup[] = [
       { href: "/dashboard/admin/oto-koruma", label: "Oto Koruma Ürünleri", icon: Shield, color: "text-emerald-500" },
     ],
   },
+  {
+    title: "İkame Araç",
+    items: [
+      { href: "/dashboard/loaner-cars", label: "İkame Araç Yönetimi", icon: ArrowRightLeft, color: "text-sky-500" },
+    ],
+  },
 ]
 
 const adminGroups: NavGroup[] = [
@@ -96,6 +103,12 @@ const adminGroups: NavGroup[] = [
     title: "Oto Koruma",
     items: [
       { href: "/dashboard/admin/oto-koruma", label: "Oto Koruma Ürünleri", icon: Shield, color: "text-emerald-500" },
+    ],
+  },
+  {
+    title: "İkame Araç",
+    items: [
+      { href: "/dashboard/loaner-cars", label: "İkame Araç Yönetimi", icon: ArrowRightLeft, color: "text-sky-500" },
     ],
   },
   {

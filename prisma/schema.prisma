@@ -27,6 +27,7 @@ model User {
   importLogs          PriceListVersion[]
   loginLogs           LoginLog[]
   approvedTemplates   MaintenanceTemplate[] @relation("ApprovedTemplates")
+  loanerLoans         LoanerCarLoan[]       @relation("LoanerCarLoans")
 }
 
 model LoginLog {
@@ -260,6 +261,57 @@ model AppSetting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+// ─── Loaner Car Management ───────────────────────────────────
+
+model LoanerCar {
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+
+  plate            String   @unique   // PLAKA
+  usagePurpose     String   @default("YEDEK ARAÇ/İKAME")  // KULLANIM AMACI
+  taxNo            String             // VERGİ NO
+  registrationDate DateTime           // TESC.TARİHİ
+  inspectionDate   DateTime           // VİZE
+  trafficInsDate   DateTime           // TRAFİK sigortası
+  kaskoDate        DateTime           // KASKO
+  brand            String             // MARKA
+  modelYear        Int                // MODEL YILI
+  specs            String?            // Araç Specs (örn. FIAT EGEA SEDAN 1.4 95HP BENZİN)
+  registrationNo   String             // RUHSAT NO
+  engineNo         String             // MOTOR NO
+  chassisNo        String             // ŞASİ NO
+  isActive         Boolean  @default(true)
+
+  loans            LoanerCarLoan[]
+}
+
+model LoanerCarLoan {
+  id                String    @id @default(cuid())
+  createdAt         DateTime  @default(now())
+  createdById       String
+
+  loanerCarId       String
+  loanerCar         LoanerCar @relation(fields: [loanerCarId], references: [id], onDelete: Cascade)
+  createdByUser     User      @relation("LoanerCarLoans", fields: [createdById], references: [id])
+
+  // Veriliş bilgileri (zorunlu)
+  advisorName       String    // Danışman
+  customerPlate     String    // Müşteri Plaka
+  jobCardNo         String    // Müşteri İKK no
+  jobCardDate       DateTime  // İKK Açılış Tarihi
+  deliveryDate      DateTime  // Veriliş Tarihi
+  deliveryKm        Int       // Veriliş Km
+  deliveryNotes     String    // Veriliş Açıklaması
+  userName          String    // KULLANICI (ikameyi kullanan kişi)
+  registrationOwner String    // RUHSAT SAHİBİ
+
+  // Dönüş bilgileri (dönüşte doldurulur)
+  returnDate        DateTime? // Dönüş Tarihi
+  returnKm          Int?      // Dönüş Km
+  returnedAt        DateTime? // Sistemdeki işlem zamanı
+  isReturned        Boolean   @default(false)
 }
 
 // ─── Oto Koruma Products ─────────────────────────────────────
