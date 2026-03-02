@@ -790,12 +790,12 @@ export default function LoanerCarsPage() {
                   <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
                 ) : pagedHistory.length === 0 ? (
                   <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Kayıt bulunamadı</TableCell></TableRow>
-                ) : pagedHistory.map(loan => {
+                ) : pagedHistory.map((loan, idx) => {
                   const days = loan.isReturned
                     ? Math.floor((new Date(loan.returnDate!).getTime() - new Date(loan.deliveryDate).getTime()) / (1000 * 60 * 60 * 24))
                     : daysSince(loan.deliveryDate)
                   return (
-                    <TableRow key={loan.id}>
+                    <TableRow key={loan.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/70"}>
                       <TableCell className="font-mono text-sm font-semibold text-slate-900">{loan.loanerCar.plate}</TableCell>
                       <TableCell className="text-sm text-slate-700">{loan.loanerCar.brand} {loan.loanerCar.modelYear}</TableCell>
                       <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
