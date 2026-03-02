@@ -80,20 +80,38 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
 
   const body = await req.json()
-  const { id, returnDate, returnKm } = body
+  const { id, action, returnDate, returnKm, ...rest } = body
 
-  if (!id || !returnDate || !returnKm)
-    return NextResponse.json({ error: "Dönüş tarihi ve km zorunludur." }, { status: 400 })
+  if (!id) return NextResponse.json({ error: "ID gerekli" }, { status: 400 })
 
-  const loan = await prisma.loanerCarLoan.update({
-    where: { id },
-    data: {
-      returnDate: new Date(returnDate),
-      returnKm: parseInt(returnKm),
-      returnedAt: new Date(),
-      isReturned: true,
-    },
-  })
+  // Dönüş işlemi
+  if (action === "return" || returnDate) {
+    if (!returnDate || !returnKm)
+      return NextResponse.json({ error: "Dönüş tarihi ve km zorunludur." }, { status: 400 })
+    const loan = await prisma.loanerCarLoan.update({
+      where: { id },
+      data: {
+        returnDate: new Date(returnDate),
+        returnKm: parseInt(returnKm),
+        returnedAt: new Date(),
+        isReturned: true,
+      },
+    })
+    return NextResponse.json({ loan })
+  }
 
+  // Kayıt düzenleme
+  const data: Record<string, unknown> = {}
+  if (rest.advisorName)       data.advisorName       = rest.advisorName.trim()
+  if (rest.customerPlate)     data.customerPlate     = rest.customerPlate.toUpperCase().trim()
+  if (rest.jobCardNo)         data.jobCardNo         = rest.jobCardNo.trim()
+  if (rest.jobCardDate)       data.jobCardDate       = new Date(rest.jobCardDate)
+  if (rest.deliveryDate)      data.deliveryDate      = new Date(rest.deliveryDate)
+  if (rest.deliveryKm)        data.deliveryKm        = parseInt(rest.deliveryKm)
+  if (rest.deliveryNotes !== undefined) data.deliveryNotes = rest.deliveryNotes.trim()
+  if (rest.userName)          data.userName          = rest.userName.trim()
+  if (rest.registrationOwner) data.registrationOwner = rest.registrationOwner.trim()
+
+  const loan = await prisma.loanerCarLoan.update({ where: { id }, data })
   return NextResponse.json({ loan })
 }

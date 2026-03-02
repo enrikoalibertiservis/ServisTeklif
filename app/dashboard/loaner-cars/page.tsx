@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import {
   Car, Plus, ArrowRightLeft, ArrowLeft, AlertTriangle,
   CheckCircle2, Clock, Wrench, Search, RefreshCw, Pencil, X, Loader2,
+  ChevronUp, ChevronDown, ChevronsUpDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -145,6 +146,18 @@ export default function LoanerCarsPage() {
   const [returnTarget, setReturnTarget] = useState<LoanRecord | null>(null)
   const [returnForm, setReturnForm] = useState({ ...emptyReturnForm })
   const [returnSaving, setReturnSaving] = useState(false)
+
+  // Edit loan
+  const [editLoanModal, setEditLoanModal] = useState(false)
+  const [editLoanTarget, setEditLoanTarget] = useState<LoanRecord | null>(null)
+  const [editLoanForm, setEditLoanForm] = useState({ ...emptyLoanForm })
+  const [editLoanSaving, setEditLoanSaving] = useState(false)
+
+  // Filters & sort
+  type SortDir = "asc" | "desc"
+  const [activeSort, setActiveSort] = useState<{ field: string; dir: SortDir }>({ field: "deliveryDate", dir: "desc" })
+  const [fleetSort, setFleetSort] = useState<{ field: string; dir: SortDir }>({ field: "plate", dir: "asc" })
+  const [fleetFilter, setFleetFilter] = useState<"all" | "available" | "out">("all")
 
   // ── Load data ──────────────────────────────────────────────
 
@@ -290,6 +303,52 @@ export default function LoanerCarsPage() {
     reload()
   }
 
+  // ── Edit loan ──────────────────────────────────────────────
+
+  function openEditLoan(loan: LoanRecord) {
+    setEditLoanTarget(loan)
+    setEditLoanForm({
+      loanerCarId: loan.loanerCarId,
+      advisorName: loan.advisorName,
+      customerPlate: loan.customerPlate,
+      jobCardNo: loan.jobCardNo,
+      jobCardDate: toInputDate(loan.jobCardDate),
+      deliveryDate: toInputDate(loan.deliveryDate),
+      deliveryKm: loan.deliveryKm.toString(),
+      deliveryNotes: loan.deliveryNotes,
+      userName: loan.userName,
+      registrationOwner: loan.registrationOwner,
+    })
+    setEditLoanModal(true)
+  }
+
+  async function saveEditLoan() {
+    const required = [
+      editLoanForm.advisorName, editLoanForm.customerPlate, editLoanForm.jobCardNo,
+      editLoanForm.jobCardDate, editLoanForm.deliveryDate, editLoanForm.deliveryKm,
+      editLoanForm.deliveryNotes, editLoanForm.userName, editLoanForm.registrationOwner,
+    ]
+    if (required.some(v => !v?.toString().trim())) {
+      toast({ title: "Hata", description: "Tüm alanlar zorunludur.", variant: "destructive" })
+      return
+    }
+    setEditLoanSaving(true)
+    const r = await fetch("/api/loaner-loans", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editLoanTarget!.id, ...editLoanForm }),
+    })
+    setEditLoanSaving(false)
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}))
+      toast({ title: "Hata", description: err.error ?? "Güncellenemedi.", variant: "destructive" })
+      return
+    }
+    toast({ title: "Güncellendi", description: "Kayıt başarıyla düzenlendi." })
+    setEditLoanModal(false)
+    reload()
+  }
+
   // ── Return processing ──────────────────────────────────────
 
   function openReturn(loan: LoanRecord) {
@@ -328,12 +387,37 @@ export default function LoanerCarsPage() {
 
   // ── Search filter ──────────────────────────────────────────
 
-  const filteredActive = activeLoans.filter(l =>
-    !search ||
-    l.loanerCar.plate.includes(search.toUpperCase()) ||
-    l.customerPlate.includes(search.toUpperCase()) ||
-    l.advisorName.toLowerCase().includes(search.toLowerCase()) ||
-    l.userName.toLowerCase().includes(search.toLowerCase())
+  function sortBy<T>(arr: T[], field: string, dir: SortDir): T[] {
+    return [...arr].sort((a, b) => {
+      const av = (a as Record<string, unknown>)[field]
+      const bv = (b as Record<string, unknown>)[field]
+      const av2 = typeof av === "string" ? av.toLowerCase() : (av ?? 0)
+      const bv2 = typeof bv === "string" ? bv.toLowerCase() : (bv ?? 0)
+      if (av2 < bv2) return dir === "asc" ? -1 : 1
+      if (av2 > bv2) return dir === "asc" ? 1 : -1
+      return 0
+    })
+  }
+
+  function toggleSort(
+    cur: { field: string; dir: SortDir },
+    set: (v: { field: string; dir: SortDir }) => void,
+    field: string
+  ) {
+    if (cur.field === field) set({ field, dir: cur.dir === "asc" ? "desc" : "asc" })
+    else set({ field, dir: "asc" })
+  }
+
+  const filteredActive = sortBy(
+    activeLoans.filter(l =>
+      !search ||
+      l.loanerCar.plate.includes(search.toUpperCase()) ||
+      l.customerPlate.includes(search.toUpperCase()) ||
+      l.advisorName.toLowerCase().includes(search.toLowerCase()) ||
+      l.userName.toLowerCase().includes(search.toLowerCase())
+    ),
+    activeSort.field === "plate" ? "loanerCar" : activeSort.field,
+    activeSort.dir
   )
 
   const filteredHistory = loans.filter(l =>
@@ -343,11 +427,21 @@ export default function LoanerCarsPage() {
     l.advisorName.toLowerCase().includes(search.toLowerCase())
   )
 
-  const filteredCars = cars.filter(c =>
-    !search ||
-    c.plate.includes(search.toUpperCase()) ||
-    c.brand.toLowerCase().includes(search.toLowerCase()) ||
-    c.specs?.toLowerCase().includes(search.toLowerCase())
+  const filteredCars = sortBy(
+    cars.filter(c => {
+      const matchSearch = !search ||
+        c.plate.includes(search.toUpperCase()) ||
+        c.brand.toLowerCase().includes(search.toLowerCase()) ||
+        c.specs?.toLowerCase().includes(search.toLowerCase())
+      const isOut = c.loans.length > 0
+      const matchStatus =
+        fleetFilter === "all" ||
+        (fleetFilter === "available" && !isOut) ||
+        (fleetFilter === "out" && isOut)
+      return matchSearch && matchStatus
+    }),
+    fleetSort.field,
+    fleetSort.dir
   )
 
   // ─────────────────────────────────────────────────────────
@@ -459,17 +553,17 @@ export default function LoanerCarsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
-                <TableHead className="w-28">İkame Plaka</TableHead>
+                <SortHead label="İkame Plaka" field="plate" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
                 <TableHead>Araç</TableHead>
-                <TableHead className="w-28">Müşteri Plaka</TableHead>
-                <TableHead>Danışman</TableHead>
-                <TableHead>İKK No</TableHead>
-                <TableHead className="w-28">Veriliş Tarihi</TableHead>
-                <TableHead className="w-20">Gün</TableHead>
-                <TableHead>Kullanıcı</TableHead>
-                <TableHead>Ruhsat Sahibi</TableHead>
+                <SortHead label="Müşteri Plaka" field="customerPlate" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
+                <SortHead label="Danışman" field="advisorName" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
+                <SortHead label="İKK No" field="jobCardNo" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
+                <SortHead label="Veriliş Tarihi" field="deliveryDate" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
+                <SortHead label="Gün" field="deliveryDate" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-16" />
+                <SortHead label="Kullanıcı" field="userName" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
+                <SortHead label="Ruhsat Sahibi" field="registrationOwner" sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
                 <TableHead className="w-24">Durum</TableHead>
-                <TableHead className="w-24">İşlem</TableHead>
+                <TableHead className="w-28">İşlem</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -512,17 +606,26 @@ export default function LoanerCarsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                        onClick={() => openReturn(loan)}
-                        disabled={!canOperate}
-                        title={!canOperate ? "Bu işlem için yetkiniz yok" : undefined}
-                      >
-                        <ArrowLeft className="h-3 w-3 mr-1" />
-                        Al
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm" variant="ghost" className="h-7 w-7 p-0"
+                          onClick={() => openEditLoan(loan)}
+                          disabled={!canOperate}
+                          title={!canOperate ? "Bu işlem için yetkiniz yok" : "Düzenle"}
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                        </Button>
+                        <Button
+                          size="sm" variant="outline"
+                          className="h-7 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                          onClick={() => openReturn(loan)}
+                          disabled={!canOperate}
+                          title={!canOperate ? "Bu işlem için yetkiniz yok" : undefined}
+                        >
+                          <ArrowLeft className="h-3 w-3 mr-1" />
+                          Al
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
@@ -597,18 +700,37 @@ export default function LoanerCarsPage() {
 
       {/* ── Tab: Araç Filosu ──────────────────────────────── */}
       {tab === "fleet" && (
+        <>
+          {/* Durum filtresi */}
+          <div className="flex gap-2">
+            {[
+              { key: "all",       label: "Tümü",       count: cars.length },
+              { key: "available", label: "Müsait",     count: cars.filter(c => !c.loans.length).length },
+              { key: "out",       label: "Müşteride",  count: cars.filter(c => c.loans.length > 0).length },
+            ].map(f => (
+              <button key={f.key} onClick={() => setFleetFilter(f.key as typeof fleetFilter)}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-xs font-medium transition-colors border",
+                  fleetFilter === f.key
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                )}>
+                {f.label} <span className="ml-1 opacity-70">({f.count})</span>
+              </button>
+            ))}
+          </div>
         <div className="rounded-lg border overflow-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
-                <TableHead className="w-28">Plaka</TableHead>
-                <TableHead>Marka / Araç</TableHead>
-                <TableHead className="w-20">Model Yılı</TableHead>
+                <SortHead label="Plaka" field="plate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
+                <SortHead label="Marka / Araç" field="brand" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} />
+                <SortHead label="Model Yılı" field="modelYear" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-20" />
                 <TableHead>Kullanım Amacı</TableHead>
                 <TableHead>Vergi No</TableHead>
-                <TableHead className="w-28">VİZE</TableHead>
-                <TableHead className="w-28">TRAFİK</TableHead>
-                <TableHead className="w-28">KASKO</TableHead>
+                <SortHead label="VİZE" field="inspectionDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
+                <SortHead label="TRAFİK" field="trafficInsDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
+                <SortHead label="KASKO" field="kaskoDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
                 <TableHead>Ruhsat No</TableHead>
                 <TableHead className="w-28">Durum</TableHead>
                 <TableHead className="w-24">İşlem</TableHead>
@@ -669,6 +791,7 @@ export default function LoanerCarsPage() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
 
       {/* ────────────────────────────────────────────────────────
@@ -805,6 +928,53 @@ export default function LoanerCarsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ────────────────────────────────────────────────────────
+          MODAL: Kayıt Düzenle
+          ──────────────────────────────────────────────────── */}
+      <Dialog open={editLoanModal} onOpenChange={setEditLoanModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-slate-500" />
+              Kayıt Düzenle — {editLoanTarget?.loanerCar?.plate}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            {/* Danışman dropdown */}
+            <div>
+              <Label className="text-xs text-slate-600 mb-1 block">Danışman *</Label>
+              <select
+                className="w-full border border-slate-200 rounded-md h-9 px-3 text-sm bg-white"
+                value={editLoanForm.advisorName}
+                onChange={e => setEditLoanForm(f => ({ ...f, advisorName: e.target.value }))}
+              >
+                <option value="">Seçiniz...</option>
+                {advisors.map(a => (
+                  <option key={a.id} value={a.name}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+            <Field label="Müşteri Plaka *" value={editLoanForm.customerPlate} onChange={v => setEditLoanForm(f => ({ ...f, customerPlate: v }))} upper />
+            <Field label="İKK No *" value={editLoanForm.jobCardNo} onChange={v => setEditLoanForm(f => ({ ...f, jobCardNo: v }))} />
+            <Field label="İKK Açılış Tarihi *" type="date" value={editLoanForm.jobCardDate} onChange={v => setEditLoanForm(f => ({ ...f, jobCardDate: v }))} />
+            <Field label="Veriliş Tarihi *" type="date" value={editLoanForm.deliveryDate} onChange={v => setEditLoanForm(f => ({ ...f, deliveryDate: v }))} />
+            <Field label="Veriliş Km *" type="number" value={editLoanForm.deliveryKm} onChange={v => setEditLoanForm(f => ({ ...f, deliveryKm: v }))} />
+            <Field label="Kullanıcı (Ad Soyad) *" value={editLoanForm.userName} onChange={v => setEditLoanForm(f => ({ ...f, userName: v }))} />
+            <Field label="Ruhsat Sahibi *" value={editLoanForm.registrationOwner} onChange={v => setEditLoanForm(f => ({ ...f, registrationOwner: v }))} />
+            <div className="col-span-2">
+              <Field label="Veriliş Açıklaması *" value={editLoanForm.deliveryNotes} onChange={v => setEditLoanForm(f => ({ ...f, deliveryNotes: v }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditLoanModal(false)}>İptal</Button>
+            <Button onClick={saveEditLoan} disabled={editLoanSaving}>
+              {editLoanSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }
@@ -830,6 +1000,34 @@ function Field({
         className="h-9 text-sm"
       />
     </div>
+  )
+}
+
+// ─── Sort Head ────────────────────────────────────────────────
+
+function SortHead({
+  label, field, sort, onSort, className,
+}: {
+  label: string
+  field: string
+  sort: { field: string; dir: "asc" | "desc" }
+  onSort: (field: string) => void
+  className?: string
+}) {
+  const active = sort.field === field
+  return (
+    <TableHead className={cn("cursor-pointer select-none", className)} onClick={() => onSort(field)}>
+      <span className="flex items-center gap-1">
+        {label}
+        {active ? (
+          sort.dir === "asc"
+            ? <ChevronUp className="h-3.5 w-3.5 text-blue-500" />
+            : <ChevronDown className="h-3.5 w-3.5 text-blue-500" />
+        ) : (
+          <ChevronsUpDown className="h-3 w-3 text-slate-300" />
+        )}
+      </span>
+    </TableHead>
   )
 }
 
