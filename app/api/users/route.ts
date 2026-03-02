@@ -4,9 +4,27 @@ import bcrypt from "bcryptjs"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session) {
+    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const namesOnly = searchParams.get("namesOnly") === "true"
+
+  // Sadece isim listesi için tüm kullanıcılar erişebilir (ikame danışman dropdown)
+  if (namesOnly) {
+    const users = await prisma.user.findMany({
+      where: { active: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    })
+    return NextResponse.json({ users })
+  }
+
+  // Tam liste sadece admin
+  if (session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 })
   }
 

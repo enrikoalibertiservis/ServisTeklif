@@ -165,10 +165,9 @@ export default function LoanerCarsPage() {
   }, [])
 
   const loadAdvisors = useCallback(async () => {
-    const r = await fetch("/api/users")
+    const r = await fetch("/api/users?namesOnly=true")
     if (r.ok) {
       const d = await r.json()
-      // hem ADVISOR hem ADMIN kullanıcılar listelensin
       setAdvisors((d.users ?? d).map((u: { id: string; name: string }) => ({ id: u.id, name: u.name })))
     }
   }, [])
@@ -369,12 +368,10 @@ export default function LoanerCarsPage() {
             <RefreshCw className={cn("h-4 w-4 mr-1.5", loading && "animate-spin")} />
             Yenile
           </Button>
-          {isAdmin && (
-            <Button size="sm" onClick={openAddCar} disabled={!canOperate} title={!canOperate ? "Bu işlem için yetkiniz yok" : undefined}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Araç Ekle
-            </Button>
-          )}
+          <Button size="sm" onClick={openAddCar} disabled={!canOperate} title={!canOperate ? "Bu işlem için yetkiniz yok" : undefined}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Araç Ekle
+          </Button>
           <Button size="sm" variant="default" className="bg-emerald-600 hover:bg-emerald-700"
             onClick={() => openLoan()} disabled={!canOperate}
             title={!canOperate ? "Bu işlem için yetkiniz yok" : undefined}>
@@ -614,7 +611,7 @@ export default function LoanerCarsPage() {
                 <TableHead className="w-28">KASKO</TableHead>
                 <TableHead>Ruhsat No</TableHead>
                 <TableHead className="w-28">Durum</TableHead>
-                {isAdmin && <TableHead className="w-24">İşlem</TableHead>}
+                <TableHead className="w-24">İşlem</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -648,26 +645,24 @@ export default function LoanerCarsPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    {isAdmin && (
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
-                            onClick={() => openEditCar(car)}
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                          onClick={() => openEditCar(car)}
+                          disabled={!canOperate}
+                          title={!canOperate ? "Bu işlem için yetkiniz yok" : "Düzenle"}>
+                          <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                        </Button>
+                        {!isOut && (
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => deleteCar(car.id)}
                             disabled={!canOperate}
-                            title={!canOperate ? "Bu işlem için yetkiniz yok" : "Düzenle"}>
-                            <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                            title={!canOperate ? "Bu işlem için yetkiniz yok" : "Pasife Al"}>
+                            <X className="h-3.5 w-3.5" />
                           </Button>
-                          {!isOut && (
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => deleteCar(car.id)}
-                              disabled={!canOperate}
-                              title={!canOperate ? "Bu işlem için yetkiniz yok" : "Pasife Al"}>
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    )}
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 )
               })}
