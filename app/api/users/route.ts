@@ -88,7 +88,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { id, active, password } = body
+  const { id, active, password, role } = body
 
   if (password !== undefined) {
     // Şifre güncelleme
@@ -103,6 +103,15 @@ export async function PATCH(req: NextRequest) {
     }
     const passwordHash = await bcrypt.hash(password, 10)
     await prisma.user.update({ where: { id }, data: { passwordHash } })
+    return NextResponse.json({ success: true })
+  }
+
+  if (role !== undefined) {
+    // Rol değiştirme
+    if (!["ADMIN", "ADVISOR"].includes(role)) {
+      return NextResponse.json({ error: "Geçersiz rol." }, { status: 400 })
+    }
+    await prisma.user.update({ where: { id }, data: { role } })
     return NextResponse.json({ success: true })
   }
 

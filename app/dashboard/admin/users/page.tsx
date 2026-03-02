@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Users, Plus, UserCheck, UserX, Eye, EyeOff, KeyRound, ShieldCheck, ShieldOff, ScanLine } from "lucide-react"
+import { Users, Plus, UserCheck, UserX, Eye, EyeOff, KeyRound, ShieldCheck, ShieldOff, ScanLine, UserCog } from "lucide-react"
 import Image from "next/image"
 
 // Şifre kural kontrolü
@@ -84,6 +84,11 @@ export default function UsersPage() {
   const [showNewPwd, setShowNewPwd] = useState(false)
   const [pwdSaving, setPwdSaving] = useState(false)
 
+  // Rol değiştirme dialog
+  const [roleDialogUser, setRoleDialogUser] = useState<{ id: string; name: string; role: string } | null>(null)
+  const [newRole, setNewRole] = useState("ADVISOR")
+  const [roleSaving, setRoleSaving] = useState(false)
+
   // 2FA kurulum dialog
   const [tfaDialogUser, setTfaDialogUser] = useState<{ id: string; name: string; twoFactorEnabled: boolean } | null>(null)
   const [tfaStep, setTfaStep] = useState<"qr" | "verify">("qr")
@@ -99,6 +104,25 @@ export default function UsersPage() {
   }
 
   useEffect(() => { loadUsers() }, [])
+
+  async function handleChangeRole() {
+    if (!roleDialogUser) return
+    setRoleSaving(true)
+    const res = await fetch("/api/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: roleDialogUser.id, role: newRole }),
+    })
+    setRoleSaving(false)
+    if (!res.ok) {
+      const err = await res.json()
+      toast({ title: "Hata", description: err.error, variant: "destructive" })
+      return
+    }
+    toast({ title: "Rol güncellendi", description: `${roleDialogUser.name} kullanıcısının rolü ${newRole === "ADMIN" ? "Yönetici" : "Danışman"} olarak değiştirildi.` })
+    setRoleDialogUser(null)
+    loadUsers()
+  }
 
   async function handleCreate() {
     if (!name || !email || !password) {
@@ -295,6 +319,13 @@ export default function UsersPage() {
                       </Button>
                       <Button
                         variant="ghost" size="sm"
+                        title="Rolü değiştir"
+                        onClick={() => { setRoleDialogUser({ id: u.id, name: u.name, role: u.role }); setNewRole(u.role) }}
+                      >
+                        <UserCog className="h-4 w-4 text-indigo-500" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm"
                         title="Şifre güncelle"
                         onClick={() => { setPwdDialogUser({ id: u.id, name: u.name }); setNewPassword(""); setNewPassword2(""); setShowNewPwd(false) }}
                       >
@@ -315,6 +346,52 @@ export default function UsersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Rol Değiştirme Dialog */}
+      <Dialog open={!!roleDialogUser} onOpenChange={open => { if (!open) setRoleDialogUser(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCog className="h-5 w-5 text-indigo-500" />
+              Rol Değiştir
+              {roleDialogUser && <span className="text-sm font-normal text-muted-foreground">— {roleDialogUser.name}</span>}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-4">
+            <div className="flex items-center gap-3 rounded-lg bg-slate-50 border px-4 py-3 text-sm">
+              <span className="text-slate-500">Mevcut Rol:</span>
+              <Badge variant={roleDialogUser?.role === "ADMIN" ? "default" : "secondary"}>
+                {roleDialogUser?.role === "ADMIN" ? "Yönetici" : "Danışman"}
+              </Badge>
+            </div>
+            <div className="space-y-2">
+              <Label>Yeni Rol</Label>
+              <Select value={newRole} onValueChange={setNewRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADVISOR">Danışman</SelectItem>
+                  <SelectItem value="ADMIN">Yönetici</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {newRole === roleDialogUser?.role && (
+              <p className="text-xs text-slate-400">Seçili rol mevcut rolle aynı.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleDialogUser(null)}>İptal</Button>
+            <Button
+              onClick={handleChangeRole}
+              disabled={roleSaving || newRole === roleDialogUser?.role}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {roleSaving ? "Kaydediliyor..." : "Rolü Güncelle"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 2FA Kurulum / Yönetim Dialog */}
       <Dialog open={!!tfaDialogUser} onOpenChange={open => { if (!open) setTfaDialogUser(null) }}>
