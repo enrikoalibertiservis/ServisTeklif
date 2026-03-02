@@ -1353,6 +1353,8 @@ function FilterBar({
 }
 
 // ── FilePickerField ───────────────────────────────────────────────────────────
+const MAX_UPLOAD_KB = 500
+
 function FilePickerField({
   label, file, existingUrl, onChange, onDelete,
 }: {
@@ -1363,12 +1365,24 @@ function FilePickerField({
   onDelete: (() => void) | null
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const [sizeError, setSizeError] = React.useState<string | null>(null)
 
   const displayName = file
     ? file.name
     : existingUrl
       ? existingUrl.split("/").pop()?.split("?")[0] ?? "Dosya mevcut"
       : null
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null
+    if (f && f.size > MAX_UPLOAD_KB * 1024) {
+      setSizeError(`Dosya çok büyük: ${(f.size / 1024).toFixed(0)} KB. Maksimum ${MAX_UPLOAD_KB} KB.`)
+      e.target.value = ""
+      return
+    }
+    setSizeError(null)
+    onChange(f)
+  }
 
   return (
     <div>
@@ -1378,8 +1392,13 @@ function FilePickerField({
         type="file"
         accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
         className="hidden"
-        onChange={e => onChange(e.target.files?.[0] ?? null)}
+        onChange={handleFileChange}
       />
+      {sizeError && (
+        <p className="text-[11px] text-red-600 mb-1 flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3 shrink-0" />{sizeError}
+        </p>
+      )}
       {displayName ? (
         <div className="flex items-center gap-1.5 border rounded-md px-2.5 py-1.5 bg-slate-50 text-xs text-slate-700">
           <FileText className="h-3.5 w-3.5 text-blue-500 shrink-0" />
