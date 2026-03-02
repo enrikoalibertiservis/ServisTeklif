@@ -705,10 +705,10 @@ export default function LoanerCarsPage() {
                     )}
                     onClick={() => { setDetailLoan(loan); setDetailModal(true) }}
                   >
-                    <TableCell className="font-mono text-sm font-semibold text-slate-900">{loan.loanerCar.plate}</TableCell>
-                    <TableCell>
-                      <span className="text-sm text-slate-700">{loan.loanerCar.brand} {loan.loanerCar.modelYear}</span>
-                      {loan.loanerCar.specs && <span className="block text-xs text-slate-400">{loan.loanerCar.specs}</span>}
+                    <TableCell className="font-mono text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
+                    <TableCell className="text-sm text-slate-700">
+                      {loan.loanerCar.brand} {loan.loanerCar.modelYear}
+                      {loan.loanerCar.specs && <span className="text-slate-400"> · {loan.loanerCar.specs}</span>}
                     </TableCell>
                     <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
                     <TableCell className="text-sm text-slate-700">{loan.advisorName}</TableCell>
@@ -716,7 +716,7 @@ export default function LoanerCarsPage() {
                     <TableCell className="text-sm text-slate-700">{fmtDate(loan.deliveryDate)}</TableCell>
                     <TableCell>
                       <span className={cn(
-                        "text-sm font-semibold tabular-nums",
+                        "text-sm tabular-nums",
                         isOverdue ? "text-red-600" : isWarning ? "text-amber-600" : "text-slate-700"
                       )}>
                         {days}
@@ -806,14 +806,14 @@ export default function LoanerCarsPage() {
                     : daysSince(loan.deliveryDate)
                   return (
                     <TableRow key={loan.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/70"}>
-                      <TableCell className="font-mono text-sm font-semibold text-slate-900">{loan.loanerCar.plate}</TableCell>
+                      <TableCell className="font-mono text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
                       <TableCell className="text-sm text-slate-700">{loan.loanerCar.brand} {loan.loanerCar.modelYear}</TableCell>
                       <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
                       <TableCell className="text-sm text-slate-700">{loan.advisorName}</TableCell>
                       <TableCell className="font-mono text-sm text-slate-700">{loan.jobCardNo}</TableCell>
                       <TableCell className="text-sm text-slate-700">{fmtDate(loan.deliveryDate)}</TableCell>
                       <TableCell className="text-sm text-slate-700">{fmtDate(loan.returnDate)}</TableCell>
-                      <TableCell className="text-sm font-semibold tabular-nums text-slate-700">{days}</TableCell>
+                      <TableCell className="text-sm tabular-nums text-slate-700">{days}</TableCell>
                       <TableCell className="text-sm text-slate-700">{loan.userName}</TableCell>
                       <TableCell>
                         {loan.isReturned ? (
@@ -895,7 +895,6 @@ export default function LoanerCarsPage() {
               <TableRow className="bg-slate-50">
                 <SortHead label="Plaka"        field="plate"          sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
                 <SortHead label="Marka / Araç" field="brand"          sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} />
-                <SortHead label="Model Yılı"   field="modelYear"      sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-20" />
                 <TableHead className={TH_BASE}>Kullanım Amacı</TableHead>
                 <TableHead className={TH_BASE}>Vergi No</TableHead>
                 <SortHead label="Vize"         field="inspectionDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
@@ -908,19 +907,18 @@ export default function LoanerCarsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isAdmin ? 11 : 10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
               ) : filteredCars.length === 0 ? (
-                <TableRow><TableCell colSpan={isAdmin ? 11 : 10} className="text-center py-12 text-slate-400">Araç bulunamadı</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Araç bulunamadı</TableCell></TableRow>
               ) : filteredCars.map(car => {
                 const isOut = car.loans.length > 0
                 return (
                   <TableRow key={car.id}>
-                    <TableCell className="font-mono text-sm font-semibold text-slate-900">{car.plate}</TableCell>
-                    <TableCell>
-                      <span className="text-sm text-slate-700 font-medium">{car.brand}</span>
-                      {car.specs && <span className="block text-xs text-slate-400">{car.specs}</span>}
+                    <TableCell className="font-mono text-sm text-slate-700">{car.plate}</TableCell>
+                    <TableCell className="text-sm text-slate-700">
+                      {car.brand} {car.modelYear}
+                      {car.specs && <span className="text-slate-400"> · {car.specs}</span>}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-700 text-center">{car.modelYear}</TableCell>
                     <TableCell className="text-sm text-slate-700">{car.usagePurpose}</TableCell>
                     <TableCell className="font-mono text-sm text-slate-700">{car.taxNo}</TableCell>
                     <TableCell className="text-sm text-slate-700">{fmtDate(car.inspectionDate)}</TableCell>
