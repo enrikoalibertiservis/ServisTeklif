@@ -167,7 +167,9 @@ export default function LoanerCarsPage() {
   type SortDir = "asc" | "desc"
   const [activeSort, setActiveSort] = useState<{ field: string; dir: SortDir }>({ field: "deliveryDate", dir: "desc" })
   const [fleetSort, setFleetSort] = useState<{ field: string; dir: SortDir }>({ field: "plate", dir: "asc" })
-  const [fleetFilter, setFleetFilter] = useState<"all" | "available" | "out">("all")
+  const [fleetFilter,   setFleetFilter]   = useState<"all" | "available" | "out">("all")
+  const [activeFilter,  setActiveFilter]  = useState<"all" | "active" | "warning" | "overdue">("all")
+  const [historyFilter, setHistoryFilter] = useState<"all" | "ongoing" | "done" | "overdue">("all")
 
   // Pagination — Tüm Kayıtlar
   const HISTORY_PAGE_SIZE = 20
@@ -423,23 +425,39 @@ export default function LoanerCarsPage() {
   }
 
   const filteredActive = sortBy(
-    activeLoans.filter(l =>
-      !search ||
-      l.loanerCar.plate.includes(search.toUpperCase()) ||
-      l.customerPlate.includes(search.toUpperCase()) ||
-      l.advisorName.toLowerCase().includes(search.toLowerCase()) ||
-      l.userName.toLowerCase().includes(search.toLowerCase())
-    ),
+    activeLoans.filter(l => {
+      const matchSearch = !search ||
+        l.loanerCar.plate.includes(search.toUpperCase()) ||
+        l.customerPlate.includes(search.toUpperCase()) ||
+        l.advisorName.toLowerCase().includes(search.toLowerCase()) ||
+        l.userName.toLowerCase().includes(search.toLowerCase())
+      const days = daysSince(l.deliveryDate)
+      const matchStatus =
+        activeFilter === "all" ||
+        (activeFilter === "overdue"  && days > OVERDUE_DAYS) ||
+        (activeFilter === "warning"  && days >= 7 && days <= OVERDUE_DAYS) ||
+        (activeFilter === "active"   && days < 7)
+      return matchSearch && matchStatus
+    }),
     activeSort.field === "plate" ? "loanerCar" : activeSort.field,
     activeSort.dir
   )
 
-  const filteredHistory = loans.filter(l =>
-    !search ||
-    l.loanerCar.plate.includes(search.toUpperCase()) ||
-    l.customerPlate.includes(search.toUpperCase()) ||
-    l.advisorName.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredHistory = loans.filter(l => {
+    const matchSearch = !search ||
+      l.loanerCar.plate.includes(search.toUpperCase()) ||
+      l.customerPlate.includes(search.toUpperCase()) ||
+      l.advisorName.toLowerCase().includes(search.toLowerCase())
+    const days = l.isReturned
+      ? Math.floor((new Date(l.returnDate!).getTime() - new Date(l.deliveryDate).getTime()) / 86400000)
+      : daysSince(l.deliveryDate)
+    const matchStatus =
+      historyFilter === "all" ||
+      (historyFilter === "done"    && l.isReturned) ||
+      (historyFilter === "ongoing" && !l.isReturned && days <= OVERDUE_DAYS) ||
+      (historyFilter === "overdue" && !l.isReturned && days > OVERDUE_DAYS)
+    return matchSearch && matchStatus
+  })
   const historyTotalPages = Math.max(1, Math.ceil(filteredHistory.length / HISTORY_PAGE_SIZE))
   const pagedHistory = filteredHistory.slice(
     (historyPage - 1) * HISTORY_PAGE_SIZE,
@@ -568,6 +586,18 @@ export default function LoanerCarsPage() {
 
       {/* ── Tab: Aktif İkameler ────────────────────────────── */}
       {tab === "active" && (
+        <div className="space-y-3">
+        <FilterBar
+          value={activeFilter}
+          onChange={v => { setActiveFilter(v as typeof activeFilter); }}
+          options={[
+            { key: "all",     label: "Tümü",      count: activeLoans.length },
+            { key: "active",  label: "Normal",    count: activeLoans.filter(l => daysSince(l.deliveryDate) < 7).length },
+            { key: "warning", label: "Uyarı",     count: activeLoans.filter(l => { const d = daysSince(l.deliveryDate); return d >= 7 && d <= OVERDUE_DAYS }).length },
+            { key: "overdue", label: "Gecikmiş",  count: activeLoans.filter(l => daysSince(l.deliveryDate) > OVERDUE_DAYS).length },
+          ]}
+          colors={{ active: "bg-slate-600", warning: "bg-orange-500", overdue: "bg-red-600" }}
+        />
         <div className="rounded-lg border overflow-auto">
           <Table>
             <TableHeader>
@@ -652,11 +682,23 @@ export default function LoanerCarsPage() {
             </TableBody>
           </Table>
         </div>
+        </div>
       )}
 
       {/* ── Tab: Tüm Kayıtlar ─────────────────────────────── */}
       {tab === "history" && (
         <div className="space-y-3">
+          <FilterBar
+            value={historyFilter}
+            onChange={v => { setHistoryFilter(v as typeof historyFilter); setHistoryPage(1); }}
+            options={[
+              { key: "all",     label: "Tümü",        count: loans.length },
+              { key: "ongoing", label: "Devam",        count: loans.filter(l => !l.isReturned && daysSince(l.deliveryDate) <= OVERDUE_DAYS).length },
+              { key: "overdue", label: "Gecikmiş",     count: loans.filter(l => !l.isReturned && daysSince(l.deliveryDate) > OVERDUE_DAYS).length },
+              { key: "done",    label: "Tamamlandı",   count: loans.filter(l => l.isReturned).length },
+            ]}
+            colors={{ ongoing: "bg-orange-500", overdue: "bg-red-600", done: "bg-emerald-600" }}
+          />
           <div className="rounded-lg border overflow-auto">
             <Table>
               <TableHeader>
@@ -757,24 +799,16 @@ export default function LoanerCarsPage() {
       {/* ── Tab: Araç Filosu ──────────────────────────────── */}
       {tab === "fleet" && (
         <>
-          {/* Durum filtresi */}
-          <div className="flex gap-2">
-            {[
+          <FilterBar
+            value={fleetFilter}
+            onChange={v => setFleetFilter(v as typeof fleetFilter)}
+            options={[
               { key: "all",       label: "Tümü",       count: cars.length },
               { key: "available", label: "Müsait",     count: cars.filter(c => !c.loans.length).length },
               { key: "out",       label: "Müşteride",  count: cars.filter(c => c.loans.length > 0).length },
-            ].map(f => (
-              <button key={f.key} onClick={() => setFleetFilter(f.key as typeof fleetFilter)}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-medium transition-colors border",
-                  fleetFilter === f.key
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                )}>
-                {f.label} <span className="ml-1 opacity-70">({f.count})</span>
-              </button>
-            ))}
-          </div>
+            ]}
+            colors={{ available: "bg-emerald-600", out: "bg-orange-500" }}
+          />
         <div className="rounded-lg border overflow-auto">
           <Table>
             <TableHeader>
@@ -1037,6 +1071,43 @@ export default function LoanerCarsPage() {
 
 // ─── Reusable Field ───────────────────────────────────────────
 
+// ── FilterBar ─────────────────────────────────────────────────────────────────
+function FilterBar({
+  value, onChange, options, colors = {},
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: { key: string; label: string; count: number }[]
+  colors?: Record<string, string>
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map(f => {
+        const isActive = value === f.key
+        const activeColor = f.key !== "all" && colors[f.key] ? colors[f.key] : "bg-slate-700"
+        return (
+          <button
+            key={f.key}
+            onClick={() => onChange(f.key)}
+            className={cn(
+              "px-3 py-1.5 rounded-md text-xs font-medium transition-colors border",
+              isActive
+                ? cn(activeColor, "text-white border-transparent")
+                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+            )}
+          >
+            {f.label}
+            <span className={cn("ml-1.5 text-[11px]", isActive ? "opacity-80" : "opacity-60")}>
+              ({f.count})
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Field ──────────────────────────────────────────────────────────────────────
 function Field({
   label, value, onChange, type = "text", upper,
 }: {
