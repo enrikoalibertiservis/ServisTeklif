@@ -29,8 +29,6 @@ export default async function DashboardPage() {
       brand: true,
       modelYear: true,
       specs: true,
-      inspectionDate: true,
-      kaskoDate: true,
     },
     orderBy: { plate: "asc" },
   })
