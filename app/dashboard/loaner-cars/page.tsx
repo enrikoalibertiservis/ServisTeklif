@@ -180,8 +180,9 @@ export default function LoanerCarsPage() {
 
   // Filters & sort
   type SortDir = "asc" | "desc"
-  const [activeSort, setActiveSort] = useState<{ field: string; dir: SortDir }>({ field: "deliveryDate", dir: "desc" })
-  const [fleetSort, setFleetSort] = useState<{ field: string; dir: SortDir }>({ field: "plate", dir: "asc" })
+  const [activeSort,  setActiveSort]  = useState<{ field: string; dir: SortDir }>({ field: "deliveryDate", dir: "desc" })
+  const [historySort, setHistorySort] = useState<{ field: string; dir: SortDir }>({ field: "deliveryDate", dir: "desc" })
+  const [fleetSort,   setFleetSort]   = useState<{ field: string; dir: SortDir }>({ field: "plate",        dir: "asc"  })
   const [fleetFilter,   setFleetFilter]   = useState<"all" | "available" | "out">("all")
   const [activeFilter,  setActiveFilter]  = useState<"all" | "active" | "warning" | "overdue">("all")
   const [historyFilter, setHistoryFilter] = useState<"all" | "ongoing" | "done" | "overdue">("all")
@@ -520,8 +521,13 @@ export default function LoanerCarsPage() {
       (historyFilter === "overdue" && !l.isReturned && days > OVERDUE_DAYS)
     return matchSearch && matchStatus
   })
-  const historyTotalPages = Math.max(1, Math.ceil(filteredHistory.length / HISTORY_PAGE_SIZE))
-  const pagedHistory = filteredHistory.slice(
+  const sortedHistory = sortBy(
+    filteredHistory,
+    historySort.field === "plate" ? "loanerCar" : historySort.field,
+    historySort.dir
+  )
+  const historyTotalPages = Math.max(1, Math.ceil(sortedHistory.length / HISTORY_PAGE_SIZE))
+  const pagedHistory = sortedHistory.slice(
     (historyPage - 1) * HISTORY_PAGE_SIZE,
     historyPage * HISTORY_PAGE_SIZE
   )
@@ -707,14 +713,14 @@ export default function LoanerCarsPage() {
                     )}
                     onClick={() => { setDetailLoan(loan); setDetailModal(true) }}
                   >
-                    <TableCell className="font-mono text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
                     <TableCell className="text-sm text-slate-700">
                       {loan.loanerCar.brand} {loan.loanerCar.modelYear}
                       {loan.loanerCar.specs && <span className="text-sm text-slate-400"> · {loan.loanerCar.specs}</span>}
                     </TableCell>
-                    <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{loan.customerPlate}</TableCell>
                     <TableCell className="text-sm text-slate-700">{loan.advisorName}</TableCell>
-                    <TableCell className="font-mono text-sm text-slate-700">{loan.jobCardNo}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{loan.jobCardNo}</TableCell>
                     <TableCell className="text-sm text-slate-700">{fmtDate(loan.deliveryDate)}</TableCell>
                     <TableCell className={cn(
                       "text-sm tabular-nums",
@@ -781,15 +787,15 @@ export default function LoanerCarsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead className={cn(TH_BASE, "w-28")}>İkame Plaka</TableHead>
+                  <SortHead label="İkame Plaka"   field="plate"         sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
                   <TableHead className={TH_BASE}>Araç</TableHead>
-                  <TableHead className={cn(TH_BASE, "w-28")}>Müşteri Plaka</TableHead>
-                  <TableHead className={TH_BASE}>Danışman</TableHead>
-                  <TableHead className={TH_BASE}>İKK No</TableHead>
-                  <TableHead className={cn(TH_BASE, "w-28")}>Veriliş</TableHead>
-                  <TableHead className={cn(TH_BASE, "w-28")}>Dönüş</TableHead>
-                  <TableHead className={cn(TH_BASE, "w-16")}>Gün</TableHead>
-                  <TableHead className={TH_BASE}>Kullanıcı</TableHead>
+                  <SortHead label="Müşteri Plaka" field="customerPlate"  sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
+                  <SortHead label="Danışman"       field="advisorName"    sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} />
+                  <SortHead label="İKK No"         field="jobCardNo"      sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} />
+                  <SortHead label="Veriliş"        field="deliveryDate"   sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
+                  <SortHead label="Dönüş"          field="returnDate"     sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
+                  <SortHead label="Gün"            field="deliveryDate"   sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-16" />
+                  <SortHead label="Kullanıcı"      field="userName"       sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} />
                   <TableHead className={cn(TH_BASE, "w-28")}>Durum</TableHead>
                 </TableRow>
               </TableHeader>
@@ -804,14 +810,14 @@ export default function LoanerCarsPage() {
                     : daysSince(loan.deliveryDate)
                   return (
                     <TableRow key={loan.id} className={idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"}>
-                      <TableCell className="font-mono text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
+                      <TableCell className="text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
                       <TableCell className="text-sm text-slate-700">
                         {loan.loanerCar.brand} {loan.loanerCar.modelYear}
                         {loan.loanerCar.specs && <span className="text-sm text-slate-400"> · {loan.loanerCar.specs}</span>}
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
+                      <TableCell className="text-sm text-slate-700">{loan.customerPlate}</TableCell>
                       <TableCell className="text-sm text-slate-700">{loan.advisorName}</TableCell>
-                      <TableCell className="font-mono text-sm text-slate-700">{loan.jobCardNo}</TableCell>
+                      <TableCell className="text-sm text-slate-700">{loan.jobCardNo}</TableCell>
                       <TableCell className="text-sm text-slate-700">{fmtDate(loan.deliveryDate)}</TableCell>
                       <TableCell className="text-sm text-slate-700">{fmtDate(loan.returnDate)}</TableCell>
                       <TableCell className="text-sm tabular-nums text-slate-700">{days}</TableCell>
@@ -842,7 +848,7 @@ export default function LoanerCarsPage() {
           {historyTotalPages > 1 && (
             <div className="flex items-center justify-between px-1">
               <p className="text-xs text-slate-500">
-                Toplam <strong>{filteredHistory.length}</strong> kayıt — Sayfa {historyPage} / {historyTotalPages}
+                Toplam <strong>{sortedHistory.length}</strong> kayıt — Sayfa {historyPage} / {historyTotalPages}
               </p>
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="sm" className="h-7 px-2 text-xs"
@@ -915,17 +921,17 @@ export default function LoanerCarsPage() {
                 const isOut = car.loans.length > 0
                 return (
                   <TableRow key={car.id} className={idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"}>
-                    <TableCell className="font-mono text-sm text-slate-700">{car.plate}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{car.plate}</TableCell>
                     <TableCell className="text-sm text-slate-700">
                       {car.brand} {car.modelYear}
                       {car.specs && <span className="text-sm text-slate-400"> · {car.specs}</span>}
                     </TableCell>
                     <TableCell className="text-sm text-slate-700">{car.usagePurpose}</TableCell>
-                    <TableCell className="font-mono text-sm text-slate-700">{car.taxNo}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{car.taxNo}</TableCell>
                     <TableCell className="text-sm text-slate-700">{fmtDate(car.inspectionDate)}</TableCell>
                     <TableCell className="text-sm text-slate-700">{fmtDate(car.trafficInsDate)}</TableCell>
                     <TableCell className="text-sm text-slate-700">{fmtDate(car.kaskoDate)}</TableCell>
-                    <TableCell className="font-mono text-sm text-slate-700">{car.registrationNo}</TableCell>
+                    <TableCell className="text-sm text-slate-700">{car.registrationNo}</TableCell>
                     <TableCell>
                       {isOut ? (
                         <Badge className="text-[10px] whitespace-nowrap bg-amber-100 text-amber-700 border-amber-200">MÜŞTERİDE</Badge>
