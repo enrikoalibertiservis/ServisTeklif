@@ -737,8 +737,8 @@ export default function LoanerCarsPage() {
                 <SortHead label="İKK No"          field="jobCardNo"          sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
                 <SortHead label="Veriliş Tarihi"  field="deliveryDate"       sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
                 <SortHead label="Gün"             field="deliveryDate"       sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-16" />
-                <SortHead label="Kullanıcı"       field="userName"           sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
                 <SortHead label="Ruhsat Sahibi"   field="registrationOwner"  sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} />
+                <TableHead className={cn(TH_BASE, "w-20")}>Dep.</TableHead>
                 <TableHead className={cn(TH_BASE, "w-24")}>Durum</TableHead>
                 <TableHead className={cn(TH_BASE, "w-28")}>İşlem</TableHead>
               </TableRow>
@@ -777,8 +777,14 @@ export default function LoanerCarsPage() {
                       "text-sm tabular-nums",
                       isOverdue ? "text-red-600" : isWarning ? "text-amber-600" : "text-slate-700"
                     )}>{days}</TableCell>
-                    <TableCell className="text-sm text-slate-700">{loan.userName}</TableCell>
                     <TableCell className="text-sm text-slate-700">{loan.registrationOwner}</TableCell>
+                    <TableCell>
+                      {loan.loanerCar.usagePurpose === "ARJ İKAME" ? (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-blue-50 border-blue-200 text-blue-800">ARJ</span>
+                      ) : loan.loanerCar.usagePurpose === "FİAT İKAME" ? (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-red-50 border-red-200 text-red-700">Fiat</span>
+                      ) : <span className="text-xs text-slate-400">—</span>}
+                    </TableCell>
                     <TableCell>
                       {isOverdue ? (
                         <Badge className="text-[10px] whitespace-nowrap bg-red-100 text-red-700 border-red-200">GECİKMİŞ</Badge>
@@ -847,7 +853,7 @@ export default function LoanerCarsPage() {
                   <SortHead label="Veriliş"        field="deliveryDate"   sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
                   <SortHead label="Dönüş"          field="returnDate"     sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
                   <SortHead label="Gün"            field="deliveryDate"   sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-16" />
-                  <SortHead label="Kullanıcı"      field="userName"       sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} />
+                  <TableHead className={cn(TH_BASE, "w-20")}>Dep.</TableHead>
                   <TableHead className={cn(TH_BASE, "w-28")}>Durum</TableHead>
                 </TableRow>
               </TableHeader>
@@ -875,7 +881,13 @@ export default function LoanerCarsPage() {
                       <TableCell className="text-sm text-slate-700">{fmtDate(loan.deliveryDate)}</TableCell>
                       <TableCell className="text-sm text-slate-700">{fmtDate(loan.returnDate)}</TableCell>
                       <TableCell className="text-sm tabular-nums text-slate-700">{days}</TableCell>
-                      <TableCell className="text-sm text-slate-700">{loan.userName}</TableCell>
+                      <TableCell>
+                        {loan.loanerCar.usagePurpose === "ARJ İKAME" ? (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-blue-50 border-blue-200 text-blue-800">ARJ</span>
+                        ) : loan.loanerCar.usagePurpose === "FİAT İKAME" ? (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-red-50 border-red-200 text-red-700">Fiat</span>
+                        ) : <span className="text-xs text-slate-400">—</span>}
+                      </TableCell>
                       <TableCell>
                         {loan.isReturned ? (
                           <Badge className="text-[10px] whitespace-nowrap bg-emerald-100 text-emerald-700 border-emerald-200">
