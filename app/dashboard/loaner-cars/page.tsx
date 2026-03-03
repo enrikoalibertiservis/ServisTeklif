@@ -656,12 +656,12 @@ export default function LoanerCarsPage() {
 
       {/* Search */}
       <div className="relative max-w-xs">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
         <Input
-          placeholder="Ara..."
+          placeholder="Plaka, danışman, araç ara..."
           value={search}
           onChange={e => { setSearch(e.target.value); setHistoryPage(1) }}
-          className="pl-9 h-8 text-sm"
+          className="pl-9 h-9 text-sm bg-white border-slate-300 shadow-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-300 placeholder:text-slate-400"
         />
         {search && (
           <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
