@@ -424,11 +424,6 @@ export function QuickPriceWidget({ onActiveChange, className = "" }: QuickPriceW
                         <span className="block truncate font-medium text-slate-800">{item.name}</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-[11px] font-mono text-slate-400">{item.referenceCode}</span>
-                          {item.durationHours && (
-                            <span className="inline-flex items-center rounded bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0">
-                              {item.durationHours} saat
-                            </span>
-                          )}
                         </div>
                       </div>
                       <span className="font-semibold text-slate-900 tabular-nums pr-3 shrink-0">{fmt(item.totalPrice)}</span>
