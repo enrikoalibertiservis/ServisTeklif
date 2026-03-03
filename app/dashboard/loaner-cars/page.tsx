@@ -619,31 +619,41 @@ export default function LoanerCarsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200">
-        {[
-          { key: "active", label: "Aktif İkameler", count: activeLoans.length },
-          { key: "history", label: "Tüm Kayıtlar", count: loans.length },
-          { key: "fleet", label: "Araç Filosu", count: cars.length },
-        ].map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key as typeof tab)}
-            className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
-              tab === t.key
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            )}
-          >
-            {t.label}
-            <span className={cn(
-              "ml-1.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-full",
-              tab === t.key ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
-            )}>
-              {t.count}
-            </span>
-          </button>
-        ))}
+      <div className="flex gap-2 border-b border-slate-200 pb-0">
+        {([
+          { key: "active",  label: "Aktif İkameler", count: activeLoans.length, icon: <ArrowRightLeft className="h-4 w-4" />, color: "blue"  },
+          { key: "history", label: "Tüm Kayıtlar",   count: loans.length,       icon: <Clock          className="h-4 w-4" />, color: "violet"},
+          { key: "fleet",   label: "Araç Filosu",    count: cars.length,        icon: <Car            className="h-4 w-4" />, color: "emerald"},
+        ] as const).map(t => {
+          const active = tab === t.key
+          const colorMap = {
+            blue:    { btn: "border-blue-500 text-blue-700 bg-blue-50/60",    icon: "text-blue-500",    badge: "bg-blue-100 text-blue-700"    },
+            violet:  { btn: "border-violet-500 text-violet-700 bg-violet-50/60", icon: "text-violet-500", badge: "bg-violet-100 text-violet-700" },
+            emerald: { btn: "border-emerald-500 text-emerald-700 bg-emerald-50/60", icon: "text-emerald-500", badge: "bg-emerald-100 text-emerald-700" },
+          }
+          const c = colorMap[t.color]
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key as typeof tab)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px rounded-t-md transition-all",
+                active
+                  ? cn("border-b-2", c.btn)
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+              )}
+            >
+              <span className={cn("transition-colors", active ? c.icon : "text-slate-400")}>{t.icon}</span>
+              {t.label}
+              <span className={cn(
+                "text-[11px] font-semibold px-1.5 py-0.5 rounded-full transition-colors",
+                active ? c.badge : "bg-slate-100 text-slate-500"
+              )}>
+                {t.count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Search */}
