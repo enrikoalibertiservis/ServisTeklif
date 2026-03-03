@@ -604,14 +604,12 @@ export default function LoanerCarsPage() {
             {overdue.map(l => (
               <span
                 key={l.id}
-                className="inline-flex items-center gap-1.5 bg-red-100/70 border border-red-200 text-red-700 text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap"
+                className="inline-flex items-center gap-1 bg-red-100/70 border border-red-200 text-red-700 text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
               >
-                <Car className="h-3 w-3 shrink-0" />
+                <Car className="h-2.5 w-2.5 shrink-0" />
                 <span className="font-mono font-semibold">{l.loanerCar.plate}</span>
                 <span className="text-red-400">·</span>
-                <span className="font-mono">{l.customerPlate}</span>
-                <span className="text-red-400">·</span>
-                <span className="font-bold tabular-nums text-slate-800">{daysSince(l.deliveryDate)} gün</span>
+                <span className="font-bold tabular-nums">{daysSince(l.deliveryDate)} gün</span>
               </span>
             ))}
           </div>
