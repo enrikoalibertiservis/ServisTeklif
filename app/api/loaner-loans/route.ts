@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     where: active ? { isReturned: false } : undefined,
     include: {
       loanerCar: {
-        select: { plate: true, brand: true, specs: true, modelYear: true },
+        select: { plate: true, brand: true, specs: true, modelYear: true, usagePurpose: true },
       },
       createdByUser: { select: { name: true } },
     },
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       registrationOwner: registrationOwner.trim(),
     },
     include: {
-      loanerCar: { select: { plate: true, brand: true, specs: true } },
+      loanerCar: { select: { plate: true, brand: true, specs: true, usagePurpose: true } },
     },
   })
 
