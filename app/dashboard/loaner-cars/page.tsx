@@ -186,6 +186,7 @@ export default function LoanerCarsPage() {
   const [fleetFilter,   setFleetFilter]   = useState<"all" | "available" | "out">("all")
   const [activeFilter,  setActiveFilter]  = useState<"all" | "active" | "warning" | "overdue">("all")
   const [historyFilter, setHistoryFilter] = useState<"all" | "ongoing" | "done" | "overdue">("all")
+  const [brandGroup,    setBrandGroup]    = useState<"all" | "arj" | "fiat">("all")
 
   // Pagination — Tüm Kayıtlar
   const HISTORY_PAGE_SIZE = 20
@@ -487,6 +488,13 @@ export default function LoanerCarsPage() {
     else set({ field, dir: "asc" })
   }
 
+  const matchBrandGroup = (brand: string) => {
+    const b = brand.toUpperCase()
+    if (brandGroup === "arj")  return b.includes("ALFA") || b.includes("JEEP")
+    if (brandGroup === "fiat") return b.includes("FIAT")
+    return true
+  }
+
   const filteredActive = sortBy(
     activeLoans.filter(l => {
       const matchSearch = !search ||
@@ -500,7 +508,7 @@ export default function LoanerCarsPage() {
         (activeFilter === "overdue"  && days > OVERDUE_DAYS) ||
         (activeFilter === "warning"  && days >= 7 && days <= OVERDUE_DAYS) ||
         (activeFilter === "active"   && days < 7)
-      return matchSearch && matchStatus
+      return matchSearch && matchStatus && matchBrandGroup(l.loanerCar.brand)
     }),
     activeSort.field === "plate" ? "loanerCar" : activeSort.field,
     activeSort.dir
@@ -519,7 +527,7 @@ export default function LoanerCarsPage() {
       (historyFilter === "done"    && l.isReturned) ||
       (historyFilter === "ongoing" && !l.isReturned && days <= OVERDUE_DAYS) ||
       (historyFilter === "overdue" && !l.isReturned && days > OVERDUE_DAYS)
-    return matchSearch && matchStatus
+    return matchSearch && matchStatus && matchBrandGroup(l.loanerCar.brand)
   })
   const sortedHistory = sortBy(
     filteredHistory,
@@ -543,7 +551,7 @@ export default function LoanerCarsPage() {
         fleetFilter === "all" ||
         (fleetFilter === "available" && !isOut) ||
         (fleetFilter === "out" && isOut)
-      return matchSearch && matchStatus
+      return matchSearch && matchStatus && matchBrandGroup(c.brand)
     }),
     fleetSort.field,
     fleetSort.dir
@@ -662,20 +670,42 @@ export default function LoanerCarsPage() {
         })}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-xs">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-        <Input
-          placeholder="Plaka, danışman, araç ara..."
-          value={search}
-          onChange={e => { setSearch(e.target.value); setHistoryPage(1) }}
-          className="pl-9 h-9 text-sm bg-white border-slate-300 shadow-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-300 placeholder:text-slate-400"
-        />
-        {search && (
-          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
+      {/* Search + Brand Group Filter */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input
+            placeholder="Plaka, danışman, araç ara..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setHistoryPage(1) }}
+            className="pl-9 h-9 text-sm bg-white border-slate-300 shadow-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-300 placeholder:text-slate-400"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Marka grubu filtreleri */}
+        <div className="flex items-center gap-1.5">
+          {([
+            { key: "all",  label: "Tümü",        cls: "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200", active: "bg-slate-600 text-white border-slate-600" },
+            { key: "arj",  label: "ARJ İkame",   cls: "bg-blue-50/80 text-blue-800 border-blue-200 hover:bg-blue-100", active: "bg-blue-900/80 text-white border-blue-900" },
+            { key: "fiat", label: "Fiat İkame",  cls: "bg-red-50/80 text-red-700 border-red-200 hover:bg-red-100", active: "bg-red-700/80 text-white border-red-700" },
+          ] as const).map(btn => (
+            <button
+              key={btn.key}
+              onClick={() => { setBrandGroup(btn.key); setHistoryPage(1) }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-full border transition-all",
+                brandGroup === btn.key ? btn.active : btn.cls
+              )}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Tab: Aktif İkameler ────────────────────────────── */}
