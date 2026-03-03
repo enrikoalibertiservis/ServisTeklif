@@ -590,28 +590,36 @@ export default function LoanerCarsPage() {
 
       {/* Overdue alert */}
       {overdue.length > 0 && (
-        <div className="bg-red-50/60 border border-red-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
           <div className="flex items-center gap-2 shrink-0">
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-            <span className="text-sm font-semibold text-red-700">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-semibold text-slate-700">
               Araç Kiralama Talep Et!
             </span>
-            <span className="text-xs text-red-500 hidden sm:inline">
+            <span className="text-xs text-slate-400 hidden sm:inline">
               — {overdue.length} araç {OVERDUE_DAYS} günü aştı
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {overdue.map(l => (
-              <span
-                key={l.id}
-                className="inline-flex items-center gap-1 bg-red-100/70 border border-red-200 text-red-700 text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
-              >
-                <Car className="h-2.5 w-2.5 shrink-0" />
-                <span className="font-mono font-semibold">{l.loanerCar.plate}</span>
-                <span className="text-red-400">·</span>
-                <span className="font-bold tabular-nums">{daysSince(l.deliveryDate)} gün</span>
-              </span>
-            ))}
+            {overdue.map(l => {
+              const days = daysSince(l.deliveryDate)
+              const pill =
+                days >= 90 ? "bg-red-600 border-red-700 text-white"
+                : days >= 30 ? "bg-red-100 border-red-300 text-red-700"
+                : "bg-amber-100 border-amber-300 text-amber-800"
+              const dot = days >= 90 ? "text-red-300" : days >= 30 ? "text-red-400" : "text-amber-400"
+              return (
+                <span
+                  key={l.id}
+                  className={`inline-flex items-center gap-1 border text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${pill}`}
+                >
+                  <Car className="h-2.5 w-2.5 shrink-0" />
+                  <span className="font-mono font-semibold">{l.loanerCar.plate}</span>
+                  <span className={dot}>·</span>
+                  <span className="font-bold tabular-nums">{days} gün</span>
+                </span>
+              )
+            })}
           </div>
         </div>
       )}
