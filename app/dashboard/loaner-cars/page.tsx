@@ -604,10 +604,10 @@ export default function LoanerCarsPage() {
             {overdue.map(l => {
               const days = daysSince(l.deliveryDate)
               const pill =
-                days >= 90 ? "bg-red-600 border-red-700 text-white"
-                : days >= 30 ? "bg-red-100 border-red-300 text-red-700"
-                : "bg-amber-100 border-amber-300 text-amber-800"
-              const dot = days >= 90 ? "text-red-300" : days >= 30 ? "text-red-400" : "text-amber-400"
+                days >= 90 ? "bg-red-50 border-red-200 text-red-600"
+                : days >= 30 ? "bg-orange-50 border-orange-200 text-orange-600"
+                : "bg-amber-50 border-amber-200 text-amber-700"
+              const dot = days >= 90 ? "text-red-300" : days >= 30 ? "text-orange-300" : "text-amber-400"
               return (
                 <span
                   key={l.id}
