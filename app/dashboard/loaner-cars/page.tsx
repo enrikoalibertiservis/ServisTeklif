@@ -692,7 +692,7 @@ export default function LoanerCarsPage() {
                 <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
               ) : filteredActive.length === 0 ? (
                 <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Aktif ikame araç yok</TableCell></TableRow>
-              ) : filteredActive.map(loan => {
+              ) : filteredActive.map((loan, idx) => {
                 const days = daysSince(loan.deliveryDate)
                 const isOverdue = days > OVERDUE_DAYS
                 const isWarning = days >= 7 && days <= OVERDUE_DAYS
@@ -700,28 +700,26 @@ export default function LoanerCarsPage() {
                   <TableRow
                     key={loan.id}
                     className={cn(
-                      "cursor-pointer hover:bg-slate-50/80 transition-colors",
-                      isOverdue && "bg-red-50/60 hover:bg-red-50"
+                      "cursor-pointer transition-colors",
+                      isOverdue
+                        ? "bg-red-50/60 hover:bg-red-50"
+                        : idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"
                     )}
                     onClick={() => { setDetailLoan(loan); setDetailModal(true) }}
                   >
                     <TableCell className="font-mono text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
                     <TableCell className="text-sm text-slate-700">
                       {loan.loanerCar.brand} {loan.loanerCar.modelYear}
-                      {loan.loanerCar.specs && <span className="text-slate-400"> · {loan.loanerCar.specs}</span>}
+                      {loan.loanerCar.specs && <span className="text-sm text-slate-400"> · {loan.loanerCar.specs}</span>}
                     </TableCell>
                     <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
                     <TableCell className="text-sm text-slate-700">{loan.advisorName}</TableCell>
                     <TableCell className="font-mono text-sm text-slate-700">{loan.jobCardNo}</TableCell>
                     <TableCell className="text-sm text-slate-700">{fmtDate(loan.deliveryDate)}</TableCell>
-                    <TableCell>
-                      <span className={cn(
-                        "text-sm tabular-nums",
-                        isOverdue ? "text-red-600" : isWarning ? "text-amber-600" : "text-slate-700"
-                      )}>
-                        {days}
-                      </span>
-                    </TableCell>
+                    <TableCell className={cn(
+                      "text-sm tabular-nums",
+                      isOverdue ? "text-red-600" : isWarning ? "text-amber-600" : "text-slate-700"
+                    )}>{days}</TableCell>
                     <TableCell className="text-sm text-slate-700">{loan.userName}</TableCell>
                     <TableCell className="text-sm text-slate-700">{loan.registrationOwner}</TableCell>
                     <TableCell>
@@ -805,9 +803,12 @@ export default function LoanerCarsPage() {
                     ? Math.floor((new Date(loan.returnDate!).getTime() - new Date(loan.deliveryDate).getTime()) / (1000 * 60 * 60 * 24))
                     : daysSince(loan.deliveryDate)
                   return (
-                    <TableRow key={loan.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/70"}>
+                    <TableRow key={loan.id} className={idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"}>
                       <TableCell className="font-mono text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
-                      <TableCell className="text-sm text-slate-700">{loan.loanerCar.brand} {loan.loanerCar.modelYear}</TableCell>
+                      <TableCell className="text-sm text-slate-700">
+                        {loan.loanerCar.brand} {loan.loanerCar.modelYear}
+                        {loan.loanerCar.specs && <span className="text-sm text-slate-400"> · {loan.loanerCar.specs}</span>}
+                      </TableCell>
                       <TableCell className="font-mono text-sm text-slate-700">{loan.customerPlate}</TableCell>
                       <TableCell className="text-sm text-slate-700">{loan.advisorName}</TableCell>
                       <TableCell className="font-mono text-sm text-slate-700">{loan.jobCardNo}</TableCell>
@@ -910,14 +911,14 @@ export default function LoanerCarsPage() {
                 <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
               ) : filteredCars.length === 0 ? (
                 <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Araç bulunamadı</TableCell></TableRow>
-              ) : filteredCars.map(car => {
+              ) : filteredCars.map((car, idx) => {
                 const isOut = car.loans.length > 0
                 return (
-                  <TableRow key={car.id}>
+                  <TableRow key={car.id} className={idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"}>
                     <TableCell className="font-mono text-sm text-slate-700">{car.plate}</TableCell>
                     <TableCell className="text-sm text-slate-700">
                       {car.brand} {car.modelYear}
-                      {car.specs && <span className="text-slate-400"> · {car.specs}</span>}
+                      {car.specs && <span className="text-sm text-slate-400"> · {car.specs}</span>}
                     </TableCell>
                     <TableCell className="text-sm text-slate-700">{car.usagePurpose}</TableCell>
                     <TableCell className="font-mono text-sm text-slate-700">{car.taxNo}</TableCell>
