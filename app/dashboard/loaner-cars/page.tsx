@@ -688,6 +688,7 @@ export default function LoanerCarsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
+                <TableHead className={cn(TH_BASE, "w-10 text-center")}>#</TableHead>
                 <SortHead label="İkame Plaka"    field="plate"              sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
                 <TableHead className={TH_BASE}>Araç</TableHead>
                 <SortHead label="Müşteri Plaka"  field="customerPlate"      sort={activeSort} onSort={f => toggleSort(activeSort, setActiveSort, f)} className="w-28" />
@@ -703,9 +704,9 @@ export default function LoanerCarsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
               ) : filteredActive.length === 0 ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Aktif ikame araç yok</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center py-12 text-slate-400">Aktif ikame araç yok</TableCell></TableRow>
               ) : filteredActive.map((loan, idx) => {
                 const days = daysSince(loan.deliveryDate)
                 const isOverdue = days > OVERDUE_DAYS
@@ -721,6 +722,7 @@ export default function LoanerCarsPage() {
                     )}
                     onClick={() => { setDetailLoan(loan); setDetailModal(true) }}
                   >
+                    <TableCell className="text-center text-xs text-slate-400 tabular-nums">{idx + 1}</TableCell>
                     <TableCell className="text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
                     <TableCell className="text-sm text-slate-700">
                       {loan.loanerCar.brand} {loan.loanerCar.modelYear}
@@ -795,6 +797,7 @@ export default function LoanerCarsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
+                  <TableHead className={cn(TH_BASE, "w-10 text-center")}>#</TableHead>
                   <SortHead label="İkame Plaka"   field="plate"         sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
                   <TableHead className={TH_BASE}>Araç</TableHead>
                   <SortHead label="Müşteri Plaka" field="customerPlate"  sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
@@ -809,15 +812,17 @@ export default function LoanerCarsPage() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
                 ) : pagedHistory.length === 0 ? (
-                  <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Kayıt bulunamadı</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Kayıt bulunamadı</TableCell></TableRow>
                 ) : pagedHistory.map((loan, idx) => {
+                  const globalIdx = (historyPage - 1) * HISTORY_PAGE_SIZE + idx + 1
                   const days = loan.isReturned
                     ? Math.floor((new Date(loan.returnDate!).getTime() - new Date(loan.deliveryDate).getTime()) / (1000 * 60 * 60 * 24))
                     : daysSince(loan.deliveryDate)
                   return (
                     <TableRow key={loan.id} className={idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"}>
+                      <TableCell className="text-center text-xs text-slate-400 tabular-nums">{globalIdx}</TableCell>
                       <TableCell className="text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
                       <TableCell className="text-sm text-slate-700">
                         {loan.loanerCar.brand} {loan.loanerCar.modelYear}
@@ -908,6 +913,7 @@ export default function LoanerCarsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
+                <TableHead className={cn(TH_BASE, "w-10 text-center")}>#</TableHead>
                 <SortHead label="Plaka"        field="plate"          sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
                 <SortHead label="Marka / Araç" field="brand"          sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} />
                 <TableHead className={TH_BASE}>Kullanım Amacı</TableHead>
@@ -922,13 +928,14 @@ export default function LoanerCarsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
               ) : filteredCars.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Araç bulunamadı</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Araç bulunamadı</TableCell></TableRow>
               ) : filteredCars.map((car, idx) => {
                 const isOut = car.loans.length > 0
                 return (
                   <TableRow key={car.id} className={idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"}>
+                    <TableCell className="text-center text-xs text-slate-400 tabular-nums">{idx + 1}</TableCell>
                     <TableCell className="text-sm text-slate-700">{car.plate}</TableCell>
                     <TableCell className="text-sm text-slate-700">
                       {car.brand} {car.modelYear}
