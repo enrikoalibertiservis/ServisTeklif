@@ -69,13 +69,15 @@ export async function GET(req: NextRequest) {
     return total
   }
 
-  // Benzersiz periyotları çıkar — sadece ay bilgisi OLMAYAN (saf km) periyotlar
+  // Benzersiz periyotları çıkar — km bilgisi olan tüm periyotlar dahil edilir.
+  // Sadece km=null olan saf ay bazlı periyotlar gizlenir.
+  // Aynı km değeri, farklı ay kombinasyonlarıyla geliyorsa tek kolon olarak birleştirilir.
   const periodSet = new Map<string, { km: number | null; month: number | null; label: string }>()
   for (const t of templates) {
-    if (t.periodMonth) continue  // ay bilgisi olan periyotları gizle
-    const key = `${t.periodKm ?? ""}_`
+    if (!t.periodKm) continue  // km bilgisi olmayan (saf ay bazlı) periyotları gizle
+    const key = `${t.periodKm}_`
     if (!periodSet.has(key)) {
-      const label = t.periodKm ? `${t.periodKm.toLocaleString("tr-TR")} km` : "—"
+      const label = `${(t.periodKm / 1000).toLocaleString("tr-TR")}K km`
       periodSet.set(key, { km: t.periodKm, month: null, label })
     }
   }
@@ -90,11 +92,11 @@ export async function GET(req: NextRequest) {
   }>()
 
   for (const t of templates) {
-    if (t.periodMonth) continue  // ay bilgisi olan şablonları dahil etme
+    if (!t.periodKm) continue  // km bilgisi olmayan şablonları dahil etme
     const smId   = t.subModelId ?? t.modelId ?? "unknown"
     const smName = t.subModel?.name ?? t.model?.name ?? "—"
     const mName  = t.model?.name ?? "—"
-    const pKey   = `${t.periodKm ?? ""}_`
+    const pKey   = `${t.periodKm}_`
     const grand  = calcTotal(t)
 
     if (!rowMap.has(smId)) {
