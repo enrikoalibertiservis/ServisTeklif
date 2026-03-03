@@ -114,7 +114,7 @@ function normName(n: string) {
 // ─── Empty forms ─────────────────────────────────────────────
 
 const emptyCarForm = {
-  plate: "", usagePurpose: "YEDEK ARAÇ/İKAME", taxNo: "",
+  plate: "", usagePurpose: "ARJ İKAME", taxNo: "",
   registrationDate: "", inspectionDate: "", trafficInsDate: "", kaskoDate: "",
   brand: "", modelYear: new Date().getFullYear().toString(), specs: "",
   registrationNo: "", engineNo: "", chassisNo: "",
@@ -957,6 +957,7 @@ export default function LoanerCarsPage() {
                 <TableHead className={cn(TH_BASE, "w-10 text-center")}>#</TableHead>
                 <SortHead label="Plaka"        field="plate"          sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
                 <SortHead label="Marka / Araç" field="brand"          sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} />
+                <TableHead className={TH_BASE}>Departman</TableHead>
                 <TableHead className={TH_BASE}>Vergi No</TableHead>
                 <SortHead label="Vize"         field="inspectionDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
                 <SortHead label="Trafik"       field="trafficInsDate" sort={fleetSort} onSort={f => toggleSort(fleetSort, setFleetSort, f)} className="w-28" />
@@ -968,9 +969,9 @@ export default function LoanerCarsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
               ) : filteredCars.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-12 text-slate-400">Araç bulunamadı</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Araç bulunamadı</TableCell></TableRow>
               ) : filteredCars.map((car, idx) => {
                 const isOut = car.loans.length > 0
                 return (
@@ -980,6 +981,15 @@ export default function LoanerCarsPage() {
                     <TableCell className="text-sm text-slate-700">
                       {car.brand} {car.modelYear}
                       {car.specs && <span className="text-sm text-slate-400"> · {car.specs}</span>}
+                    </TableCell>
+                    <TableCell>
+                      {car.usagePurpose === "ARJ İKAME" ? (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded border bg-blue-50 border-blue-200 text-blue-800">ARJ</span>
+                      ) : car.usagePurpose === "FİAT İKAME" ? (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded border bg-red-50 border-red-200 text-red-700">Fiat</span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-slate-700">{car.taxNo}</TableCell>
                     <TableCell className="text-sm text-slate-700">{fmtDate(car.inspectionDate)}</TableCell>
@@ -1033,9 +1043,9 @@ export default function LoanerCarsPage() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3 py-2">
             <Field label="Plaka *" value={carForm.plate} onChange={v => setCarForm(f => ({ ...f, plate: v }))} upper />
-            {/* Kullanım Amacı — ikame grubu seçimi */}
+            {/* Departman seçimi */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-600">Kullanım Amacı / Grup *</label>
+              <label className="text-xs font-medium text-slate-600">Departman *</label>
               <Select value={carForm.usagePurpose} onValueChange={v => setCarForm(f => ({ ...f, usagePurpose: v }))}>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
@@ -1044,19 +1054,13 @@ export default function LoanerCarsPage() {
                   <SelectItem value="ARJ İKAME">
                     <span className="flex items-center gap-2">
                       <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-900/70" />
-                      ARJ İkame (Alfa Romeo / Jeep)
+                      ARJ İkame
                     </span>
                   </SelectItem>
                   <SelectItem value="FİAT İKAME">
                     <span className="flex items-center gap-2">
                       <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600/70" />
                       Fiat İkame
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="YEDEK ARAÇ/İKAME">
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-400" />
-                      Yedek Araç / İkame (Genel)
                     </span>
                   </SelectItem>
                 </SelectContent>
