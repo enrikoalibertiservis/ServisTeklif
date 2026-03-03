@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -75,7 +76,7 @@ interface LoanRecord {
   returnKm: number | null
   returnedAt: string | null
   isReturned: boolean
-  loanerCar: { plate: string; brand: string; specs: string | null; modelYear: number }
+  loanerCar: { plate: string; brand: string; specs: string | null; modelYear: number; usagePurpose: string }
   createdByUser: { name: string }
 }
 
@@ -488,10 +489,12 @@ export default function LoanerCarsPage() {
     else set({ field, dir: "asc" })
   }
 
-  const matchBrandGroup = (brand: string) => {
+  const matchBrandGroup = (brand: string, usagePurpose?: string) => {
+    if (brandGroup === "all") return true
     const b = brand.toUpperCase()
-    if (brandGroup === "arj")  return b.includes("ALFA") || b.includes("JEEP")
-    if (brandGroup === "fiat") return b.includes("FIAT")
+    const u = (usagePurpose ?? "").toUpperCase()
+    if (brandGroup === "arj")  return u === "ARJ İKAME" || b.includes("ALFA") || b.includes("JEEP")
+    if (brandGroup === "fiat") return u === "FİAT İKAME" || b.includes("FIAT")
     return true
   }
 
@@ -508,7 +511,7 @@ export default function LoanerCarsPage() {
         (activeFilter === "overdue"  && days > OVERDUE_DAYS) ||
         (activeFilter === "warning"  && days >= 7 && days <= OVERDUE_DAYS) ||
         (activeFilter === "active"   && days < 7)
-      return matchSearch && matchStatus && matchBrandGroup(l.loanerCar.brand)
+      return matchSearch && matchStatus && matchBrandGroup(l.loanerCar.brand, l.loanerCar.usagePurpose)
     }),
     activeSort.field === "plate" ? "loanerCar" : activeSort.field,
     activeSort.dir
@@ -527,7 +530,7 @@ export default function LoanerCarsPage() {
       (historyFilter === "done"    && l.isReturned) ||
       (historyFilter === "ongoing" && !l.isReturned && days <= OVERDUE_DAYS) ||
       (historyFilter === "overdue" && !l.isReturned && days > OVERDUE_DAYS)
-    return matchSearch && matchStatus && matchBrandGroup(l.loanerCar.brand)
+    return matchSearch && matchStatus && matchBrandGroup(l.loanerCar.brand, l.loanerCar.usagePurpose)
   })
   const sortedHistory = sortBy(
     filteredHistory,
@@ -551,7 +554,7 @@ export default function LoanerCarsPage() {
         fleetFilter === "all" ||
         (fleetFilter === "available" && !isOut) ||
         (fleetFilter === "out" && isOut)
-      return matchSearch && matchStatus && matchBrandGroup(c.brand)
+      return matchSearch && matchStatus && matchBrandGroup(c.brand, c.usagePurpose)
     }),
     fleetSort.field,
     fleetSort.dir
@@ -1032,7 +1035,35 @@ export default function LoanerCarsPage() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3 py-2">
             <Field label="Plaka *" value={carForm.plate} onChange={v => setCarForm(f => ({ ...f, plate: v }))} upper />
-            <Field label="Kullanım Amacı *" value={carForm.usagePurpose} onChange={v => setCarForm(f => ({ ...f, usagePurpose: v }))} />
+            {/* Kullanım Amacı — ikame grubu seçimi */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Kullanım Amacı / Grup *</label>
+              <Select value={carForm.usagePurpose} onValueChange={v => setCarForm(f => ({ ...f, usagePurpose: v }))}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ARJ İKAME">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-900/70" />
+                      ARJ İkame (Alfa Romeo / Jeep)
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="FİAT İKAME">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600/70" />
+                      Fiat İkame
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="YEDEK ARAÇ/İKAME">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-400" />
+                      Yedek Araç / İkame (Genel)
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Field label="Vergi No *" value={carForm.taxNo} onChange={v => setCarForm(f => ({ ...f, taxNo: v }))} />
             <Field label="Tescil Tarihi *" type="date" value={carForm.registrationDate} onChange={v => setCarForm(f => ({ ...f, registrationDate: v }))} />
             <Field label="Muayene/Vize Tarihi *" type="date" value={carForm.inspectionDate} onChange={v => setCarForm(f => ({ ...f, inspectionDate: v }))} />
