@@ -17,10 +17,22 @@ export default async function DashboardPage() {
     prisma.brand.count(),
   ])
 
-  const recentQuotes = await prisma.quote.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 5,
-    include: { createdBy: { select: { name: true } } },
+  // Müsait ikame araçları (aktif & şu an kullanımda olmayan)
+  const availableLoanerCars = await prisma.loanerCar.findMany({
+    where: {
+      isActive: true,
+      loans: { none: { isReturned: false } },
+    },
+    select: {
+      id: true,
+      plate: true,
+      brand: true,
+      modelYear: true,
+      specs: true,
+      inspectionDate: true,
+      kaskoDate: true,
+    },
+    orderBy: { plate: "asc" },
   })
 
   // Danışman bazlı teklif sayıları — herkes görebilir
@@ -197,8 +209,8 @@ export default async function DashboardPage() {
         isAdmin={isAdmin}
       />
 
-      {/* ── Hızlı Fiyat Sorgulama + Son Teklifler ───────────────────── */}
-      <DashboardBottom recentQuotes={recentQuotes} isAdmin={isAdmin} />
+      {/* ── Hızlı Fiyat Sorgulama + Müsait İkame Araçları ───────────────────── */}
+      <DashboardBottom availableLoanerCars={availableLoanerCars} isAdmin={isAdmin} />
 
     </div>
   )
