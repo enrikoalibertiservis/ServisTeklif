@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { supabaseAdmin, LOANER_DOCS_BUCKET } from "@/lib/supabase"
+import { getSupabaseAdmin, LOANER_DOCS_BUCKET } from "@/lib/supabase"
 
 export const runtime = "nodejs"
 
@@ -61,13 +61,25 @@ export async function POST(req: NextRequest) {
     const loan = await prisma.loanerCarLoan.findUnique({ where: { id: loanId } })
     if (!loan) return NextResponse.json({ error: "Kayıt bulunamadı." }, { status: 404 })
 
+    // Supabase client — env var hatası burada yakalanır
+    let sb: ReturnType<typeof getSupabaseAdmin>
+    try {
+      sb = getSupabaseAdmin()
+    } catch (envErr) {
+      console.error("Supabase init error:", envErr)
+      return NextResponse.json(
+        { error: "Sunucu yapılandırma hatası: " + (envErr instanceof Error ? envErr.message : String(envErr)) },
+        { status: 500 }
+      )
+    }
+
     // Eski dosyayı sil (varsa)
     const oldUrl = fileType === "contract" ? loan.contractFileUrl : loan.licenseFileUrl
     if (oldUrl) {
       const parts = oldUrl.split(`/object/public/${LOANER_DOCS_BUCKET}/`)
       const oldPath = parts[1]
       if (oldPath) {
-        await supabaseAdmin.storage.from(LOANER_DOCS_BUCKET).remove([decodeURIComponent(oldPath)])
+        await sb.storage.from(LOANER_DOCS_BUCKET).remove([decodeURIComponent(oldPath)])
       }
     }
 
@@ -78,7 +90,9 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer      = Buffer.from(arrayBuffer)
 
-    const { error: uploadError } = await supabaseAdmin.storage
+    console.log(`Upload attempt: bucket=${LOANER_DOCS_BUCKET} path=${storagePath} size=${buffer.length} type=${file.type}`)
+
+    const { error: uploadError } = await sb.storage
       .from(LOANER_DOCS_BUCKET)
       .upload(storagePath, buffer, {
         contentType: file.type,
@@ -86,15 +100,15 @@ export async function POST(req: NextRequest) {
       })
 
     if (uploadError) {
-      console.error("Supabase upload error:", uploadError)
+      console.error("Supabase upload error:", JSON.stringify(uploadError))
       return NextResponse.json(
-        { error: "Depolama hatası: " + uploadError.message },
+        { error: `Depolama hatası [${uploadError.message}] — Bucket: ${LOANER_DOCS_BUCKET}` },
         { status: 500 }
       )
     }
 
     // Public URL al
-    const { data: { publicUrl } } = supabaseAdmin.storage
+    const { data: { publicUrl } } = sb.storage
       .from(LOANER_DOCS_BUCKET)
       .getPublicUrl(storagePath)
 
@@ -132,11 +146,14 @@ export async function DELETE(req: NextRequest) {
 
     const oldUrl = fileType === "contract" ? loan.contractFileUrl : loan.licenseFileUrl
     if (oldUrl) {
-      const parts = oldUrl.split(`/object/public/${LOANER_DOCS_BUCKET}/`)
-      const oldPath = parts[1]
-      if (oldPath) {
-        await supabaseAdmin.storage.from(LOANER_DOCS_BUCKET).remove([decodeURIComponent(oldPath)])
-      }
+      try {
+        const sb = getSupabaseAdmin()
+        const parts = oldUrl.split(`/object/public/${LOANER_DOCS_BUCKET}/`)
+        const oldPath = parts[1]
+        if (oldPath) {
+          await sb.storage.from(LOANER_DOCS_BUCKET).remove([decodeURIComponent(oldPath)])
+        }
+      } catch { /* silme hatası kritik değil */ }
     }
 
     const updateData = fileType === "contract"
