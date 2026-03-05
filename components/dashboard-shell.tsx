@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { usePathname } from "next/navigation"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Clock } from "lucide-react"
+import { signOut } from "next-auth/react"
 import { Sidebar } from "@/components/sidebar"
+import { useIdleLogout } from "@/hooks/use-idle-logout"
 
 interface DashboardShellProps {
   user: { name: string; email: string; role: string }
@@ -11,16 +13,75 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ user, children }: DashboardShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen,    setSidebarOpen]    = useState(false)
+  const [idleWarning,    setIdleWarning]    = useState(false)
+  const [countdown,      setCountdown]      = useState(300) // 5 dk = 300 sn
   const pathname = usePathname()
+
+  const handleWarn      = useCallback(() => { setIdleWarning(true); setCountdown(300) }, [])
+  const handleClearWarn = useCallback(() => setIdleWarning(false), [])
+
+  const { reset } = useIdleLogout(handleWarn, handleClearWarn)
+
+  // Uyarı gösterilirken geri sayım
+  useEffect(() => {
+    if (!idleWarning) return
+    if (countdown <= 0) { signOut({ callbackUrl: "/login" }); return }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [idleWarning, countdown])
+
+  function handleContinue() {
+    setIdleWarning(false)
+    reset()
+  }
 
   // Sayfa değişince mobilede otomatik kapat
   useEffect(() => {
     setSidebarOpen(false)
   }, [pathname])
 
+  const mins = Math.floor(countdown / 60)
+  const secs = countdown % 60
+
   return (
     <div className="flex h-screen overflow-hidden">
+
+      {/* ── Hareketsizlik uyarı modalı ──────────────────────── */}
+      {idleWarning && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 flex flex-col items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+              <Clock className="h-7 w-7 text-amber-600" />
+            </div>
+            <div className="text-center">
+              <p className="text-base font-semibold text-slate-800">Oturum kapanmak üzere</p>
+              <p className="text-sm text-slate-500 mt-1">
+                Hareketsizlik nedeniyle{" "}
+                <span className="font-semibold text-red-600 tabular-nums">
+                  {mins}:{String(secs).padStart(2, "0")}
+                </span>{" "}
+                içinde çıkış yapılacak.
+              </p>
+            </div>
+            <div className="flex gap-2 w-full">
+              <button
+                onClick={handleContinue}
+                className="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold py-2.5 transition-colors"
+              >
+                Devam Et
+              </button>
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="flex-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-medium py-2.5 transition-colors"
+              >
+                Çıkış Yap
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobil overlay backdrop */}
       {sidebarOpen && (
         <div
