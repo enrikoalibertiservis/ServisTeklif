@@ -2,14 +2,39 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
+// SSRF: bu aralıklara istek yapılmasına izin yok
+const PRIVATE_IP_RE = /^(localhost|127\.|0\.0\.0\.0|::1|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.)/i
+
+function isSafeOllamaUrl(raw: string): boolean {
+  try {
+    const parsed = new URL(raw)
+    if (!["http:", "https:"].includes(parsed.protocol)) return false
+    if (PRIVATE_IP_RE.test(parsed.hostname)) {
+      // Sadece localhost varsayılan değere izin ver (kullanıcı açıkça girmedi)
+      return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1"
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 401 })
   }
 
-  const url = req.nextUrl.searchParams.get("url") || "http://localhost:11434"
-  const base = url.replace(/\/$/, "")
+  const rawUrl = req.nextUrl.searchParams.get("url") || "http://localhost:11434"
+
+  if (!isSafeOllamaUrl(rawUrl)) {
+    return NextResponse.json(
+      { error: "Geçersiz veya izin verilmeyen Ollama URL'si." },
+      { status: 400 }
+    )
+  }
+
+  const base = rawUrl.replace(/\/$/, "")
 
   try {
     const res = await fetch(`${base}/api/tags`, {

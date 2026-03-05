@@ -5,6 +5,26 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { generateQuoteNo, toUpperTR } from "@/lib/utils"
 
+// ── Sahiplik / erişim yardımcısı ─────────────────────────────
+async function assertQuoteAccess(quoteId: string) {
+  const session = await getServerSession(authOptions)
+  if (!session) throw new Error("Yetkisiz erişim")
+
+  const quote = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    select: { id: true, createdById: true },
+  })
+  if (!quote) throw new Error("Teklif bulunamadı")
+
+  const isAdmin  = (session.user as any).role === "ADMIN"
+  const isOwner  = quote.createdById === (session.user as any).id
+
+  if (!isAdmin && !isOwner) throw new Error("Bu teklife erişim yetkiniz yok")
+
+  return session
+}
+// ─────────────────────────────────────────────────────────────
+
 interface CreateQuoteInput {
   brandId: string
   modelId: string
@@ -138,6 +158,7 @@ export async function createQuoteFromTemplate(input: CreateQuoteInput) {
 }
 
 export async function getQuote(id: string) {
+  await assertQuoteAccess(id)
   return prisma.quote.findUnique({
     where: { id },
     include: {
@@ -168,6 +189,7 @@ export async function addQuoteItem(
     hourlyRate?: number
   }
 ) {
+  await assertQuoteAccess(quoteId)
   const maxSort = await prisma.quoteItem.findFirst({
     where: { quoteId },
     orderBy: { sortOrder: "desc" },
@@ -193,6 +215,7 @@ export async function addQuoteItem(
 }
 
 export async function removeQuoteItem(itemId: string, quoteId: string) {
+  await assertQuoteAccess(quoteId)
   await prisma.quoteItem.delete({ where: { id: itemId } })
   await recalculateQuote(quoteId)
 }
@@ -202,6 +225,7 @@ export async function updateQuoteItem(
   quoteId: string,
   data: { quantity?: number; unitPrice?: number; discountPct?: number; durationHours?: number }
 ) {
+  await assertQuoteAccess(quoteId)
   const item = await prisma.quoteItem.findUnique({ where: { id: itemId } })
   if (!item) return
 
@@ -231,6 +255,7 @@ export async function updateQuoteDiscount(
   discountType: string | null,
   discountValue: number
 ) {
+  await assertQuoteAccess(quoteId)
   const quote = await prisma.quote.findUnique({ where: { id: quoteId } })
   if (!quote) return
 
@@ -255,10 +280,12 @@ export async function updateQuoteCustomer(
   quoteId: string,
   data: { customerName?: string; customerPhone?: string; customerEmail?: string; plateNo?: string; notes?: string }
 ) {
+  await assertQuoteAccess(quoteId)
   await prisma.quote.update({ where: { id: quoteId }, data })
 }
 
 export async function finalizeQuote(quoteId: string) {
+  await assertQuoteAccess(quoteId)
   await prisma.quote.update({
     where: { id: quoteId },
     data: { status: "FINALIZED" },
@@ -272,8 +299,7 @@ export async function applyCrmDiscount(quoteId: string) {
 
 /** Özel indirim: verilen yüzdelerle tüm satırlara indirim uygular */
 export async function applyCustomDiscount(quoteId: string, partsPct: number, laborPct: number) {
-  const session = await getServerSession(authOptions)
-  if (!session) throw new Error("Yetkisiz erişim")
+  await assertQuoteAccess(quoteId)
 
   const items = await prisma.quoteItem.findMany({ where: { quoteId } })
 

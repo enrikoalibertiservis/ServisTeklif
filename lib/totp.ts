@@ -2,7 +2,7 @@
  * TOTP (RFC 6238) implementation using only Node.js built-in crypto.
  * No external ESM-only dependencies.
  */
-import { createHmac, randomBytes } from "crypto"
+import { createHmac, randomBytes, timingSafeEqual } from "crypto"
 
 const BASE32_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 
@@ -63,12 +63,16 @@ export function keyuri(email: string, service: string, secret: string): string {
   return `otpauth://totp/${encodeURIComponent(service)}:${encodeURIComponent(email)}?secret=${secret}&issuer=${encodeURIComponent(service)}`
 }
 
-/** TOTP token doğrula (±1 zaman penceresi = ±30 saniye tolerans) */
+/** TOTP token doğrula (±1 zaman penceresi = ±30 saniye tolerans)
+ *  timingSafeEqual kullanılarak timing saldırılarına karşı korunur. */
 export function verifyTotp(token: string, secret: string): boolean {
+  if (!token || token.length !== 6) return false
   const key = base32Decode(secret)
   const counter = Math.floor(Date.now() / 1000 / 30)
+  const tokenBuf = Buffer.from(token.padStart(6, "0"))
   for (let delta = -1; delta <= 1; delta++) {
-    if (hotp(key, counter + delta) === token) return true
+    const expected = Buffer.from(hotp(key, counter + delta))
+    if (timingSafeEqual(expected, tokenBuf)) return true
   }
   return false
 }

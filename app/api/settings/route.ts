@@ -3,8 +3,23 @@ import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
+// Hassas ayar anahtarları — sadece ADMIN görebilir
+const SENSITIVE_KEYS = ["aiApiKey", "aiApiUrl", "aiProvider", "aiModel"]
+
 export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 })
+  }
+
   const settings = await prisma.appSetting.findMany()
+
+  // ADMIN değilse hassas anahtarları gizle
+  if (session.user.role !== "ADMIN") {
+    const filtered = settings.filter(s => !SENSITIVE_KEYS.includes(s.key))
+    return NextResponse.json(filtered)
+  }
+
   return NextResponse.json(settings)
 }
 

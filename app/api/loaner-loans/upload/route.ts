@@ -16,10 +16,19 @@ function canOperate(name: string) {
 }
 
 const MAX_FILE_SIZE = 500 * 1024 // 500 KB
-const ALLOWED_TYPES = [
-  "image/jpeg", "image/png", "image/webp", "image/heic",
-  "application/pdf",
-]
+
+// MIME → uzantı eşlemesi: uzantı asla client'tan gelmez
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg":       "jpg",
+  "image/png":        "png",
+  "image/webp":       "webp",
+  "image/heic":       "heic",
+  "application/pdf":  "pdf",
+}
+const ALLOWED_TYPES = Object.keys(MIME_TO_EXT)
+
+// fileType parametresi için izin verilen değerler
+const ALLOWED_FILE_TYPES = new Set(["contract", "license"])
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +50,11 @@ export async function POST(req: NextRequest) {
 
     if (!file || !loanId || !fileType) {
       return NextResponse.json({ error: "Eksik parametreler." }, { status: 400 })
+    }
+
+    // fileType runtime doğrulaması (TypeScript tip güvencesi yeterli değil)
+    if (!ALLOWED_FILE_TYPES.has(fileType)) {
+      return NextResponse.json({ error: "Geçersiz dosya türü parametresi." }, { status: 400 })
     }
 
     if (file.size > MAX_FILE_SIZE) {
@@ -84,7 +98,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Yeni dosyayı yükle — ArrayBuffer → Buffer (Node.js uyumluluğu)
-    const ext         = (file.name.split(".").pop() ?? "bin").toLowerCase()
+    // Uzantı asla client'tan gelmez; MIME eşlemesinden türetilir
+    const ext         = MIME_TO_EXT[file.type] ?? "bin"
     const timestamp   = Date.now()
     const storagePath = `${loanId}/${fileType}-${timestamp}.${ext}`
     const arrayBuffer = await file.arrayBuffer()
