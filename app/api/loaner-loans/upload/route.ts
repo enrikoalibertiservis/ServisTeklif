@@ -132,7 +132,19 @@ export async function POST(req: NextRequest) {
 
     console.log(`Cloudinary upload: ${publicId} (${(buffer.length / 1024).toFixed(0)} KB, ${file.type})`)
 
-    const publicUrl = await uploadToCloudinary(buffer, file.type, publicId)
+    let publicUrl: string
+    try {
+      publicUrl = await uploadToCloudinary(buffer, file.type, publicId)
+    } catch (uploadErr: unknown) {
+      const detail = uploadErr instanceof Error
+        ? uploadErr.message
+        : JSON.stringify(uploadErr)
+      console.error("Cloudinary upload error detail:", detail)
+      return NextResponse.json(
+        { error: `Cloudinary yükleme hatası: ${detail}` },
+        { status: 500 }
+      )
+    }
 
     // Supabase DB'ye sadece link yaz
     const updateData = fileType === "contract"
