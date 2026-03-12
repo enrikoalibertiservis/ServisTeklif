@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { google } from "googleapis"
-import { Readable } from "stream"
+import { v2 as cloudinary } from "cloudinary"
 
 export const runtime = "nodejs"
 
@@ -17,7 +16,7 @@ function canOperate(name: string) {
 }
 
 // ── Dosya kısıtlamaları ───────────────────────────────────────
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB (Drive'da alan bol)
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg":      "jpg",
@@ -26,78 +25,64 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/heic":      "heic",
   "application/pdf": "pdf",
 }
-const ALLOWED_TYPES    = Object.keys(MIME_TO_EXT)
+const ALLOWED_TYPES      = Object.keys(MIME_TO_EXT)
 const ALLOWED_FILE_TYPES = new Set(["contract", "license"])
 
-// ── Google Drive yardımcıları ─────────────────────────────────
-function getDriveClient() {
-  const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID
-  if (!json)     throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON tanımlı değil")
-  if (!folderId) throw new Error("GOOGLE_DRIVE_FOLDER_ID tanımlı değil")
+// ── Cloudinary yapılandırması ─────────────────────────────────
+function getCloudinary() {
+  const cloud  = process.env.CLOUDINARY_CLOUD_NAME
+  const key    = process.env.CLOUDINARY_API_KEY
+  const secret = process.env.CLOUDINARY_API_SECRET
+  if (!cloud || !key || !secret)
+    throw new Error("Cloudinary env değişkenleri eksik (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)")
 
-  const auth = new google.auth.GoogleAuth({
-    credentials: JSON.parse(json),
-    scopes: ["https://www.googleapis.com/auth/drive.file"],
-  })
-  return { drive: google.drive({ version: "v3", auth }), folderId }
+  cloudinary.config({ cloud_name: cloud, api_key: key, api_secret: secret })
+  return cloudinary
 }
 
-/** Drive URL'sinden dosya ID'sini çıkar
- *  Desteklenen formatlar:
- *  https://drive.google.com/file/d/{ID}/view
- *  https://drive.google.com/open?id={ID}
- */
-function extractDriveFileId(url: string): string | null {
-  const m1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/)
-  if (m1) return m1[1]
-  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/)
-  if (m2) return m2[1]
-  return null
-}
-
-async function uploadToDrive(
+/** Buffer'ı Cloudinary'ye yükle, public URL döndür */
+async function uploadToCloudinary(
   buffer: Buffer,
   mimeType: string,
-  fileName: string,
-  folderId: string,
-  drive: ReturnType<typeof google.drive>
+  publicId: string,
 ): Promise<string> {
-  // Yükle
-  const res = await drive.files.create({
-    requestBody: {
-      name: fileName,
-      parents: [folderId],
-    },
-    media: {
-      mimeType,
-      body: Readable.from(buffer),
-    },
-    fields: "id,webViewLink",
+  const cl = getCloudinary()
+
+  // PDF ve resim için farklı resource_type
+  const resourceType = mimeType === "application/pdf" ? "raw" : "image"
+
+  return new Promise((resolve, reject) => {
+    cl.uploader.upload_stream(
+      {
+        public_id:     publicId,
+        folder:        "ikame-belgeler",
+        resource_type: resourceType,
+        overwrite:     true,
+      },
+      (err, result) => {
+        if (err || !result) return reject(err ?? new Error("Cloudinary sonuç dönmedi"))
+        resolve(result.secure_url)
+      }
+    ).end(buffer)
   })
-
-  const fileId = res.data.id
-  if (!fileId) throw new Error("Drive'dan dosya ID alınamadı")
-
-  // Herkese okuma izni ver (link ile erişim)
-  await drive.permissions.create({
-    fileId,
-    requestBody: { role: "reader", type: "anyone" },
-  })
-
-  return res.data.webViewLink ?? `https://drive.google.com/file/d/${fileId}/view`
 }
 
-async function deleteFromDrive(
-  fileUrl: string,
-  drive: ReturnType<typeof google.drive>
-) {
-  const fileId = extractDriveFileId(fileUrl)
-  if (!fileId) return
+/** Cloudinary'den public_id ile dosyayı sil */
+async function deleteFromCloudinary(fileUrl: string) {
   try {
-    await drive.files.delete({ fileId })
+    const cl = getCloudinary()
+    // secure_url → public_id çıkar
+    // Format: https://res.cloudinary.com/{cloud}/image/upload/v.../ikame-belgeler/{id}.ext
+    const match = fileUrl.match(/\/ikame-belgeler\/([^/.]+)/)
+    if (!match) return
+
+    const publicId   = `ikame-belgeler/${match[1]}`
+    const isPdf      = fileUrl.includes("/raw/")
+    const resourceType = isPdf ? "raw" : "image"
+
+    await cl.uploader.destroy(publicId, { resource_type: resourceType })
   } catch {
-    // Dosya zaten silinmiş olabilir, kritik değil
+    // Silme hatası kritik değil
   }
 }
 // ─────────────────────────────────────────────────────────────
@@ -122,7 +107,7 @@ export async function POST(req: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE)
       return NextResponse.json(
-        { error: `Dosya boyutu ${MAX_FILE_SIZE / (1024 * 1024)} MB'ı aşamaz. Seçilen: ${(file.size / 1024 / 1024).toFixed(1)} MB` },
+        { error: `Dosya boyutu 5 MB'ı aşamaz. Seçilen: ${(file.size / 1024 / 1024).toFixed(1)} MB` },
         { status: 400 }
       )
 
@@ -135,35 +120,21 @@ export async function POST(req: NextRequest) {
     const loan = await prisma.loanerCarLoan.findUnique({ where: { id: loanId } })
     if (!loan) return NextResponse.json({ error: "Kayıt bulunamadı." }, { status: 404 })
 
-    let drive: ReturnType<typeof google.drive>
-    let folderId: string
-    try {
-      ({ drive, folderId } = getDriveClient())
-    } catch (e) {
-      console.error("Google Drive init error:", e)
-      return NextResponse.json(
-        { error: "Google Drive yapılandırma hatası: " + (e instanceof Error ? e.message : String(e)) },
-        { status: 500 }
-      )
-    }
-
-    // Eski dosyayı Drive'dan sil
+    // Eski dosyayı Cloudinary'den sil
     const oldUrl = fileType === "contract" ? loan.contractFileUrl : loan.licenseFileUrl
-    if (oldUrl) {
-      await deleteFromDrive(oldUrl, drive)
-    }
+    if (oldUrl) await deleteFromCloudinary(oldUrl)
 
-    // Yeni dosyayı yükle
-    const ext       = MIME_TO_EXT[file.type] ?? "bin"
+    // Yükle
     const timestamp = Date.now()
-    const fileName  = `${fileType === "contract" ? "sozlesme" : "ehliyet"}-${loanId}-${timestamp}.${ext}`
+    const label     = fileType === "contract" ? "sozlesme" : "ehliyet"
+    const publicId  = `${label}-${loanId}-${timestamp}`
     const buffer    = Buffer.from(await file.arrayBuffer())
 
-    console.log(`Drive upload: ${fileName} (${(buffer.length / 1024).toFixed(0)} KB)`)
+    console.log(`Cloudinary upload: ${publicId} (${(buffer.length / 1024).toFixed(0)} KB, ${file.type})`)
 
-    const publicUrl = await uploadToDrive(buffer, file.type, fileName, folderId, drive)
+    const publicUrl = await uploadToCloudinary(buffer, file.type, publicId)
 
-    // Supabase DB'yi güncelle — sadece link yazılıyor
+    // Supabase DB'ye sadece link yaz
     const updateData = fileType === "contract"
       ? { contractFileUrl: publicUrl }
       : { licenseFileUrl: publicUrl }
@@ -177,7 +148,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("Upload route error:", err)
     return NextResponse.json(
-      { error: "Beklenmeyen hata: " + (err instanceof Error ? err.message : String(err)) },
+      { error: "Yükleme hatası: " + (err instanceof Error ? err.message : String(err)) },
       { status: 500 }
     )
   }
@@ -196,12 +167,7 @@ export async function DELETE(req: NextRequest) {
     if (!loan) return NextResponse.json({ error: "Kayıt bulunamadı." }, { status: 404 })
 
     const oldUrl = fileType === "contract" ? loan.contractFileUrl : loan.licenseFileUrl
-    if (oldUrl) {
-      try {
-        const { drive } = getDriveClient()
-        await deleteFromDrive(oldUrl, drive)
-      } catch { /* Drive silme hatası kritik değil */ }
-    }
+    if (oldUrl) await deleteFromCloudinary(oldUrl)
 
     const updateData = fileType === "contract"
       ? { contractFileUrl: null }
