@@ -139,15 +139,16 @@ model LaborOperation {
 // ─── Maintenance Templates ───────────────────────────────────
 
 model MaintenanceTemplate {
-  id          String   @id @default(cuid())
-  brandId     String
-  modelId     String?
-  subModelId  String?
-  periodKm    Int?
-  periodMonth Int?
-  serviceType String?  // "AGIR" | "NORMAL" | "HIZLI"
-  name        String?
-  createdAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  brandId          String
+  modelId          String?
+  subModelId       String?
+  periodKm         Int?
+  periodMonth      Int?
+  serviceType      String?  // "AGIR" | "NORMAL" | "HIZLI"
+  name             String?
+  estimatedMinutes Int?     // Tahmini iş süresi (dakika) — kapasite hesabında kullanılır
+  createdAt        DateTime @default(now())
 
   isApproved    Boolean   @default(false)
   approvedAt    DateTime?

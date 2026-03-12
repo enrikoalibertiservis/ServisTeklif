@@ -222,6 +222,19 @@ export async function deleteTemplate(templateId: string) {
   return prisma.maintenanceTemplate.delete({ where: { id: templateId } })
 }
 
+export async function updateTemplateEstimatedMinutes(templateId: string, minutes: number | null) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== "ADMIN") throw new Error("Yetkisiz")
+
+  if (minutes !== null && (minutes < 0 || minutes > 9999))
+    throw new Error("Geçersiz süre değeri (0-9999 dakika arası olmalı)")
+
+  return prisma.maintenanceTemplate.update({
+    where: { id: templateId },
+    data: { estimatedMinutes: minutes },
+  })
+}
+
 export async function approveTemplate(templateId: string, approve: boolean) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== "ADMIN") throw new Error("Yetkisiz")

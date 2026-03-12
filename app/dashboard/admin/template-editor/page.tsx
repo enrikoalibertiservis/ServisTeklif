@@ -27,12 +27,13 @@ import {
   deleteTemplate,
   dedupeMaintenanceTemplates,
   approveTemplate,
+  updateTemplateEstimatedMinutes,
 } from "@/app/actions/template"
 import { formatCurrency } from "@/lib/utils"
 import {
   ClipboardList, Plus, Trash2, Search, Loader2, Copy, Package,
   Wrench, AlertTriangle, Check, Minus, ChevronRight, FileCog, PlusCircle, X,
-  ShieldCheck, ShieldOff,
+  ShieldCheck, ShieldOff, Clock,
 } from "lucide-react"
 
 interface TemplateItem {
@@ -72,6 +73,8 @@ export default function TemplateEditorPage() {
   const [items, setItems] = useState<TemplateItem[]>([])
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [approving, setApproving] = useState(false)
+  const [estimatedMinutes, setEstimatedMinutes] = useState<string>("")
+  const [savingMinutes, setSavingMinutes] = useState(false)
 
   // Search dialog
   const [searchOpen, setSearchOpen] = useState(false)
@@ -186,12 +189,32 @@ export default function TemplateEditorPage() {
       const details = await getTemplateDetails(templateId)
       setTemplateDetails(details)
       setItems(details.items)
+      setEstimatedMinutes(details.estimatedMinutes != null ? String(details.estimatedMinutes) : "")
     } catch (err: any) {
       toast({ title: "Hata", description: err.message, variant: "destructive" })
     } finally {
       setLoadingDetails(false)
     }
   }, [toast])
+
+  const handleSaveMinutes = useCallback(async () => {
+    if (!selectedTemplateId) return
+    const parsed = estimatedMinutes === "" ? null : parseInt(estimatedMinutes, 10)
+    if (parsed !== null && (isNaN(parsed) || parsed < 0 || parsed > 9999)) {
+      toast({ title: "Geçersiz değer", description: "0-9999 arası bir dakika değeri girin.", variant: "destructive" })
+      return
+    }
+    setSavingMinutes(true)
+    try {
+      await updateTemplateEstimatedMinutes(selectedTemplateId, parsed)
+      setTemplateDetails((prev: any) => prev ? { ...prev, estimatedMinutes: parsed } : prev)
+      toast({ title: "Kaydedildi", description: parsed != null ? `Tahmini süre: ${parsed} dk` : "Süre bilgisi temizlendi." })
+    } catch (err: any) {
+      toast({ title: "Hata", description: err.message, variant: "destructive" })
+    } finally {
+      setSavingMinutes(false)
+    }
+  }, [selectedTemplateId, estimatedMinutes, toast])
 
   // Template select
   useEffect(() => {
@@ -674,7 +697,7 @@ export default function TemplateEditorPage() {
                 </Table>
 
                 <div className="mt-4 flex justify-end">
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-1 text-sm min-w-[260px]">
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-1 text-sm min-w-[300px]">
                     <p className="text-[11px] text-amber-600 font-medium text-right mb-2 flex items-center justify-end gap-1">
                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
                       Tüm fiyatlar KDV hariçtir
@@ -693,6 +716,26 @@ export default function TemplateEditorPage() {
                         <span className="ml-1.5 text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-0.5">KDV Hariç</span>
                       </div>
                       <span className="font-bold text-primary">{formatCurrency(partsTotal + laborTotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-2 mt-1 gap-2">
+                      <label className="flex items-center gap-1.5 text-muted-foreground whitespace-nowrap shrink-0">
+                        <Clock className="h-3.5 w-3.5 text-violet-500" />
+                        Tahmini Süre (dk):
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={9999}
+                          placeholder="—"
+                          value={estimatedMinutes}
+                          onChange={e => setEstimatedMinutes(e.target.value)}
+                          onBlur={handleSaveMinutes}
+                          onKeyDown={e => { if (e.key === "Enter") { e.currentTarget.blur() } }}
+                          className="w-20 h-7 text-center text-sm p-1"
+                        />
+                        {savingMinutes && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                      </div>
                     </div>
                   </div>
                 </div>
