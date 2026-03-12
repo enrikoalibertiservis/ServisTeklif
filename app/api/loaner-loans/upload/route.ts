@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { v2 as cloudinary } from "cloudinary"
+import { getSupabaseAdmin, LOANER_DOCS_BUCKET } from "@/lib/supabase"
 
 export const runtime = "nodejs"
 
@@ -28,71 +28,16 @@ const MIME_TO_EXT: Record<string, string> = {
 const ALLOWED_TYPES      = Object.keys(MIME_TO_EXT)
 const ALLOWED_FILE_TYPES = new Set(["contract", "license"])
 
-// ── Cloudinary yapılandırması ─────────────────────────────────
-function getCloudinary() {
-  const cloud  = process.env.CLOUDINARY_CLOUD_NAME
-  const key    = process.env.CLOUDINARY_API_KEY
-  const secret = process.env.CLOUDINARY_API_SECRET
-  if (!cloud || !key || !secret)
-    throw new Error("Cloudinary env değişkenleri eksik (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)")
-
-  cloudinary.config({ cloud_name: cloud, api_key: key, api_secret: secret })
-  return cloudinary
-}
-
-/** Buffer'ı Cloudinary'ye yükle, public URL döndür */
-async function uploadToCloudinary(
-  buffer: Buffer,
-  mimeType: string,
-  publicId: string,
-): Promise<string> {
-  const cl = getCloudinary()
-
-  // PDF ve resim için farklı resource_type
-  const resourceType = mimeType === "application/pdf" ? "raw" : "image"
-
-  return new Promise((resolve, reject) => {
-    cl.uploader.upload_stream(
-      {
-        public_id:     publicId,
-        folder:        "ikame-belgeler",
-        resource_type: resourceType,
-        overwrite:     true,
-      },
-      (err, result) => {
-        if (err || !result) return reject(err ?? new Error("Cloudinary sonuç dönmedi"))
-        resolve(result.secure_url)
-      }
-    ).end(buffer)
-  })
-}
-
-/** Cloudinary'den public_id ile dosyayı sil */
-async function deleteFromCloudinary(fileUrl: string) {
-  try {
-    const cl = getCloudinary()
-    // secure_url → public_id çıkar
-    // Format: https://res.cloudinary.com/{cloud}/image/upload/v.../ikame-belgeler/{id}.ext
-    const match = fileUrl.match(/\/ikame-belgeler\/([^/.]+)/)
-    if (!match) return
-
-    const publicId   = `ikame-belgeler/${match[1]}`
-    const isPdf      = fileUrl.includes("/raw/")
-    const resourceType = isPdf ? "raw" : "image"
-
-    await cl.uploader.destroy(publicId, { resource_type: resourceType })
-  } catch {
-    // Silme hatası kritik değil
-  }
-}
-// ─────────────────────────────────────────────────────────────
-
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 })
     if (!canOperate(session.user.name ?? ""))
       return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: "Sunucu yapılandırma hatası." }, { status: 500 })
+    }
 
     const formData = await req.formData()
     const file     = formData.get("file") as File | null
@@ -120,33 +65,50 @@ export async function POST(req: NextRequest) {
     const loan = await prisma.loanerCarLoan.findUnique({ where: { id: loanId } })
     if (!loan) return NextResponse.json({ error: "Kayıt bulunamadı." }, { status: 404 })
 
-    // Eski dosyayı Cloudinary'den sil
-    const oldUrl = fileType === "contract" ? loan.contractFileUrl : loan.licenseFileUrl
-    if (oldUrl) await deleteFromCloudinary(oldUrl)
-
-    // Yükle
-    const timestamp = Date.now()
-    const label     = fileType === "contract" ? "sozlesme" : "ehliyet"
-    const publicId  = `${label}-${loanId}-${timestamp}`
-    const buffer    = Buffer.from(await file.arrayBuffer())
-
-    console.log(`Cloudinary upload: ${publicId} (${(buffer.length / 1024).toFixed(0)} KB, ${file.type})`)
-
-    let publicUrl: string
+    let sb: ReturnType<typeof getSupabaseAdmin>
     try {
-      publicUrl = await uploadToCloudinary(buffer, file.type, publicId)
-    } catch (uploadErr: unknown) {
-      const detail = uploadErr instanceof Error
-        ? uploadErr.message
-        : JSON.stringify(uploadErr)
-      console.error("Cloudinary upload error detail:", detail)
+      sb = getSupabaseAdmin()
+    } catch (envErr) {
       return NextResponse.json(
-        { error: `Cloudinary yükleme hatası: ${detail}` },
+        { error: "Supabase yapılandırma hatası: " + (envErr instanceof Error ? envErr.message : String(envErr)) },
         { status: 500 }
       )
     }
 
-    // Supabase DB'ye sadece link yaz
+    // Eski dosyayı sil
+    const oldUrl = fileType === "contract" ? loan.contractFileUrl : loan.licenseFileUrl
+    if (oldUrl) {
+      const parts = oldUrl.split(`/object/public/${LOANER_DOCS_BUCKET}/`)
+      const oldPath = parts[1]
+      if (oldPath) {
+        await sb.storage.from(LOANER_DOCS_BUCKET).remove([decodeURIComponent(oldPath)])
+      }
+    }
+
+    // Yeni dosyayı yükle
+    const ext         = MIME_TO_EXT[file.type] ?? "bin"
+    const timestamp   = Date.now()
+    const storagePath = `${loanId}/${fileType}-${timestamp}.${ext}`
+    const buffer      = Buffer.from(await file.arrayBuffer())
+
+    console.log(`Supabase upload: ${storagePath} (${(buffer.length / 1024).toFixed(0)} KB)`)
+
+    const { error: uploadError } = await sb.storage
+      .from(LOANER_DOCS_BUCKET)
+      .upload(storagePath, buffer, { contentType: file.type, upsert: true })
+
+    if (uploadError) {
+      console.error("Supabase upload error:", JSON.stringify(uploadError))
+      return NextResponse.json(
+        { error: `Depolama hatası: ${uploadError.message}` },
+        { status: 500 }
+      )
+    }
+
+    const { data: { publicUrl } } = sb.storage
+      .from(LOANER_DOCS_BUCKET)
+      .getPublicUrl(storagePath)
+
     const updateData = fileType === "contract"
       ? { contractFileUrl: publicUrl }
       : { licenseFileUrl: publicUrl }
@@ -160,7 +122,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("Upload route error:", err)
     return NextResponse.json(
-      { error: "Yükleme hatası: " + (err instanceof Error ? err.message : String(err)) },
+      { error: "Beklenmeyen hata: " + (err instanceof Error ? err.message : String(err)) },
       { status: 500 }
     )
   }
@@ -179,7 +141,16 @@ export async function DELETE(req: NextRequest) {
     if (!loan) return NextResponse.json({ error: "Kayıt bulunamadı." }, { status: 404 })
 
     const oldUrl = fileType === "contract" ? loan.contractFileUrl : loan.licenseFileUrl
-    if (oldUrl) await deleteFromCloudinary(oldUrl)
+    if (oldUrl) {
+      try {
+        const sb = getSupabaseAdmin()
+        const parts = oldUrl.split(`/object/public/${LOANER_DOCS_BUCKET}/`)
+        const oldPath = parts[1]
+        if (oldPath) {
+          await sb.storage.from(LOANER_DOCS_BUCKET).remove([decodeURIComponent(oldPath)])
+        }
+      } catch { /* silme hatası kritik değil */ }
+    }
 
     const updateData = fileType === "contract"
       ? { contractFileUrl: null }
