@@ -1508,7 +1508,7 @@ function FilterBar({
 }
 
 // ── FilePickerField ───────────────────────────────────────────────────────────
-const MAX_UPLOAD_KB = 500
+const MAX_UPLOAD_KB = 5 * 1024 // 5 MB
 
 function FilePickerField({
   label, file, existingUrl, onChange, onDelete,
@@ -1531,7 +1531,7 @@ function FilePickerField({
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null
     if (f && f.size > MAX_UPLOAD_KB * 1024) {
-      setSizeError(`Dosya çok büyük: ${(f.size / 1024).toFixed(0)} KB. Maksimum ${MAX_UPLOAD_KB} KB.`)
+      setSizeError(`Dosya çok büyük: ${(f.size / 1024 / 1024).toFixed(1)} MB. Maksimum 5 MB.`)
       e.target.value = ""
       return
     }
