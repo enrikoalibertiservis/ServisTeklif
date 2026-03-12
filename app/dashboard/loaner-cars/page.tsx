@@ -854,21 +854,30 @@ export default function LoanerCarsPage() {
                   <SortHead label="Dönüş"          field="returnDate"     sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-28" />
                   <SortHead label="Gün"            field="deliveryDate"   sort={historySort} onSort={f => { toggleSort(historySort, setHistorySort, f); setHistoryPage(1) }} className="w-16" />
                   <TableHead className={cn(TH_BASE, "w-20")}>Dep.</TableHead>
+                  <TableHead className={cn(TH_BASE, "w-20 text-center")}>Belge</TableHead>
                   <TableHead className={cn(TH_BASE, "w-28")}>Durum</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={12} className="text-center py-12 text-slate-400">Yükleniyor...</TableCell></TableRow>
                 ) : pagedHistory.length === 0 ? (
-                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-slate-400">Kayıt bulunamadı</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={12} className="text-center py-12 text-slate-400">Kayıt bulunamadı</TableCell></TableRow>
                 ) : pagedHistory.map((loan, idx) => {
                   const globalIdx = (historyPage - 1) * HISTORY_PAGE_SIZE + idx + 1
                   const days = loan.isReturned
                     ? Math.floor((new Date(loan.returnDate!).getTime() - new Date(loan.deliveryDate).getTime()) / (1000 * 60 * 60 * 24))
                     : daysSince(loan.deliveryDate)
+                  const hasDocs = !!(loan.contractFileUrl || loan.licenseFileUrl)
                   return (
-                    <TableRow key={loan.id} className={idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"}>
+                    <TableRow
+                      key={loan.id}
+                      className={cn(
+                        "cursor-pointer transition-colors",
+                        idx % 2 === 0 ? "bg-white hover:bg-slate-50/80" : "bg-slate-50/70 hover:bg-slate-100/60"
+                      )}
+                      onClick={() => { setDetailLoan(loan); setDetailModal(true) }}
+                    >
                       <TableCell className="text-center text-xs text-slate-400 tabular-nums">{globalIdx}</TableCell>
                       <TableCell className="text-sm text-slate-700">{loan.loanerCar.plate}</TableCell>
                       <TableCell className="text-sm text-slate-700">
@@ -887,6 +896,36 @@ export default function LoanerCarsPage() {
                         ) : loan.loanerCar.usagePurpose === "FİAT İKAME" ? (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-red-50 border-red-200 text-red-700">Fiat</span>
                         ) : <span className="text-xs text-slate-400">—</span>}
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        {hasDocs ? (
+                          <div className="flex items-center justify-center gap-1">
+                            {loan.contractFileUrl && (
+                              <a
+                                href={loan.contractFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="İkame Sözleşmesi"
+                                className="p-1 rounded hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </a>
+                            )}
+                            {loan.licenseFileUrl && (
+                              <a
+                                href={loan.licenseFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Ehliyet Fotoğrafı"
+                                className="p-1 rounded hover:bg-emerald-50 text-emerald-500 hover:text-emerald-700 transition-colors"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-300 flex justify-center">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {loan.isReturned ? (
@@ -1407,7 +1446,7 @@ export default function LoanerCarsPage() {
                 Düzenle
               </Button>
             )}
-            {canOperate && detailLoan && (
+            {canOperate && detailLoan && !detailLoan.isReturned && (
               <Button size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => {
