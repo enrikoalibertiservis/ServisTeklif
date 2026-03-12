@@ -6,6 +6,7 @@ import {
   Car, Plus, ArrowRightLeft, ArrowLeft, AlertTriangle,
   CheckCircle2, Clock, Wrench, Search, RefreshCw, Pencil, X, Loader2,
   ChevronUp, ChevronDown, ChevronsUpDown, FileText, Upload, Trash2, ExternalLink,
+  ScrollText, CreditCard,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -906,9 +907,10 @@ export default function LoanerCarsPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="İkame Sözleşmesi"
-                                className="p-1 rounded hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
                               >
-                                <FileText className="h-4 w-4" />
+                                <ScrollText className="h-3 w-3 shrink-0" />
+                                Söz.
                               </a>
                             )}
                             {loan.licenseFileUrl && (
@@ -917,9 +919,10 @@ export default function LoanerCarsPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="Ehliyet Fotoğrafı"
-                                className="p-1 rounded hover:bg-emerald-50 text-emerald-500 hover:text-emerald-700 transition-colors"
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors whitespace-nowrap"
                               >
-                                <FileText className="h-4 w-4" />
+                                <CreditCard className="h-3 w-3 shrink-0" />
+                                Ehl.
                               </a>
                             )}
                           </div>
