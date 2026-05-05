@@ -1159,7 +1159,9 @@ export default function LoanerCarsPage() {
           ...calcOccupancy(car.id, occYear, occMonth, loans),
         }))
 
-        const avgPct     = occData.length > 0 ? Math.round(occData.reduce((s, d) => s + d.pct, 0) / occData.length) : 0
+        const totalLoanedDays  = occData.reduce((s, d) => s + d.days, 0)
+        const totalPossibleDays = occData.length * occTotalDays
+        const totalPct  = totalPossibleDays > 0 ? Math.round((totalLoanedDays / totalPossibleDays) * 100) : 0
         const atTarget   = occData.filter(d => d.pct >= OCCUPANCY_TARGET).length
         const belowTarget = occData.filter(d => d.pct > 0 && d.pct < OCCUPANCY_TARGET).length
         const unused     = occData.filter(d => d.pct === 0).length
@@ -1199,8 +1201,9 @@ export default function LoanerCarsPage() {
             {/* Fleet summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-lg border bg-indigo-50 border-indigo-200 p-4">
-                <p className="text-xs font-medium text-indigo-600 opacity-80">Filo Ort. Doluluk</p>
-                <p className="text-3xl font-bold text-indigo-700 mt-1">%{avgPct}</p>
+                <p className="text-xs font-medium text-indigo-600 opacity-80">Filo Toplam Doluluk</p>
+                <p className="text-3xl font-bold text-indigo-700 mt-1">%{totalPct}</p>
+                <p className="text-[10px] text-indigo-500 mt-0.5 tabular-nums">{totalLoanedDays} / {totalPossibleDays} araç-gün</p>
               </div>
               <div className="rounded-lg border bg-emerald-50 border-emerald-200 p-4">
                 <p className="text-xs font-medium text-emerald-600 opacity-80">Hedefe Ulaşan</p>
