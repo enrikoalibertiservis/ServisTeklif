@@ -6,7 +6,7 @@ import {
   Car, Plus, ArrowRightLeft, ArrowLeft, AlertTriangle,
   CheckCircle2, Clock, Wrench, Search, RefreshCw, Pencil, X, Loader2,
   ChevronUp, ChevronDown, ChevronsUpDown, FileText, Upload, Trash2, ExternalLink,
-  ScrollText, CreditCard,
+  ScrollText, CreditCard, BarChart2, ChevronLeft, ChevronRight, Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,7 +99,43 @@ function toInputDate(dateStr?: string | null) {
   return new Date(dateStr).toISOString().split("T")[0]
 }
 
+function calcOccupancy(carId: string, year: number, month: number, loanList: LoanRecord[]) {
+  const totalDays = new Date(year, month, 0).getDate()
+  const monthStart = new Date(year, month - 1, 1)
+  monthStart.setHours(0, 0, 0, 0)
+  const monthEnd = new Date(year, month - 1, totalDays)
+  monthEnd.setHours(23, 59, 59, 999)
+
+  const carLoans = loanList.filter(l => l.loanerCarId === carId)
+  const loanedSet = new Set<number>()
+
+  for (const loan of carLoans) {
+    const loanStart = new Date(loan.deliveryDate)
+    loanStart.setHours(0, 0, 0, 0)
+    const loanEnd = loan.isReturned && loan.returnDate
+      ? (() => { const d = new Date(loan.returnDate!); d.setHours(23, 59, 59, 999); return d })()
+      : new Date()
+
+    const overlapStart = loanStart > monthStart ? loanStart : monthStart
+    const overlapEnd = loanEnd < monthEnd ? loanEnd : monthEnd
+
+    if (overlapEnd >= overlapStart) {
+      const cur = new Date(overlapStart)
+      cur.setHours(0, 0, 0, 0)
+      while (cur <= overlapEnd) {
+        loanedSet.add(cur.getDate())
+        cur.setDate(cur.getDate() + 1)
+      }
+    }
+  }
+
+  const days = loanedSet.size
+  const pct = totalDays > 0 ? Math.round((days / totalDays) * 100) : 0
+  return { days, totalDays, pct }
+}
+
 const OVERDUE_DAYS = 10
+const OCCUPANCY_TARGET = 70
 
 // Araç ver / al / araç ekle-sil
 const LOANER_OPERATORS = ["serdar güler", "handan özçetin", "özgür zavalsız"]
@@ -139,7 +175,7 @@ export default function LoanerCarsPage() {
   const canOperate  = LOANER_OPERATORS.some(n => normName(n) === myName)
   const canEditLoan = LOAN_EDITORS.some(n => normName(n) === myName)
 
-  const [tab, setTab] = useState<"active" | "history" | "fleet">("active")
+  const [tab, setTab] = useState<"active" | "history" | "fleet" | "occupancy">("active")
   const [cars, setCars] = useState<LoanerCar[]>([])
   const [loans, setLoans] = useState<LoanRecord[]>([])
   const [advisors, setAdvisors] = useState<{ id: string; name: string }[]>([])
@@ -193,6 +229,22 @@ export default function LoanerCarsPage() {
   // Pagination — Tüm Kayıtlar
   const HISTORY_PAGE_SIZE = 20
   const [historyPage, setHistoryPage] = useState(1)
+
+  // Doluluk Takibi
+  const [occYear,  setOccYear]  = useState(() => new Date().getFullYear())
+  const [occMonth, setOccMonth] = useState(() => new Date().getMonth() + 1)
+
+  function prevOccMonth() {
+    if (occMonth === 1) { setOccYear(y => y - 1); setOccMonth(12) }
+    else setOccMonth(m => m - 1)
+  }
+  function nextOccMonth() {
+    const now = new Date()
+    if (occYear > now.getFullYear() || (occYear === now.getFullYear() && occMonth >= now.getMonth() + 1)) return
+    if (occMonth === 12) { setOccYear(y => y + 1); setOccMonth(1) }
+    else setOccMonth(m => m + 1)
+  }
+  const isCurrentMonth = occYear === new Date().getFullYear() && occMonth === new Date().getMonth() + 1
 
   // ── Load data ──────────────────────────────────────────────
 
@@ -639,15 +691,17 @@ export default function LoanerCarsPage() {
       {/* Tabs */}
       <div className="flex gap-2 border-b border-slate-200 pb-0">
         {([
-          { key: "active",  label: "Aktif İkameler", count: activeLoans.length, icon: <ArrowRightLeft className="h-4 w-4" />, color: "blue"  },
-          { key: "history", label: "Tüm Kayıtlar",   count: loans.length,       icon: <Clock          className="h-4 w-4" />, color: "violet"},
-          { key: "fleet",   label: "Araç Filosu",    count: cars.length,        icon: <Car            className="h-4 w-4" />, color: "emerald"},
+          { key: "active",    label: "Aktif İkameler",  count: activeLoans.length, icon: <ArrowRightLeft className="h-4 w-4" />, color: "blue"    },
+          { key: "history",   label: "Tüm Kayıtlar",    count: loans.length,       icon: <Clock          className="h-4 w-4" />, color: "violet"  },
+          { key: "fleet",     label: "Araç Filosu",     count: cars.length,        icon: <Car            className="h-4 w-4" />, color: "emerald" },
+          { key: "occupancy", label: "Doluluk Takibi",  count: cars.length,        icon: <BarChart2      className="h-4 w-4" />, color: "indigo"  },
         ] as const).map(t => {
           const active = tab === t.key
           const colorMap = {
-            blue:    { btn: "border-blue-500 text-blue-700 bg-blue-50/60",    icon: "text-blue-500",    badge: "bg-blue-100 text-blue-700"    },
-            violet:  { btn: "border-violet-500 text-violet-700 bg-violet-50/60", icon: "text-violet-500", badge: "bg-violet-100 text-violet-700" },
+            blue:    { btn: "border-blue-500 text-blue-700 bg-blue-50/60",       icon: "text-blue-500",    badge: "bg-blue-100 text-blue-700"    },
+            violet:  { btn: "border-violet-500 text-violet-700 bg-violet-50/60", icon: "text-violet-500",  badge: "bg-violet-100 text-violet-700" },
             emerald: { btn: "border-emerald-500 text-emerald-700 bg-emerald-50/60", icon: "text-emerald-500", badge: "bg-emerald-100 text-emerald-700" },
+            indigo:  { btn: "border-indigo-500 text-indigo-700 bg-indigo-50/60", icon: "text-indigo-500",  badge: "bg-indigo-100 text-indigo-700" },
           }
           const c = colorMap[t.color]
           return (
@@ -1086,6 +1140,186 @@ export default function LoanerCarsPage() {
         </div>
         </>
       )}
+
+      {/* ── Tab: Doluluk Takibi ──────────────────────────────── */}
+      {tab === "occupancy" && (() => {
+        const occTotalDays = new Date(occYear, occMonth, 0).getDate()
+        const targetDays   = Math.round(occTotalDays * (OCCUPANCY_TARGET / 100))
+        const monthLabel   = new Date(occYear, occMonth - 1).toLocaleDateString("tr-TR", { month: "long", year: "numeric" })
+
+        const activeCars = cars.filter(c =>
+          matchBrandGroup(c.brand, c.usagePurpose) &&
+          (!search ||
+            c.plate.includes(search.toUpperCase()) ||
+            c.brand.toLowerCase().includes(search.toLowerCase()))
+        )
+
+        const occData = activeCars.map(car => ({
+          car,
+          ...calcOccupancy(car.id, occYear, occMonth, loans),
+        }))
+
+        const avgPct     = occData.length > 0 ? Math.round(occData.reduce((s, d) => s + d.pct, 0) / occData.length) : 0
+        const atTarget   = occData.filter(d => d.pct >= OCCUPANCY_TARGET).length
+        const belowTarget = occData.filter(d => d.pct > 0 && d.pct < OCCUPANCY_TARGET).length
+        const unused     = occData.filter(d => d.pct === 0).length
+
+        return (
+          <div className="space-y-4">
+
+            {/* Month selector */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={prevOccMonth}
+                  className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-sm font-bold text-slate-800 w-44 text-center capitalize">
+                  {monthLabel}
+                </span>
+                <button
+                  onClick={nextOccMonth}
+                  disabled={isCurrentMonth}
+                  className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+                <Target className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                <span>Hedef:</span>
+                <span className="font-semibold text-indigo-600">%{OCCUPANCY_TARGET}</span>
+                <span className="text-slate-300">·</span>
+                <span>{targetDays} gün / {occTotalDays} gün</span>
+              </div>
+            </div>
+
+            {/* Fleet summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-lg border bg-indigo-50 border-indigo-200 p-4">
+                <p className="text-xs font-medium text-indigo-600 opacity-80">Filo Ort. Doluluk</p>
+                <p className="text-3xl font-bold text-indigo-700 mt-1">%{avgPct}</p>
+              </div>
+              <div className="rounded-lg border bg-emerald-50 border-emerald-200 p-4">
+                <p className="text-xs font-medium text-emerald-600 opacity-80">Hedefe Ulaşan</p>
+                <p className="text-3xl font-bold text-emerald-700 mt-1">{atTarget}</p>
+                <p className="text-[10px] text-emerald-500 mt-0.5">≥ %{OCCUPANCY_TARGET}</p>
+              </div>
+              <div className="rounded-lg border bg-amber-50 border-amber-200 p-4">
+                <p className="text-xs font-medium text-amber-600 opacity-80">Hedefin Altında</p>
+                <p className="text-3xl font-bold text-amber-700 mt-1">{belowTarget}</p>
+                <p className="text-[10px] text-amber-500 mt-0.5">{'< '}%{OCCUPANCY_TARGET}</p>
+              </div>
+              <div className="rounded-lg border bg-slate-50 border-slate-200 p-4">
+                <p className="text-xs font-medium text-slate-500 opacity-80">Hiç Kullanılmayan</p>
+                <p className="text-3xl font-bold text-slate-500 mt-1">{unused}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">%0 doluluk</p>
+              </div>
+            </div>
+
+            {/* Per-vehicle cards */}
+            {occData.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 py-16 text-center text-slate-400">
+                <Car className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                Araç bulunamadı
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {occData
+                  .sort((a, b) => b.pct - a.pct)
+                  .map(({ car, days, totalDays: td, pct }) => {
+                    const metTarget  = pct >= OCCUPANCY_TARGET
+                    const nearTarget = pct >= 50 && pct < OCCUPANCY_TARGET
+                    const barColor   = metTarget  ? "bg-emerald-500"
+                                     : nearTarget ? "bg-amber-400"
+                                     : pct > 0   ? "bg-red-400"
+                                     :              "bg-slate-200"
+                    const pctColor   = metTarget  ? "text-emerald-600"
+                                     : nearTarget ? "text-amber-600"
+                                     : pct > 0   ? "text-red-500"
+                                     :              "text-slate-400"
+                    const cardBorder = metTarget  ? "border-emerald-200 bg-emerald-50/30"
+                                     : nearTarget ? "border-amber-200 bg-amber-50/30"
+                                     : pct > 0   ? "border-red-200 bg-red-50/20"
+                                     :              "border-slate-200 bg-white"
+                    const isOut = car.loans.length > 0
+
+                    return (
+                      <div key={car.id} className={cn("rounded-xl border p-4 space-y-3", cardBorder)}>
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-slate-800 text-sm">{car.plate}</span>
+                              {car.usagePurpose === "ARJ İKAME" ? (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-blue-50 border-blue-200 text-blue-800">ARJ</span>
+                              ) : car.usagePurpose === "FİAT İKAME" ? (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-red-50 border-red-200 text-red-700">Fiat</span>
+                              ) : null}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">{car.brand} {car.modelYear}{car.specs ? ` · ${car.specs}` : ""}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className={cn("text-2xl font-bold tabular-nums leading-none", pctColor)}>%{pct}</span>
+                            {isOut && (
+                              <p className="text-[10px] text-amber-600 font-semibold mt-0.5 flex items-center gap-0.5 justify-end">
+                                <Clock className="h-2.5 w-2.5 shrink-0" />
+                                dışarıda
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Progress bar with target marker */}
+                        <div className="space-y-1.5">
+                          <div className="relative h-3 rounded-full bg-slate-100 overflow-visible">
+                            <div
+                              className={cn("h-full rounded-full transition-all duration-500", barColor)}
+                              style={{ width: `${Math.min(100, pct)}%` }}
+                            />
+                            {/* Target marker at 70% */}
+                            <div
+                              className="absolute top-[-3px] bottom-[-3px] w-0.5 bg-slate-500 opacity-40 rounded-full"
+                              style={{ left: `${OCCUPANCY_TARGET}%` }}
+                              title={`Hedef: %${OCCUPANCY_TARGET}`}
+                            />
+                          </div>
+                          <div className="flex justify-between text-[10px] text-slate-400 tabular-nums">
+                            <span><span className="font-semibold text-slate-600">{days}</span> gün dolu</span>
+                            <span>
+                              Hedef: <span className={cn("font-semibold", metTarget ? "text-emerald-600" : "text-slate-500")}>{targetDays}</span> / {td} gün
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Status badge */}
+                        <div>
+                          {metTarget ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="h-3 w-3 shrink-0" />
+                              Hedefe ulaştı
+                            </span>
+                          ) : pct === 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                              Kullanım yok
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                              <AlertTriangle className="h-3 w-3 shrink-0" />
+                              {targetDays - days} gün eksik
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ────────────────────────────────────────────────────────
           MODAL: Araç Ekle / Düzenle
