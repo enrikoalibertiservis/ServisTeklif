@@ -698,10 +698,30 @@ export default function LoanerCarsPage() {
         ] as const).map(t => {
           const active = tab === t.key
           const colorMap = {
-            blue:    { btn: "border-blue-500 text-blue-700 bg-blue-50/60",       icon: "text-blue-500",    badge: "bg-blue-100 text-blue-700"    },
-            violet:  { btn: "border-violet-500 text-violet-700 bg-violet-50/60", icon: "text-violet-500",  badge: "bg-violet-100 text-violet-700" },
-            emerald: { btn: "border-emerald-500 text-emerald-700 bg-emerald-50/60", icon: "text-emerald-500", badge: "bg-emerald-100 text-emerald-700" },
-            indigo:  { btn: "border-indigo-500 text-indigo-700 bg-indigo-50/60", icon: "text-indigo-500",  badge: "bg-indigo-100 text-indigo-700" },
+            blue:    {
+              active:   "border-blue-500 text-blue-800 bg-blue-100/80",
+              inactive: "border-blue-200 text-blue-700 bg-blue-50/70 hover:bg-blue-100/60",
+              icon:     { active: "text-blue-600", inactive: "text-blue-400" },
+              badge:    { active: "bg-blue-200 text-blue-800", inactive: "bg-blue-100 text-blue-600" },
+            },
+            violet:  {
+              active:   "border-violet-500 text-violet-800 bg-violet-100/80",
+              inactive: "border-violet-200 text-violet-700 bg-violet-50/70 hover:bg-violet-100/60",
+              icon:     { active: "text-violet-600", inactive: "text-violet-400" },
+              badge:    { active: "bg-violet-200 text-violet-800", inactive: "bg-violet-100 text-violet-600" },
+            },
+            emerald: {
+              active:   "border-emerald-500 text-emerald-800 bg-emerald-100/80",
+              inactive: "border-emerald-200 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100/60",
+              icon:     { active: "text-emerald-600", inactive: "text-emerald-400" },
+              badge:    { active: "bg-emerald-200 text-emerald-800", inactive: "bg-emerald-100 text-emerald-600" },
+            },
+            indigo:  {
+              active:   "border-indigo-500 text-indigo-800 bg-indigo-100/80",
+              inactive: "border-indigo-200 text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100/60",
+              icon:     { active: "text-indigo-600", inactive: "text-indigo-400" },
+              badge:    { active: "bg-indigo-200 text-indigo-800", inactive: "bg-indigo-100 text-indigo-600" },
+            },
           }
           const c = colorMap[t.color]
           return (
@@ -710,16 +730,14 @@ export default function LoanerCarsPage() {
               onClick={() => setTab(t.key as typeof tab)}
               className={cn(
                 "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px rounded-t-md transition-all",
-                active
-                  ? cn("border-b-2", c.btn)
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                active ? c.active : c.inactive
               )}
             >
-              <span className={cn("transition-colors", active ? c.icon : "text-slate-400")}>{t.icon}</span>
+              <span className={cn("transition-colors", active ? c.icon.active : c.icon.inactive)}>{t.icon}</span>
               {t.label}
               <span className={cn(
                 "text-[11px] font-semibold px-1.5 py-0.5 rounded-full transition-colors",
-                active ? c.badge : "bg-slate-100 text-slate-500"
+                active ? c.badge.active : c.badge.inactive
               )}>
                 {t.count}
               </span>
